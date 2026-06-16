@@ -79,6 +79,39 @@ Load with: `skill_view(name="agent-skills-code-simplification")`
 
 **Process:** Make one simplification → run tests → if pass, continue; if fail, revert. Commit simplifications separately from feature changes.
 
+### agent-skills-code-review-and-quality
+
+**Load this skill before marking any task complete** to review code across five axes: correctness, readability, architecture, security, and performance.
+
+Load with: `skill_view(name="agent-skills-code-review-and-quality")`
+
+**When to review (mandatory):**
+- After every implementation task — review what was written before committing
+- Before merging any change — no exceptions
+- After any bug fix — review both the fix and the regression test
+- When code exceeds ~300 lines changed — split it instead of reviewing one massive change
+
+**Five review axes:**
+1. **Correctness** — Does it match the spec? Edge cases handled? Error paths? Tests actually test the right things?
+2. **Readability** — Can another engineer understand this without help? Names descriptive? No unnecessary complexity?
+3. **Architecture** — Follows existing patterns? Clean module boundaries? No circular dependencies?
+4. **Security** — Input validated? Secrets out of code? Auth checks in place? SQL parameterized?
+5. **Performance** — No N+1 queries? No unbounded loops? Pagination on list endpoints?
+
+**Severity labels for findings:**
+- `Critical:` — Blocks merge (security, data loss, broken functionality)
+- *(no prefix)* — Required change before merge
+- `Nit:` — Minor, optional (formatting, style preferences)
+- `Optional:` / `Consider:` — Suggestion, not required
+- `FYI` — Informational only, no action needed
+
+**Change sizing:**
+- ~100 lines → Good, reviewable in one sitting
+- ~300 lines → Acceptable if single logical change
+- ~1000+ lines → Too large, split it
+
+**Separate refactoring from feature work.** A change that refactors AND adds behavior is two PRs.
+
 ## Execution Rules
 
 1. Read the relevant spec(s) and implementation plan before writing code
