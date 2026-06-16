@@ -71,7 +71,7 @@ Three independent asset types, plus one composition:
 
 **Versioning:** Each asset_output tracks its version. When regenerated, the old version is archived in `asset_output_versions` and the current row is updated with new values and `version + 1`. This keeps the main table lean with only current versions.
 
-**Reproducibility:** Each asset_output stores `generation_params` (model, seed, resolution, steps, guidance, etc.), `reference_images` (uploaded input images), and `source_asset_outputs` (links to existing assets used as input). This makes every image reproducible.
+**Reproducibility:** Each asset_output stores `generation_params` (the complete JSON body sent to fal.ai — model, seed, resolution, steps, guidance_scale, sampler, num_outputs, prompt, and all API parameters), `reference_images` (uploaded input images stored as `ref_{asset_id}_{version}_{short_uuid}.png`), and `source_asset_outputs` (links to existing assets used as input). This makes every image exactly reproducible.
 
 **Soft delete:** Assets are never hard-deleted. A `deleted_at` timestamp marks deletion. All queries filter `deleted_at IS NULL`. Only Admin can permanently remove.
 

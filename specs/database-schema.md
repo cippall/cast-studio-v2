@@ -172,7 +172,7 @@ Stores the generated images for each asset. Tracks model used, cost charged, and
 
 **Versioning:** When an output is regenerated, the old row is moved to `asset_output_versions` and the current row is updated with new values and `version + 1`. This keeps the main table lean with only current versions.
 
-**Reproducibility:** `generation_params` stores everything needed to reproduce the image (model, seed, resolution, steps, guidance, etc.). `reference_images` stores uploaded input images. `source_asset_outputs` links to existing assets used as input (e.g., character sheet uses headshot + look outputs).
+**Reproducibility:** `generation_params` stores the complete JSON body sent to fal.ai (model, seed, resolution, steps, guidance_scale, sampler, num_outputs, prompt, and any other API parameters). This allows exact replay of the generation call. `reference_images` stores uploaded input images with naming convention `ref_{asset_id}_{version}_{short_uuid}.png` for traceability. `source_asset_outputs` links to existing assets used as input (e.g., character sheet uses headshot + look outputs).
 
 ---
 
