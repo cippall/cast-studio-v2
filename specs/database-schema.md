@@ -116,6 +116,8 @@ The zero-duplication table that stores prompt recipes and handles visibility bri
 
 **Note on visibility:** Visibility is managed via the `asset_permissions` table, not a column on this table.
 
+**Marketplace:** Assets can be listed on the marketplace via `marketplace_listings`. The `client_id` field is the single ownership pointer: NULL = Studio owns, set = Client owns (via purchase or premium unlock).
+
 ---
 
 ## 7. asset_permissions
@@ -279,6 +281,28 @@ Admin-managed taxonomy for all configurable categories and properties.
 
 ---
 
+## 15. marketplace_listings
+
+Assets listed for sale on the Studio marketplace. Only Studio Workspace assets can be listed.
+
+| Column | Type | Constraints / Relations | Description |
+| :---- | :---- | :---- | :---- |
+| id | UUID | Primary Key | Unique identifier. |
+| asset_id | UUID | Foreign Key -> assets.id, Not Null | The asset being listed. |
+| seller_id | UUID | Foreign Key -> accounts.id, Not Null | The artist or admin who listed it. |
+| price_credits | DECIMAL(12,4) | Not Null | Sale price in credits. |
+| listing_type | VARCHAR | Not Null | 'ACTOR_PACKAGE', 'LOOK', 'FASHION_ITEM' |
+| is_active | BOOLEAN | Not Null, Default TRUE | Whether the listing is available for purchase. |
+| purchased_by | UUID | Foreign Key -> accounts.id, Nullable | The client who purchased (NULL = not yet sold). |
+| purchased_at | TIMESTAMP | Nullable | When the purchase happened. |
+| created_at | TIMESTAMP | Default NOW() | Standard timestamp tracking. |
+
+**Indexes:** `asset_id`, `listing_type`, `is_active`, `purchased_by`.
+
+**Actor Package:** When an Actor is listed as 'ACTOR_PACKAGE', the buyer receives a fixed set of outputs: headshot, fullshot, expressions, character sheet (using generic standard look), and editorial shots (using generic standard look). The generic standard look is defined by the Admin in system prompts.
+
+---
+
 ## Entity Relationship Summary
 
 ```
@@ -302,6 +326,7 @@ workspaces
   |           |
   |           +-- commission_assets (commission_id, asset_id)
   |
+  +-- marketplace_listings (asset_id, seller_id, purchased_by)
   +-- notifications (recipient_id)
   +-- models (workspace_id)
   +-- taxonomy (workspace_id)

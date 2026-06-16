@@ -44,6 +44,11 @@ Three independent asset types, plus one composition:
 3. **Fashion Item** — individual clothing/accessory piece (created via Fashion Item Creator)
 4. **Character Sheet** (composition) = Actor + Look
 
+**How Clients Acquire Assets:**
+1. **Create their own** — use Designer tools, pay per generation from wallet
+2. **Commission** — request custom work from Artist, pay premium on approval
+3. **Purchase from marketplace** — buy Actor Packages or Looks (Studio-only listings)
+
 ### Actor Designer Flow
 
 1. **Create Actor identity** via 4 entry options:
@@ -88,7 +93,45 @@ Output: single image per Fashion Item (system prompt controls product-shot layou
 - Composes Actor identity + Look into a single output
 - Stored as an asset_output linked to the Actor
 
-## Asset Libraries
+## Marketplace
+
+Only Studio Workspace assets can be sold. Clients can only buy and create their own.
+
+**Actor Package (fixed bundle):**
+- Headshot
+- Fullshot
+- Expression Sheet
+- Character Sheet (using generic standard look — same neutral outfit for all actors)
+- Editorial shots (using generic standard look)
+- Generic standard look defined by Admin in system prompts
+
+**Individual Looks** — standalone, can be applied to any actor
+
+**Pricing:** Set by Artist/Admin in credits. Sale is one-time — buyer gets the rendered images and full ownership (`client_id` set).
+
+**No prompt access:** Purchased assets are final images only. Client does not receive prompt recipe, seed, or generation parameters.
+
+**What Clients can do with purchased assets:**
+- Use as-is (view images)
+- Apply own Looks for additional Character Sheets and Editorial Shots
+- Commission Artists for custom work based on purchased actors
+
+## Ownership Rule
+
+**`client_id` is the single source of truth. No exceptions.**
+
+| `client_id` | Owner | Artist can do | Client can do |
+|---|---|---|---|
+| **NULL** | Studio | Full control — edit, regenerate, share, use | Nothing (unless shared via permissions) |
+| **Set** (after purchase or premium unlock) | Client | View only — cannot edit, regenerate, or share | Full control — owns it, can use freely |
+
+**The only way `client_id` gets set:** Client pays for marketplace purchase or premium unlocks a commission.
+
+**The only way an Artist can use a client-owned asset:** Client commissions them again.
+
+During commission review (before approval/purchase), shared assets are view-only — cannot be used in compositions or other commissions.
+
+## Asset Libraries (e-commerce pattern):
 
 All libraries follow an e-commerce pattern: grid of cards (image + name + tags) + rich sidebar filters.
 
@@ -221,6 +264,7 @@ Both **in-app** and **email** for all key events:
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items)
+- Marketplace
 - Commissions
 - Settings (profile, API keys if API-enabled)
 
@@ -228,6 +272,7 @@ Both **in-app** and **email** for all key events:
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items — each with "Shared with Me" filter)
+- Marketplace
 - Commissions
 - Settings (profile, wallet/top-up)
 
@@ -235,6 +280,7 @@ Both **in-app** and **email** for all key events:
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items)
+- Marketplace
 - Commissions
 - Settings:
   - Users & Roles (artists, clients, agents/API)
@@ -244,18 +290,19 @@ Both **in-app** and **email** for all key events:
   - Look Taxonomy (gender/age, style, season, etc.)
   - Fashion Item Taxonomy (item types, sub-types, etc.)
   - Commission Form Templates (fields, required fields, options)
+  - Marketplace Management (listings, pricing, generic standard look)
 
 ## Sharing Model
 
-For Artist-created assets only:
+For Artist-created assets (before purchase):
 
 | Visibility | Who Can See |
 | :---- | :---- |
 | **Private** | Creating Artist + Admins |
 | **Studio Public** | All Artists in the same Studio Workspace + Admins |
-| **Client Shared** | Specific Client (via Client Workspace) + Admins |
+| **Client Shared** (via commission, before approval) | Specific Client + Admins — view only |
 
-Managed via `asset_permissions` table. Revocation is instant (hard cutoff — `revoked_at` set, access terminated immediately).
+After marketplace purchase or commission premium unlock, `client_id` is set and the asset is fully owned by the Client. See Ownership Rule above.
 
 ## Billing
 
@@ -264,6 +311,8 @@ Managed via `asset_permissions` table. Revocation is instant (hard cutoff — `r
 | **Studio Key** | Studio compute (Artist) |
 | **Client Key** | Client wallet (Client) |
 | **Agent** | Pre-flight escrow — max estimated cost locked before execution, auto-refund on failure |
+| **Marketplace Purchase** | Client wallet — one-time credit deduction, `client_id` set on purchase |
+| **Premium Unlock** | Client wallet — deducted on commission approval, `client_id` set |
 
 ## Database Schema
 

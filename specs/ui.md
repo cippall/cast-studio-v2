@@ -417,6 +417,116 @@ All three libraries share the same layout pattern:
 
 ---
 
+### 6.1 Marketplace (Client)
+
+The storefront where Clients browse and purchase Actor Packages and Looks from the Studio.
+
+```
++--------------------------------------------------+
+|  Marketplace                                     |
++--------------------------------------------------+
+|  [All] [Actor Packages] [Looks]       Search [🔍]|
++--------------------------------------------------+
+|  Sort: [Newest ▼]  Price: [Any ▼]                |
++--------------------------------------------------+
+|                                                  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
+|  |name    |  |name    |  |name    |  |name    |  |
+|  |by Artist|  |by Artist|  |by Artist|  |by Artist|  |
+|  |10.00cr |  |5.00cr  |  |12.00cr |  |8.00cr  |  |
+|  |[Buy]   |  |[Buy]   |  |[Buy]   |  |[Buy]   |  |
+|  +--------+  +--------+  +--------+  +--------+  |
+|                                                  |
+|  [< 1 2 3 >]                                     |
++--------------------------------------------------+
+```
+
+**Card structure:**
+- Thumbnail (headshot for Actor Packages, look image for Looks)
+- Name
+- "by ArtistName" 
+- Price in credits
+- "Buy" button
+
+**Empty state:**
+```
++--------------------------------------------------+
+|              [Empty Illustration]                |
+|                                                  |
+|         No listings available yet                |
+|     Check back soon for new assets               |
++--------------------------------------------------+
+```
+
+#### Marketplace Detail Page
+
+```
++--------------------------------------------------+
+|  ← Back to Marketplace                           |
++--------------------------------------------------+
+|  +------------------+  +----------------------+   |
+|  |                  |  | Cyberpunk Woman      |   |
+|  |   HEADSHOT       |  | by Jane Artist       |   |
+|  |   (large)        |  |                      |   |
+|  |                  |  | 10.00 credits        |   |
+|  +------------------+  |                      |   |
+|  +------------------+  | Package includes:    |   |
+|  |   FULLSHOT       |  | • Headshot           |   |
+|  |   (large)        |  | • Fullshot           |   |
+|  |                  |  | • Expression Sheet   |   |
+|  +------------------+  | • Character Sheet    |   |
+|  +------------------+  | • 2 Editorial Shots  |   |
+|  |   CHARACTER      |  |                      |   |
+|  |   SHEET          |  | [Buy for 10.00 cr]   |   |
+|  |   (large)        |  |                      |   |
+|  +------------------+  | Your balance: 150.50 |   |
+|  +--------+---------+  +----------------------+   |
+|  | Ed 1   | Ed 2    |                          |
+|  +--------+---------+                          |
++--------------------------------------------------+
+```
+
+**Purchase flow:**
+1. Client clicks "Buy for X.00 cr"
+2. Confirmation dialog: "Purchase 'Cyberpunk Woman' for 10.00 credits? Your balance after: 140.50"
+3. Client confirms → API call → wallet deducted → `client_id` set
+4. Success toast: "Purchase complete! Assets added to your library."
+5. Assets appear in Client's library immediately
+
+**Insufficient balance:**
+- "Buy" button shows: "Insufficient credits (need 10.00, have 5.00)"
+- "Top Up" button next to it
+
+---
+
+### 6.2 Marketplace Management (Artist/Admin)
+
+```
++--------------------------------------------------+
+|  Marketplace Management              [+ New Listing]|
++--------------------------------------------------+
+|  [My Listings] [All Listings (Admin)]             |
++--------------------------------------------------+
+|  +--------+  +--------+  +--------+              |
+|  |thumb   |  |thumb   |  |thumb   |              |
+|  |name    |  |name    |  |name    |              |
+|  |10.00cr |  |5.00cr  |  |12.00cr |              |
+|  |Active  |  |Active  |  |Sold    |              |
+|  |[Edit]  |  |[Edit]  |  |[View]  |              |
+|  +--------+  +--------+  +--------+              |
++--------------------------------------------------+
+```
+
+**New Listing flow:**
+1. Select asset from workspace library
+2. Choose listing type (Actor Package / Look)
+3. Set price
+4. For Actor Packages: system auto-generates the standard package outputs
+5. Preview the package → confirm → publish
+
+---
+
 ### 7. Commissions
 
 #### Client View: My Commissions
@@ -682,6 +792,10 @@ Unread notifications have a blue dot. Clicking navigates to the relevant page.
 | `TaxonomyForm` | Dynamic form rendered from taxonomy entries |
 | `ImageUpload` | Drag-and-drop image upload with preview |
 | `ImageGrid` | Grid of selectable images (for generation options) |
+| `MarketplaceCard` | Listing card with thumbnail, name, artist, price, buy button |
+| `MarketplaceFilters` | Filter panel for marketplace (type, price range, artist) |
+| `PurchaseDialog` | Confirmation dialog for marketplace purchase |
+| `ListingForm` | Form for creating/editing marketplace listings |
 | `Stepper` | Horizontal step indicator (for creation wizards) |
 | `WalletBalance` | Balance display + top-up button |
 | `DataTable` | Generic sortable/filterable data table (Admin) |
@@ -701,6 +815,9 @@ All API data is managed by React Query with the following query key patterns:
 ['looks', id]                 — single look
 ['fashion-items']              — fashion item list
 ['fashion-items', id]          — single fashion item
+['marketplace']                — marketplace listings (Client view)
+['marketplace', id]            — single listing detail
+['marketplace', 'manage']      — managed listings (Artist/Admin)
 ['commissions']                — commission list (filtered by role)
 ['commissions', id]            — single commission with assets
 ['workflows', id]              — workflow status
@@ -747,6 +864,10 @@ Filters and pagination are synced to URL search params for shareability:
 /fashion-items              → Fashion Item Library
 /fashion-items/new          → Fashion Item Creator
 /fashion-items/:id          → Fashion Item Detail
+/marketplace                → Marketplace (Client: browse/buy)
+/marketplace/:id            → Marketplace Listing Detail
+/marketplace/manage         → Marketplace Management (Artist/Admin)
+/marketplace/manage/new     → New Listing
 /commissions                → Commissions list
 /commissions/new            → New Commission form
 /commissions/:id            → Commission Detail

@@ -1215,7 +1215,155 @@ Delete form template.
 
 ---
 
-## 13. Dashboard Endpoints
+## 14. Marketplace Endpoints
+
+### GET /api/marketplace
+
+List marketplace listings available to the authenticated Client.
+
+**Query params:**
+- `page`, `pageSize`, `sortBy`, `sortOrder`
+- `listing_type` — 'ACTOR_PACKAGE', 'LOOK'
+- `max_price` — filter by maximum price
+- `creator_id` — filter by artist
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "id": "uuid",
+      "listing_type": "ACTOR_PACKAGE",
+      "asset_id": "uuid",
+      "asset": {
+        "id": "uuid",
+        "name": "Cyberpunk Woman",
+        "headshot_url": "https://fal.ai/...",
+        "fullshot_url": "https://fal.ai/..."
+      },
+      "seller_id": "uuid",
+      "seller_name": "Jane Artist",
+      "price_credits": 10.00,
+      "is_active": true,
+      "created_at": "2026-06-16T10:00:00Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "totalItems": 12, "totalPages": 1 }
+}
+```
+
+### GET /api/marketplace/:id
+
+Get a single listing detail.
+
+**Response (200):**
+```json
+{
+  "id": "uuid",
+  "listing_type": "ACTOR_PACKAGE",
+  "asset": {
+    "id": "uuid",
+    "name": "Cyberpunk Woman",
+    "headshot_url": "https://fal.ai/...",
+    "fullshot_url": "https://fal.ai/...",
+    "expression_sheet_url": "https://fal.ai/...",
+    "character_sheet_url": "https://fal.ai/...",
+    "editorial_urls": ["https://fal.ai/...", "https://fal.ai/..."]
+  },
+  "seller": { "id": "uuid", "name": "Jane Artist" },
+  "price_credits": 10.00,
+  "is_active": true,
+  "created_at": "2026-06-16T10:00:00Z"
+}
+```
+
+### POST /api/marketplace/:id/purchase
+
+Client purchases a listing.
+
+**Response (200):**
+```json
+{
+  "listing_id": "uuid",
+  "purchased_at": "2026-06-16T10:00:00Z",
+  "cost_credits": 10.00,
+  "new_balance": 140.50,
+  "assets": [
+    { "layout_type": "headshot", "image_url": "https://fal.ai/..." },
+    { "layout_type": "fullshot", "image_url": "https://fal.ai/..." },
+    { "layout_type": "expressions_3x4", "image_url": "https://fal.ai/..." },
+    { "layout_type": "character_sheet", "image_url": "https://fal.ai/..." },
+    { "layout_type": "editorial", "image_url": "https://fal.ai/..." },
+    { "layout_type": "editorial", "image_url": "https://fal.ai/..." }
+  ]
+}
+```
+
+This triggers:
+1. Deduct `price_credits` from client wallet (ledger entry: CHARGE)
+2. Set `client_id` on the asset
+3. Set `purchased_by` and `purchased_at` on the listing
+4. Link purchased assets to the client's library
+5. Notify the seller (Artist)
+
+**Error (402):** Insufficient balance — "Insufficient credits. Your balance: X. Required: Y. [Top Up]"
+**Error (409):** Already purchased — "This listing has already been purchased."
+
+---
+
+### 14.1 Artist/Admin Marketplace Management
+
+### GET /api/marketplace/manage
+
+List all listings (Artist sees own, Admin sees all).
+
+**Query params:** `?is_active=true&listing_type=ACTOR_PACKAGE&page=1&pageSize=20`
+
+### POST /api/marketplace/manage
+
+Create a new listing (Artist/Admin only).
+
+**Request (Actor Package):**
+```json
+{
+  "asset_id": "uuid",
+  "listing_type": "ACTOR_PACKAGE",
+  "price_credits": 10.00
+}
+```
+
+The system automatically generates the package outputs using the generic standard look for character sheet and editorial shots.
+
+**Request (Look):**
+```json
+{
+  "asset_id": "uuid",
+  "listing_type": "LOOK",
+  "price_credits": 5.00
+}
+```
+
+**Response (201):** Listing object.
+
+### PATCH /api/marketplace/manage/:id
+
+Update listing price or toggle active.
+
+**Request:**
+```json
+{
+  "price_credits": 12.00,
+  "is_active": true
+}
+```
+
+### DELETE /api/marketplace/manage/:id
+
+Remove a listing.
+
+---
+
+## 15. Dashboard Endpoints
 
 ### GET /api/dashboard
 
@@ -1226,10 +1374,13 @@ Returns dashboard data for the authenticated role.
 {
   "recent_activity": [
     { "type": "asset_created", "actor_name": "Cyberpunk Woman", "created_at": "2026-06-16T10:00:00Z" },
-    { "type": "generation_completed", "actor_name": "Cyberpunk Woman", "layout_type": "headshot", "created_at": "2026-06-16T10:00:15Z" }
+    { "type": "generation_completed", "actor_name": "Cyberpunk Woman", "layout_type": "headshot", "completed_at": "2026-06-16T10:00:15Z" }
   ],
   "commissions": [
     { "id": "uuid", "title": "Need cyberpunk actor", "status": "IN_PROGRESS" }
+  ],
+  "marketplace_sales": [
+    { "listing_id": "uuid", "asset_name": "Cyberpunk Woman", "buyer_name": "Brand Client", "price_credits": 10.00, "purchased_at": "2026-06-15T10:00:00Z" }
   ]
 }
 ```
@@ -1237,10 +1388,13 @@ Returns dashboard data for the authenticated role.
 **Client response (200):**
 ```json
 {
-  "wallet_balance": 150.50,
+  "wallet_balance": 140.50,
   "recent_activity": [ ... ],
   "commissions": [
     { "id": "uuid", "title": "Need cyberpunk actor", "status": "SUBMITTED" }
+  ],
+  "purchases": [
+    { "listing_id": "uuid", "asset_name": "Cyberpunk Woman", "price_credits": 10.00, "purchased_at": "2026-06-15T10:00:00Z" }
   ]
 }
 ```
@@ -1253,7 +1407,9 @@ Returns dashboard data for the authenticated role.
     "total_looks": 80,
     "total_fashion_items": 200,
     "active_members": 25,
-    "pending_commissions": 5
+    "pending_commissions": 5,
+    "active_listings": 30,
+    "total_sales_credits": 1250.00
   },
   "recent_activity": [ ... ],
   "commissions": [
