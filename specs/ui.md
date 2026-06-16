@@ -224,7 +224,9 @@ The main view for a single actor and all its assets.
 
 ```
 +--------------------------------------------------+
-|  [Edit Fields]  [Generate Look]                  |
+|  [Edit Fields]  [Generate Look]  [Submit to Marketplace]  |
++--------------------------------------------------+
+|  🔒 Marketplace Listed  |  [Duplicate]              |
 +--------------------------------------------------+
 |                                                  |
 |  +------------------+  +----------------------+   |
@@ -257,6 +259,28 @@ The main view for a single actor and all its assets.
 |  [Generate]  [Generate New]                      |
 |  (empty state if none generated)                 |
 +--------------------------------------------------+
+|  CHARACTER SHEET                                 |
+|  Select Look: [Dropdown ▼]  [Generate]           |
+|  (empty state if none generated)                 |
++--------------------------------------------------+
+```
+
+**Marketplace freeze indicators:**
+- 🔒 Lock icon next to marketplace status
+- When frozen: "Edit" and "Regenerate" buttons are disabled/grayed
+- "Submit to Marketplace" button: disabled if missing required outputs, shows what's missing
+- "Duplicate" button: always available, creates editable copy with new name
+
+**Source info (shown in asset detail):**
+```
+Source: Original
+```
+or
+```
+Source: Duplicated from "Cyberpunk Woman" (uuid)
+Source: Purchased from Marketplace
+Source: Commissioned (uuid)
+```
 |  CHARACTER SHEET                                 |
 |  Select Look: [Dropdown ▼]  [Generate]           |
 |  (empty state if none generated)                 |

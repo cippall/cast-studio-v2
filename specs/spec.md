@@ -134,6 +134,45 @@ The Studio operates an e-commerce storefront where Clients purchase assets. Only
 
 Agents can submit assets to the marketplace via API only (no UI). Agent receives a brief externally, creates assets, and submits via API endpoint. Not connected to client commissions — Clients have no API access.
 
+### Duplication & Source Tracking
+
+**Artist duplication:** Artist can duplicate any asset they own (or marketplace-frozen asset). The duplicate:
+- Inherits all fields (prompt recipe, seed, taxonomy values, outputs)
+- Gets a new name
+- Has `source_asset_id` pointing to the original
+- Has `source_type = 'DUPLICATE'`
+- Is fully editable (not marketplace-frozen)
+
+**Client purchase:** When a Client purchases from the marketplace, a duplicate is created in their workspace:
+- Same prompt recipe, seed, outputs (same image URLs)
+- `client_id` set to the purchasing Client
+- `source_asset_id` pointing to the original marketplace asset
+- `source_type = 'MARKETPLACE_PURCHASE'`
+- Original stays in Studio workspace, frozen
+
+**Commission unlock:** When a Client premium-unlocks a commission, the asset gets:
+- `client_id` set to the Client
+- `source_type = 'COMMISSION'`
+
+**Source types:**
+
+| source_type | Meaning |
+|---|---|
+| `ORIGINAL` | Created from scratch, no source |
+| `MARKETPLACE_PURCHASE` | Bought from marketplace |
+| `COMMISSION` | Created via commission and premium unlocked |
+| `DUPLICATE` | Duplicated from another asset |
+
+### Marketplace Freeze
+
+When `marketplace_status = 'MARKETPLACE_APPROVED'`, the asset becomes frozen:
+- `is_marketplace_frozen = TRUE`
+- No editing (headshot/fullshot/expressions locked)
+- No regenerating
+- No deleting
+- Artist can still VIEW the asset
+- Artist can duplicate it (creates a new editable copy)
+
 ### What Clients Can Do with Purchased Assets
 
 - Use as-is (view images)

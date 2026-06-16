@@ -1301,9 +1301,9 @@ Client purchases a listing.
 
 This triggers:
 1. Deduct `price_credits` from client wallet (ledger entry: CHARGE)
-2. Set `client_id` on the asset
-3. Set `purchased_by` and `purchased_at` on the listing
-4. Link purchased assets to the client's library
+2. Create a duplicate asset in Client's workspace with `client_id` set, `source_asset_id` pointing to original, `source_type = 'MARKETPLACE_PURCHASE'`
+3. Duplicate all asset_outputs (new rows, same image URLs)
+4. Set `purchased_by` and `purchased_at` on the listing
 5. Notify the seller (Artist)
 
 **Error (402):** Insufficient balance — "Insufficient credits. Your balance: X. Required: Y. [Top Up]"
@@ -1311,7 +1311,42 @@ This triggers:
 
 ---
 
-### 14.1 Artist/Admin Marketplace Management
+### 14.1 Asset Duplication
+
+### POST /api/assets/:id/duplicate
+
+Duplicate an asset (Artist only, for assets they own or marketplace-frozen assets).
+
+**Request:**
+```json
+{
+  "name": "Cyberpunk Woman v2"
+}
+```
+
+**Response (201):**
+```json
+{
+  "id": "uuid",
+  "name": "Cyberpunk Woman v2",
+  "source_asset_id": "uuid",
+  "source_type": "DUPLICATE",
+  "asset_type": "ACTOR",
+  "seed": 12345,
+  "prompt_recipe": { ... },
+  "outputs": [
+    { "id": "uuid", "layout_type": "headshot", "image_url": "https://fal.ai/...", "status": "SUCCESS" },
+    { "id": "uuid", "layout_type": "fullshot", "image_url": "https://fal.ai/...", "status": "SUCCESS" }
+  ],
+  "created_at": "2026-06-16T10:00:00Z"
+}
+```
+
+The duplicate inherits all fields from the original. New asset_outputs are created with new IDs but same image URLs. The duplicate is fully editable.
+
+---
+
+### 14.3 Artist/Admin Marketplace Management
 
 ### GET /api/marketplace/manage
 
@@ -1363,7 +1398,7 @@ Remove a listing.
 
 ---
 
-### 14.2 Artist Marketplace Submission
+### 14.4 Artist Marketplace Submission
 
 ### POST /api/marketplace/submit
 
@@ -1417,7 +1452,7 @@ List Artist's own submissions with status.
 
 ---
 
-### 14.3 Admin Marketplace Review
+### 14.5 Admin Marketplace Review
 
 ### GET /api/admin/marketplace/submissions
 
@@ -1492,7 +1527,7 @@ This sets `assets.marketplace_status = 'MARKETPLACE_REJECTED'`. Notifies the Art
 
 ---
 
-### 14.4 Agent Marketplace Submission (API only)
+### 14.6 Agent Marketplace Submission (API only)
 
 ### POST /api/agent/marketplace/submit
 
@@ -1513,7 +1548,7 @@ Same validation as Artist submission. Agent must have API key access and the ass
 
 ---
 
-### 14.5 Listings Settings (Admin)
+### 14.7 Listings Settings (Admin)
 
 ### GET /api/admin/marketplace/settings
 

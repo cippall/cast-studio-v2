@@ -111,6 +111,9 @@ The zero-duplication table that stores prompt recipes and handles visibility bri
 | seed | BIGINT | Not Null | The deterministic generation seed. |
 | prompt_recipe | JSONB | Not Null | The master system prompt configuration (structured JSON). |
 | marketplace_status | VARCHAR | Nullable | NULL = not submitted, 'MARKETPLACE_PENDING', 'MARKETPLACE_APPROVED', 'MARKETPLACE_REJECTED', 'MARKETPLACE_DELISTED' |
+| is_marketplace_frozen | BOOLEAN | Not Null, Default FALSE | TRUE when marketplace_status = 'APPROVED' — locks editing/regenerating/deleting |
+| source_asset_id | UUID | Foreign Key -> assets.id, Nullable | Points to parent asset (for duplicates and purchases) |
+| source_type | VARCHAR | Not Null, Default 'ORIGINAL' | 'ORIGINAL', 'MARKETPLACE_PURCHASE', 'COMMISSION', 'DUPLICATE' |
 | created_at | TIMESTAMP | Default NOW() | Standard timestamp tracking. |
 
 **Indexes:** `workspace_id`, `creator_id`, `client_id`, `asset_type`.
