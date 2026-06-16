@@ -110,6 +110,7 @@ The zero-duplication table that stores prompt recipes and handles visibility bri
 | name | VARCHAR(255) | Nullable | Auto-generated or user-edited name (for Look and Fashion Item). |
 | seed | BIGINT | Not Null | The deterministic generation seed. |
 | prompt_recipe | JSONB | Not Null | The master system prompt configuration (structured JSON). |
+| marketplace_status | VARCHAR | Nullable | NULL = not submitted, 'MARKETPLACE_PENDING', 'MARKETPLACE_APPROVED', 'MARKETPLACE_REJECTED', 'MARKETPLACE_DELISTED' |
 | created_at | TIMESTAMP | Default NOW() | Standard timestamp tracking. |
 
 **Indexes:** `workspace_id`, `creator_id`, `client_id`, `asset_type`.

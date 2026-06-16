@@ -93,25 +93,49 @@ Output: single image per Fashion Item (system prompt controls product-shot layou
 - Composes Actor identity + Look into a single output
 - Stored as an asset_output linked to the Actor
 
-## Marketplace
+## Marketplace (Studio-only storefront)
 
-Only Studio Workspace assets can be sold. Clients can only buy and create their own.
+The Studio operates an e-commerce storefront where Clients purchase assets. Only Studio Workspace assets can be sold. Clients can only buy and create their own.
 
-**Actor Package (fixed bundle):**
+### How It Works
+
+1. **Admin defines package rules** in Listings Settings — what outputs are required for each listing type, which generic standard look to use for character sheets/editorials
+2. **Artist generates all required assets** (headshot, fullshot, expressions, etc.)
+3. **Artist submits to marketplace** from the Asset Page — "Submit to Marketplace" button is only enabled when ALL required outputs have status SUCCESS
+4. **Admin reviews** in Submissions — approves or rejects (no reasons, no resubmit flow for now)
+5. **Approved assets** get `MARKETPLACE_APPROVED` status → listed on the store → visible on Artist's asset page with status tag
+6. **Client purchases** from the store → wallet deducted → `client_id` set → assets appear in Client's library
+
+### Marketplace Submission Statuses
+
+| Status | Meaning |
+|---|---|
+| `MARKETPLACE_PENDING` | Submitted by Artist, awaiting Admin review |
+| `MARKETPLACE_APPROVED` | Approved by Admin, listed on store |
+| `MARKETPLACE_REJECTED` | Rejected by Admin |
+| `MARKETPLACE_DELISTED` | Removed from store by Admin |
+
+### Listing Types
+
+**Actor Package (fixed bundle, defined in Admin Listings Settings):**
 - Headshot
 - Fullshot
 - Expression Sheet
-- Character Sheet (using generic standard look — same neutral outfit for all actors)
+- Character Sheet (using generic standard look — neutral outfit for uniformity)
 - Editorial shots (using generic standard look)
-- Generic standard look defined by Admin in system prompts
 
-**Individual Looks** — standalone, can be applied to any actor
+**Individual Looks** — standalone, can be applied to any actor for custom character sheets
 
-**Pricing:** Set by Artist/Admin in credits. Sale is one-time — buyer gets the rendered images and full ownership (`client_id` set).
+**Pricing:** Set by Admin at approval time. Sale is one-time — buyer gets rendered images and full ownership (`client_id` set).
 
 **No prompt access:** Purchased assets are final images only. Client does not receive prompt recipe, seed, or generation parameters.
 
-**What Clients can do with purchased assets:**
+### Agent Marketplace Submission
+
+Agents can submit assets to the marketplace via API only (no UI). Agent receives a brief externally, creates assets, and submits via API endpoint. Not connected to client commissions — Clients have no API access.
+
+### What Clients Can Do with Purchased Assets
+
 - Use as-is (view images)
 - Apply own Looks for additional Character Sheets and Editorial Shots
 - Commission Artists for custom work based on purchased actors
@@ -281,6 +305,9 @@ Both **in-app** and **email** for all key events:
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items)
 - Marketplace
+  - Store
+  - Submissions
+  - Listings Settings
 - Commissions
 - Settings:
   - Users & Roles (artists, clients, agents/API)
@@ -290,7 +317,6 @@ Both **in-app** and **email** for all key events:
   - Look Taxonomy (gender/age, style, season, etc.)
   - Fashion Item Taxonomy (item types, sub-types, etc.)
   - Commission Form Templates (fields, required fields, options)
-  - Marketplace Management (listings, pricing, generic standard look)
 
 ## Sharing Model
 

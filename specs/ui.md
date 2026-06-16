@@ -500,30 +500,141 @@ The storefront where Clients browse and purchase Actor Packages and Looks from t
 
 ---
 
-### 6.2 Marketplace Management (Artist/Admin)
+### 6.2 Artist Marketplace Submission
+
+On the Actor Page, Look Detail, or Fashion Item Detail page, a "Submit to Marketplace" button appears when ALL required outputs (as defined in Admin Listings Settings) have status SUCCESS.
 
 ```
 +--------------------------------------------------+
-|  Marketplace Management              [+ New Listing]|
-+--------------------------------------------------+
-|  [My Listings] [All Listings (Admin)]             |
-+--------------------------------------------------+
-|  +--------+  +--------+  +--------+              |
-|  |thumb   |  |thumb   |  |thumb   |              |
-|  |name    |  |name    |  |name    |              |
-|  |10.00cr |  |5.00cr  |  |12.00cr |              |
-|  |Active  |  |Active  |  |Sold    |              |
-|  |[Edit]  |  |[Edit]  |  |[View]  |              |
-|  +--------+  +--------+  +--------+              |
+|  [Edit Fields]  [Generate Look]  [Submit to Marketplace]  |
 +--------------------------------------------------+
 ```
 
-**New Listing flow:**
-1. Select asset from workspace library
-2. Choose listing type (Actor Package / Look)
-3. Set price
-4. For Actor Packages: system auto-generates the standard package outputs
-5. Preview the package → confirm → publish
+**Button states:**
+- **Disabled (grayed):** "Submit to Marketplace — Missing: character_sheet, editorial" (shows what's missing)
+- **Enabled:** "Submit to Marketplace" — clicking it submits immediately (no confirmation dialog, no price suggestion)
+- **After submit:** Button changes to badge: "Marketplace: Pending Review"
+- **After approval:** Badge changes to "Marketplace: Listed" with green indicator
+- **After rejection:** Badge changes to "Marketplace: Rejected"
+
+**Marketplace status badge on asset card (Library view):**
+- No badge = not submitted
+- Blue "Pending" badge = MARKETPLACE_PENDING
+- Green "Listed" badge = MARKETPLACE_APPROVED
+- Red "Rejected" badge = MARKETPLACE_REJECTED
+
+---
+
+### 6.3 Admin Marketplace
+
+Three sub-pages accessible from the Admin sidebar under "Marketplace":
+
+#### 6.3.1 Store
+
+Preview of the Client-facing e-commerce storefront. Admin can see exactly what Clients see, with additional admin controls (edit listing, delist, view sales data).
+
+```
++--------------------------------------------------+
+|  Store (Admin Preview)                           |
++--------------------------------------------------+
+|  [All] [Actor Packages] [Looks]       Search [🔍]|
++--------------------------------------------------+
+|  Sort: [Newest ▼]  Price: [Any ▼]                |
++--------------------------------------------------+
+|  +--------+  +--------+  +--------+  +--------+  |
+|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
+|  |name    |  |name    |  |name    |  |name    |  |
+|  |by Artist|  |by Artist|  |by Artist|  |by Artist|  |
+|  |10.00cr |  |5.00cr  |  |12.00cr |  |8.00cr  |  |
+|  |[Manage]|[Manage]|[Manage]|[Manage]            |
+|  +--------+  +--------+  +--------+  +--------+  |
++--------------------------------------------------+
+```
+
+Each card has a [Manage] button that opens a quick-edit panel (price, active/inactive, delist).
+
+#### 6.3.2 Submissions
+
+Review queue for Artist marketplace proposals.
+
+```
++--------------------------------------------------+
+|  Submissions                                     |
++--------------------------------------------------+
+|  [Pending (5)] [Approved (20)] [Rejected (3)]    |
++--------------------------------------------------+
+|  +----------------------------------------------+ |
+|  | 🟡 Cyberpunk Woman          Actor Package    | |
+|  |    by Jane Artist • Submitted 2h ago         | |
+|  |                                              | |
+|  |    [Preview]  [Approve]  [Reject]            | |
+|  +----------------------------------------------+ |
+|  +----------------------------------------------+ |
+|  | 🟡 Black Suit Editorial  Look                | |
+|  |    by John Artist • Submitted 5h ago         | |
+|  |                                              | |
+|  |    [Preview]  [Approve]  [Reject]            | |
+|  +----------------------------------------------+ |
++--------------------------------------------------+
+```
+
+**Preview** opens a modal showing all the asset outputs (headshot, fullshot, etc.) so Admin can review quality.
+
+**Approve** opens a price dialog:
+```
++--------------------------------------------------+
+|  Approve Listing                                 |
++--------------------------------------------------+
+|  Asset: Cyberpunk Woman                          |
+|  Type: Actor Package                             |
+|  by: Jane Artist                                 |
+|                                                  |
+|  Price (credits): [10.00]                        |
+|                                                  |
+|  [Cancel]  [Approve & List]                      |
++--------------------------------------------------+
+```
+
+**Reject** — immediate, no reason required. Sets `MARKETPLACE_REJECTED`.
+
+#### 6.3.3 Listings Settings
+
+Admin configures what constitutes a marketplace package.
+
+```
++--------------------------------------------------+
+|  Listings Settings                               |
++--------------------------------------------------+
+|  Actor Package                                   |
+|  +----------------------------------------------+ |
+|  | Required outputs:                            | |
+|  | [✓] Headshot                                | |
+|  | [✓] Fullshot                                | |
+|  | [✓] Expression Sheet                        | |
+|  | [✓] Character Sheet                         | |
+|  | [✓] Editorial Shots (count: [2])            | |
+|  |                                              | |
+|  | Generic Standard Look: [Dropdown ▼]          | |
+|  | (Used for Character Sheet & Editorials)      | |
+|  +----------------------------------------------+ |
+|                                                  |
+|  Look                                            |
+|  +----------------------------------------------+ |
+|  | Required outputs:                            | |
+|  | [✓] Look Image                              | |
+|  +----------------------------------------------+ |
+|                                                  |
+|  Fashion Item                                    |
+|  +----------------------------------------------+ |
+|  | Required outputs:                            | |
+|  | [✓] Item Image                              | |
+|  +----------------------------------------------+ |
+|                                                  |
+|  [Save Changes]                                  |
++--------------------------------------------------+
+```
+
+The **Generic Standard Look** dropdown lists all Looks in the workspace. The selected Look is used when generating Character Sheet and Editorial outputs for Actor Packages.
 
 ---
 
@@ -864,11 +975,13 @@ Filters and pagination are synced to URL search params for shareability:
 /fashion-items              → Fashion Item Library
 /fashion-items/new          → Fashion Item Creator
 /fashion-items/:id          → Fashion Item Detail
-/marketplace                → Marketplace (Client: browse/buy)
-/marketplace/:id            → Marketplace Listing Detail
-/marketplace/manage         → Marketplace Management (Artist/Admin)
-/marketplace/manage/new     → New Listing
-/commissions                → Commissions list
+/marketplace                        → Marketplace (Client: browse/buy)
+/marketplace/:id                    → Marketplace Listing Detail
+/marketplace/manage                 → Marketplace Management (Artist/Admin)
+/marketplace/manage/new             → New Listing
+/admin/marketplace/submissions      → Admin Submissions Review
+/admin/marketplace/settings         → Admin Listings Settings
+/commissions                        → Commissions list
 /commissions/new            → New Commission form
 /commissions/:id            → Commission Detail
 /settings                   → Settings

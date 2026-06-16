@@ -1363,6 +1363,201 @@ Remove a listing.
 
 ---
 
+### 14.2 Artist Marketplace Submission
+
+### POST /api/marketplace/submit
+
+Artist submits an asset for marketplace review.
+
+**Request:**
+```json
+{
+  "asset_id": "uuid"
+}
+```
+
+**Validation:**
+- Asset must belong to the Artist's workspace
+- Asset must have all required outputs (as defined in Admin Listings Settings) with status SUCCESS
+- Asset must not already have a pending or approved marketplace status
+
+**Response (201):**
+```json
+{
+  "asset_id": "uuid",
+  "marketplace_status": "MARKETPLACE_PENDING",
+  "submitted_at": "2026-06-16T10:00:00Z"
+}
+```
+
+**Error (409):** "Asset is missing required outputs for marketplace submission. Required: headshot, fullshot, expressions, character_sheet, editorial."
+**Error (409):** "Asset already has an active marketplace submission."
+
+### GET /api/marketplace/submissions
+
+List Artist's own submissions with status.
+
+**Query params:** `?status=MARKETPLACE_PENDING&page=1&pageSize=20`
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "asset_id": "uuid",
+      "asset_name": "Cyberpunk Woman",
+      "asset_type": "ACTOR",
+      "marketplace_status": "MARKETPLACE_PENDING",
+      "submitted_at": "2026-06-16T10:00:00Z"
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "totalItems": 3, "totalPages": 1 }
+}
+```
+
+---
+
+### 14.3 Admin Marketplace Review
+
+### GET /api/admin/marketplace/submissions
+
+List all submissions for Admin review.
+
+**Query params:** `?status=MARKETPLACE_PENDING&page=1&pageSize=20`
+
+**Response (200):**
+```json
+{
+  "data": [
+    {
+      "asset_id": "uuid",
+      "asset_name": "Cyberpunk Woman",
+      "asset_type": "ACTOR",
+      "creator_name": "Jane Artist",
+      "marketplace_status": "MARKETPLACE_PENDING",
+      "submitted_at": "2026-06-16T10:00:00Z",
+      "outputs": {
+        "headshot": { "status": "SUCCESS", "image_url": "https://..." },
+        "fullshot": { "status": "SUCCESS", "image_url": "https://..." },
+        "expressions": { "status": "SUCCESS", "image_url": "https://..." },
+        "character_sheet": { "status": "SUCCESS", "image_url": "https://..." },
+        "editorial": { "status": "SUCCESS", "image_url": "https://..." }
+      }
+    }
+  ],
+  "pagination": { "page": 1, "pageSize": 20, "totalItems": 5, "totalPages": 1 }
+}
+```
+
+### POST /api/admin/marketplace/submissions/:assetId/approve
+
+Admin approves a submission and creates a listing.
+
+**Request:**
+```json
+{
+  "price_credits": 10.00
+}
+```
+
+This:
+1. Sets `assets.marketplace_status = 'MARKETPLACE_APPROVED'`
+2. Creates a `marketplace_listings` record with the price
+3. Notifies the Artist
+
+**Response (200):**
+```json
+{
+  "asset_id": "uuid",
+  "marketplace_status": "MARKETPLACE_APPROVED",
+  "listing_id": "uuid",
+  "price_credits": 10.00,
+  "approved_at": "2026-06-16T10:00:00Z"
+}
+```
+
+### POST /api/admin/marketplace/submissions/:assetId/reject
+
+Admin rejects a submission.
+
+This sets `assets.marketplace_status = 'MARKETPLACE_REJECTED'`. Notifies the Artist.
+
+**Response (200):**
+```json
+{
+  "asset_id": "uuid",
+  "marketplace_status": "MARKETPLACE_REJECTED"
+}
+```
+
+---
+
+### 14.4 Agent Marketplace Submission (API only)
+
+### POST /api/agent/marketplace/submit
+
+Agent submits assets to the marketplace via API. No UI for this.
+
+**Headers:** `Authorization: Bearer <api_key>`
+
+**Request:**
+```json
+{
+  "asset_id": "uuid"
+}
+```
+
+Same validation as Artist submission. Agent must have API key access and the asset must be in the Agent's workspace.
+
+**Response (201):** Same as Artist submission.
+
+---
+
+### 14.5 Listings Settings (Admin)
+
+### GET /api/admin/marketplace/settings
+
+Get current marketplace package configuration.
+
+**Response (200):**
+```json
+{
+  "actor_package": {
+    "required_outputs": ["headshot", "fullshot", "expressions", "character_sheet", "editorial"],
+    "generic_standard_look_id": "uuid",
+    "editorial_count": 2
+  },
+  "look_package": {
+    "required_outputs": ["look_image"]
+  },
+  "fashion_item_package": {
+    "required_outputs": ["item_image"]
+  }
+}
+```
+
+### PUT /api/admin/marketplace/settings
+
+Update marketplace package configuration.
+
+**Request:**
+```json
+{
+  "actor_package": {
+    "required_outputs": ["headshot", "fullshot", "expressions", "character_sheet", "editorial"],
+    "generic_standard_look_id": "uuid",
+    "editorial_count": 3
+  }
+}
+```
+
+This defines:
+- What outputs are required for each listing type
+- Which Look to use as the generic standard look for Actor Packages
+- How many editorial shots to include
+
+---
+
 ## 15. Dashboard Endpoints
 
 ### GET /api/dashboard
