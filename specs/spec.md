@@ -1,0 +1,305 @@
+# Spec: Cast Studio v2
+
+## Objective
+
+Build a multi-tenant digital casting and wardrobe library that enables artists, external clients, and autonomous AI agents to generate, store, and track highly consistent multi-layout actor portfolios, looks, and fashion items — without custom model training.
+
+Success looks like: an Artist in a Studio Workspace can create an Actor with a full portfolio (headshot, fullshot, expressions, character sheet, editorial), create Looks and Fashion Items, and share them with Clients. A Client in their own Client Workspace can browse shared assets, create their own, submit commissions, and premium-unlock approved work. An Admin sees and manages everything across all workspaces.
+
+## Tech Stack
+
+- **Backend**: Node.js + Express, TypeScript ESM
+- **Frontend**: React + TypeScript
+- **Database**: PostgreSQL
+- **Image Generation**: fal.ai API (text_to_image, image_to_image, image_to_text models)
+- **Image Storage**: fal.ai URLs (primary) + local server backup (future: AWS S3)
+- **Auth**: Session-based for web, API keys for programmatic access
+- **Notifications**: In-app + email
+
+## Workspace Model
+
+Cast Studio uses a **two-workspace model** for tenant isolation:
+
+- **Studio Workspace** — where Artists and Admins work. Contains full creation tools, asset library, model management, system prompts.
+- **Client Workspace** — where Clients operate. Contains shared assets (filtered view), commission submission, wallet management.
+- **Admin** — workspace-agnostic. Sees and manages everything across all workspaces.
+- One Client = one Client Workspace. One Studio = one Studio Workspace.
+- Connection between workspaces: `asset_permissions` table + commission workflow.
+
+## Roles and Permissions
+
+| Role | Workspace | Capabilities |
+| :---- | :---- | :---- |
+| **Admin** | All | Manages everything: users, models, system prompts, taxonomy, commissions, sees all workspaces |
+| **Artist** | Studio | Creates assets via all tools, shares assets (private/studio-public/client-shared), executes commissions, studio compute. Can be API-enabled. |
+| **Client** | Client | Creates assets via all tools, pays per wallet credit, limited settings, cannot share. Submits commissions, premium-unlocks. |
+| **Agent** | Studio | Automated via API. Pre-flight escrow workflows, auto-refund on failure. API-enabled Artist role. |
+
+## Asset Types
+
+Three independent asset types, plus one composition:
+
+1. **Actor** — identity/character (created via Actor Designer)
+2. **Look** — clothing/styling (created via Look Designer)
+3. **Fashion Item** — individual clothing/accessory piece (created via Fashion Item Creator)
+4. **Character Sheet** (composition) = Actor + Look
+
+### Actor Designer Flow
+
+1. **Create Actor identity** via 4 entry options:
+   - Structured form (dropdowns/sliders for admin-defined properties)
+   - Reference photo (vision model builds identity)
+   - Raw text prompt (unrestricted, ChatGPT-style)
+   - Randomize (grid of random base identities, select one to refine)
+
+2. **Iterate headshot** (anchor image) — generate multiple options, select one
+3. **Iterate fullshot** — depends on headshot being locked
+4. **Iterate expressions** — depends on fullshot being locked
+5. **Generate remaining assets** — character sheet, looks, editorial shots (regenerate or create new)
+6. **Name character + fill admin-defined fields** → save to database
+7. **Actor page opens** — shows all features, all asset types with generate/regenerate buttons
+
+**Dependency chain:** Headshot > Fullshot > Expressions > Character Sheet / Looks / Editorial
+- Editing/regenerating an upstream asset invalidates all downstream assets
+- Obsolete assets show an explanatory banner with inline regenerate button
+- Only headshot, fullshot, expressions are **editable**. Others are regenerate-only or create-new.
+
+### Look Designer Flow
+
+Three input options:
+1. **Generate from prompt** — type a description
+2. **Extract from reference image** — vision model identifies clothing pieces, user selects which to include
+3. **Compose from Fashion Item library** — select existing Fashion Items, system renders them together
+
+All three converge: multiple options generated → user selects one → auto-name generated → user can edit name → save as Look.
+
+Output: single image per Look (system prompt controls layout, angle, background).
+
+### Fashion Item Creator Flow
+
+1. Generate from prompt OR extract from reference image
+2. Multiple options generated → user selects one → auto-name → edit name → save
+
+Output: single image per Fashion Item (system prompt controls product-shot layout).
+
+### Character Sheet
+
+- Created on the Actor page by selecting a Look from the library
+- Composes Actor identity + Look into a single output
+- Stored as an asset_output linked to the Actor
+
+## Asset Libraries
+
+All libraries follow an e-commerce pattern: grid of cards (image + name + tags) + rich sidebar filters.
+
+### Actor Library
+- Cards: headshot thumbnail + name + tags
+- Filters: admin-defined actor properties (age, gender, ethnicity, etc.), creator, date, tags
+- "Shared with Me" filter tag (for Client workspace)
+
+### Look Library
+- Cards: look image + name + tags
+- Filters: gender/age (men/women/boys/girls), style, season, color palette, occasion, creator, date
+- "Shared with Me" filter tag
+
+### Fashion Item Library
+- Cards: item image + name + tags
+- Filters: gender/age, item type (clothing/shoes/accessories), sub-type (jackets/shirts/pants/etc.), style, color, season, creator, date
+- "Shared with Me" filter tag
+
+**All taxonomy is admin-managed** — add/remove categories, types, filter options, properties.
+
+## Actor Page Layout
+
+- **Top**: Actor name + headshot (side by side)
+- **Actions**: "Edit Fields" + "Generate Look" (primary action)
+- **Middle**: Grouped sections per asset type — each section shows generated images with clearly separated generate/regenerate/create-new buttons
+- **Obsolete assets**: explanatory banner — "This asset is based on a previous version of the [Headshot/Fullshot]. Regenerate to update." — with inline Regenerate button
+- **Bottom**: Character Sheet section with Look selector from library
+
+## Commission Workflow
+
+A formal workflow connecting Client Workspace → Studio Workspace:
+
+1. **Client** fills commission request form (admin-defined fields) in Client Workspace
+2. **Admin** receives request, assigns to Artist (or Agent) in Studio Workspace
+3. **Artist/Agent** executes based on the brief
+4. **Work submitted** for client review
+5. **Client** approves or requests changes
+6. **Approved** → premium unlock confirmation dialog → deduct credits from wallet → set `client_id` on asset → asset transferred to Client
+
+### Commission Statuses
+
+```
+Requested → Assigned → In Progress → Submitted → Changes Requested → Approved → Cancelled
+```
+
+### Sidebar (all roles)
+
+- **Client**: Commissions page showing submitted commissions with status
+- **Artist**: Commissions page showing assigned commissions with status
+- **Admin**: Commissions page showing all commissions, with ability to assign to Artists/Agents
+
+## Model Management (fal.ai)
+
+- Admin connects fal.ai API key
+- System fetches available models from fal.ai API
+- Models categorized by type: `text_to_image`, `image_to_image`, `image_to_text` (vision)
+- Admin selects which models are available per task
+- fal.ai API returns parameter schema → UI renders dynamic configuration form
+- Admin configures parameters (image size, outputs, quality, etc.)
+
+### Model Permissions
+
+| Role | Model Access |
+| :---- | :---- |
+| **Admin** | Picks models + configures all parameters |
+| **Artist** | Chooses from admin-approved models + adjusts settings within admin-defined ranges |
+| **Client** | Adjusts settings only — no model choice |
+
+## API Key Management
+
+- Available only to **Admin** and **API-enabled Artists**
+- Admin marks an Artist as "API able" → auto-generates first API key
+- Artists can create **multiple API keys** in Settings → API Keys
+- Each key tracks cost usage independently (credits consumed, generations run)
+- API keys are workspace-scoped, draw from **studio compute** (not wallet)
+- **Clients never get API keys**
+
+## System Prompts
+
+Admin manages system prompt templates for every generation step:
+- Actor generation (headshot, fullshot, expressions, character sheet, editorial)
+- Look generation
+- Fashion Item generation
+- Reference extraction (vision model prompt for identifying clothing pieces)
+- Character Sheet composition (actor + look combined prompt)
+
+Each prompt template defines: shot type, background, pose, lighting, style. Artists and Clients fill in variables (actor description, clothing details) but the Admin controls the structure.
+
+## Image Storage
+
+- **Primary**: fal.ai URLs stored in `asset_outputs.image_url`
+- **Backup**: async download to local server on every successful generation
+- **Future**: migrate to AWS S3 — storage is abstracted behind an interface for swappable backends
+
+## Notifications
+
+Both **in-app** and **email** for all key events:
+
+| Role | Notification Events |
+| :---- | :---- |
+| **Artist** | Commission assigned, commission approved, changes requested |
+| **Client** | Work submitted for review, commission status change |
+| **Admin** | New commission request, assignment needed |
+
+## Generation UX
+
+- **Async across all pages** — user hits generate, navigates freely, gets notified when done
+- `asset_output` starts as `PENDING` → system polls fal.ai → updates to `SUCCESS` or `FAILED`
+- **FAILED state**: red indicator on asset card + error message + Retry button
+- Failed generations **still cost credits** (pay-per-click model — spec says clients absorb cost of bad rolls)
+
+## Premium Unlock Flow
+
+- Client reviews submitted work → clicks "Approve"
+- Confirmation dialog shows premium cost
+- Client confirms → credits deducted from wallet → `client_id` set on asset → asset appears in Client's library as owned
+- If insufficient wallet balance → prompted to top up first
+
+## Dashboards
+
+| Role | Content |
+| :---- | :---- |
+| **Artist** | Quick actions (New Actor, New Look, New Fashion Item) + recent activity (capped) |
+| **Client** | Quick actions + recent activity (capped) + wallet balance |
+| **Admin** | Overview + recent activity across workspace + workspace stats |
+
+## Sidebar Navigation
+
+### Artist
+- Dashboard
+- Tools (Actor Designer | Look Designer | Fashion Item Creator)
+- Library (Actors | Looks | Fashion Items)
+- Commissions
+- Settings (profile, API keys if API-enabled)
+
+### Client
+- Dashboard
+- Tools (Actor Designer | Look Designer | Fashion Item Creator)
+- Library (Actors | Looks | Fashion Items — each with "Shared with Me" filter)
+- Commissions
+- Settings (profile, wallet/top-up)
+
+### Admin
+- Dashboard
+- Tools (Actor Designer | Look Designer | Fashion Item Creator)
+- Library (Actors | Looks | Fashion Items)
+- Commissions
+- Settings:
+  - Users & Roles (artists, clients, agents/API)
+  - Models (fal.ai integration, model selection per task)
+  - System Prompts (templates for each generation step)
+  - Actor Properties (feature taxonomy — add/remove fields)
+  - Look Taxonomy (gender/age, style, season, etc.)
+  - Fashion Item Taxonomy (item types, sub-types, etc.)
+  - Commission Form Templates (fields, required fields, options)
+
+## Sharing Model
+
+For Artist-created assets only:
+
+| Visibility | Who Can See |
+| :---- | :---- |
+| **Private** | Creating Artist + Admins |
+| **Studio Public** | All Artists in the same Studio Workspace + Admins |
+| **Client Shared** | Specific Client (via Client Workspace) + Admins |
+
+Managed via `asset_permissions` table. Revocation is instant (hard cutoff — `revoked_at` set, access terminated immediately).
+
+## Billing
+
+| API Key Type | Billing Source |
+| :---- | :---- |
+| **Studio Key** | Studio compute (Artist) |
+| **Client Key** | Client wallet (Client) |
+| **Agent** | Pre-flight escrow — max estimated cost locked before execution, auto-refund on failure |
+
+## Database Schema
+
+See `draft_api.md` for the full database schema with all tables, columns, types, constraints, indexes, and ER diagram.
+
+## Boundaries
+
+- **Always do:** Run tests before commits, follow naming conventions, validate inputs, filter all queries by workspace_id
+- **Ask first:** Database schema changes, adding dependencies, changing system prompts, modifying taxonomy
+- **Never do:** Commit secrets, edit vendor directories, remove failing tests without approval, modify Hermes own files
+
+## Out of Scope
+
+- Automated quality telemetry filters (clients/agents absorb cost of bad rolls)
+- Soft-lock data archiving (hard cutoff on revocation)
+- Custom model training / LoRA pipelines
+- Data export (Day One)
+- Public self-registration (accounts created by Admin or invited)
+
+## Open Questions
+
+- **Image storage migration path**: When to move from fal.ai + local backup to AWS S3
+- **Inference provider beyond fal.ai**: Whether to support multiple providers (Replicate, etc.) in the future
+- **Webhook reliability**: How to handle external payment/top-up failures mid-agent-loop
+- **Multiple workspaces per user**: Currently one Client = one workspace; may need to support freelance artists working across studios
+
+## Success Criteria
+
+- [ ] Artist can create a full Actor portfolio (headshot → fullshot → expressions → character sheet → editorial)
+- [ ] Artist can create Looks via prompt, reference extraction, or Fashion Item composition
+- [ ] Artist can create Fashion Items via prompt or reference extraction
+- [ ] Client can browse shared assets, create their own, and submit commissions
+- [ ] Commission workflow functions end-to-end: request → assign → execute → review → approve → unlock
+- [ ] Admin can manage models, system prompts, taxonomy, users, and commissions
+- [ ] API-enabled Artists can generate and use multiple API keys with cost tracking
+- [ ] Dependency chain works: editing headshot invalidates downstream assets with clear UI indication
+- [ ] Obsolete assets show explanatory banner with inline regenerate
+- [ ] Notifications fire in-app and via email for all key events
+- [ ] Workspace isolation is complete: Studio and Client workspaces cannot see each other's data except via sharing
