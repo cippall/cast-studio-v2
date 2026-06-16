@@ -120,6 +120,45 @@ Load with: `skill_view(name="agent-skills-code-review-and-quality")`
 4. Commit after each task step with conventional commit messages
 5. Never edit files outside your domain (backend-dev ≠ frontend-dev)
 6. Run `npm run typecheck` and `npm run test` before committing
+7. **Max 200 lines per file.** If a file exceeds 200 lines, split it into smaller modules with clear responsibilities. No exceptions for "it's all related."
+8. **Max 50 lines per function.** If a function exceeds 50 lines, extract helper functions. Each function should do one thing.
+
+## Naming Conventions
+
+Follow these conventions consistently. Load `agent-skills-code-simplification` and `agent-skills-code-review-and-quality` for detailed guidance.
+
+### General
+- **No generic names:** `data`, `result`, `temp`, `val`, `item` — always describe the content (`userProfile`, `validationErrors`, `pendingJobs`)
+- **No abbreviations:** `usr`, `cfg`, `btn`, `evt` — use full words unless the abbreviation is universal (`id`, `url`, `api`)
+- **Names must match behavior:** A function named `get` that also mutates state must be renamed to reflect what it actually does
+
+### TypeScript / JavaScript
+- **Variables, functions, parameters:** `camelCase`
+- **Types, interfaces, classes, enums:** `PascalCase`
+- **Constants:** `UPPER_SNAKE_CASE` for true constants; `camelCase` for module-level `const` values
+- **React components:** `PascalCase` (both the component name and the file name)
+- **React hooks:** `use` prefix + descriptive name (`useAuth`, `useGeneration`)
+- **Files:** `camelCase.ts` for utilities/services, `PascalCase.tsx` for components
+- **API fields:** `camelCase` (per API spec convention)
+- **Enum values:** `UPPER_SNAKE_CASE` (per database schema convention: `MARKETPLACE_PENDING`, `ASSET_TYPE_ACTOR`)
+
+### Database
+- **Tables:** plural, `snake_case` (`asset_outputs`, `marketplace_listings`)
+- **Columns:** `snake_case` (`workspace_id`, `deleted_at`, `client_id`)
+- **Enum types:** `UPPER_SNAKE_CASE` values (`PENDING`, `SUCCESS`, `FAILED`)
+- **Foreign keys:** `<table>_id` (`account_id`, `asset_id`, `workspace_id`)
+- **Indexes:** `idx_<table>_<column>` or let PostgreSQL auto-name
+
+### API
+- **Endpoints:** plural nouns (`/api/actors`, `/api/looks`)
+- **Route params:** `:id` (UUID)
+- **Query params:** `camelCase` (`page`, `pageSize`, `sortBy`, `sortOrder`, `sharedWithMe`)
+- **Request/response body fields:** `camelCase`
+- **Error codes:** `UPPER_SNAKE_CASE` (`VALIDATION_ERROR`, `NOT_FOUND`)
+
+### CSS / Tailwind
+- **Custom class names:** `kebab-case` (if not using utility-only approach)
+- **CSS custom properties:** `--kebab-case` (`--color-primary`, `--spacing-unit`)
 
 ## Directory Structure
 
