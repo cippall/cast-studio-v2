@@ -114,9 +114,12 @@ The zero-duplication table that stores prompt recipes and handles visibility bri
 | is_marketplace_frozen | BOOLEAN | Not Null, Default FALSE | TRUE when marketplace_status = 'APPROVED' — locks editing/regenerating/deleting |
 | source_asset_id | UUID | Foreign Key -> assets.id, Nullable | Points to parent asset (for duplicates and purchases) |
 | source_type | VARCHAR | Not Null, Default 'ORIGINAL' | 'ORIGINAL', 'MARKETPLACE_PURCHASE', 'COMMISSION', 'DUPLICATE' |
+| deleted_at | TIMESTAMP | Nullable | Soft delete timestamp (NULL = active) |
 | created_at | TIMESTAMP | Default NOW() | Standard timestamp tracking. |
 
-**Indexes:** `workspace_id`, `creator_id`, `client_id`, `asset_type`.
+**Indexes:** `workspace_id`, `creator_id`, `client_id`, `asset_type`, `deleted_at`.
+
+**Soft delete:** Assets are never hard-deleted. `deleted_at` is set on deletion. All queries filter `deleted_at IS NULL`. Only Admin can hard-delete (permanent removal).
 
 **Note on visibility:** Visibility is managed via the `asset_permissions` table, not a column on this table.
 
@@ -156,16 +159,48 @@ Stores the generated images for each asset. Tracks model used, cost charged, and
 | local_backup_url | VARCHAR | Nullable | Local server backup URL. |
 | cost_credits | DECIMAL(12,4) | Not Null, Default 0.00 | The credit cost charged for this specific output. |
 | status | VARCHAR | Not Null, Default 'PENDING' | 'PENDING', 'SUCCESS', 'FAILED' |
+| version | INTEGER | Not Null, Default 1 | Version number, incremented on each regeneration |
 | is_obsolete | BOOLEAN | Not Null, Default FALSE | TRUE when upstream asset was edited/regenerated. |
 | obsolete_reason | VARCHAR | Nullable | e.g., "Headshot was regenerated. Regenerate to update." |
 | error_message | TEXT | Nullable | Error details if status = 'FAILED'. |
+| generation_params | JSONB | Nullable | Full API call parameters (model, seed, resolution, steps, guidance, etc.) |
+| reference_images | JSONB | Nullable | Array of {image_url, type} for uploaded reference images used as input |
+| source_asset_outputs | JSONB | Nullable | Array of {asset_id, asset_output_id, layout_type} for existing assets used as input |
 | created_at | TIMESTAMP | Default NOW() | Standard timestamp tracking. |
 
-**Indexes:** `asset_id`, `status`, `(asset_id, status)`, `is_obsolete`.
+**Indexes:** `asset_id`, `status`, `(asset_id, status)`, `is_obsolete`, `version`.
+
+**Versioning:** When an output is regenerated, the old row is moved to `asset_output_versions` and the current row is updated with new values and `version + 1`. This keeps the main table lean with only current versions.
+
+**Reproducibility:** `generation_params` stores everything needed to reproduce the image (model, seed, resolution, steps, guidance, etc.). `reference_images` stores uploaded input images. `source_asset_outputs` links to existing assets used as input (e.g., character sheet uses headshot + look outputs).
 
 ---
 
-## 9. workflows (The Agent Telemetry)
+## 9. asset_output_versions
+
+Archive of previous versions of asset outputs. When an output is regenerated, the old row is moved here before the current row is updated.
+
+| Column | Type | Constraints / Relations | Description |
+| :---- | :---- | :---- | :---- |
+| id | UUID | Primary Key | Unique identifier. |
+| asset_output_id | UUID | Not Null | The ID of the current asset_output this version belongs to. |
+| version | INTEGER | Not Null | The version number (1, 2, 3, etc.) |
+| image_url | VARCHAR | Nullable | The image URL at this version. |
+| local_backup_url | VARCHAR | Nullable | Local backup URL at this version. |
+| model | VARCHAR(100) | Not Null | The inference model used. |
+| cost_credits | DECIMAL(12,4) | Not Null | The credit cost charged. |
+| status | VARCHAR | Not Null | 'SUCCESS', 'FAILED' |
+| generation_params | JSONB | Nullable | Full API call parameters at this version. |
+| reference_images | JSONB | Nullable | Reference images used at this version. |
+| source_asset_outputs | JSONB | Nullable | Source asset outputs used at this version. |
+| error_message | TEXT | Nullable | Error details if status = 'FAILED'. |
+| created_at | TIMESTAMP | Default NOW() | When this version was archived. |
+
+**Indexes:** `asset_output_id`, `version`, `(asset_output_id, version)`.
+
+---
+
+## 11. workflows (The Agent Telemetry)
 
 Tracks autonomous loops, handles the Pre-Flight Escrow budget, and logs structured errors.
 
@@ -187,7 +222,7 @@ Tracks autonomous loops, handles the Pre-Flight Escrow budget, and logs structur
 
 ---
 
-## 10. commissions
+## 11. commissions
 
 Tracks commission requests from Client Workspace to Studio Workspace.
 
@@ -210,7 +245,7 @@ Tracks commission requests from Client Workspace to Studio Workspace.
 
 ---
 
-## 11. commission_assets
+## 12. commission_assets
 
 Links generated assets to a commission (the work submitted for review).
 
@@ -226,7 +261,7 @@ Links generated assets to a commission (the work submitted for review).
 
 ---
 
-## 12. notifications
+## 13. notifications
 
 In-app notifications for all key events.
 
@@ -244,7 +279,7 @@ In-app notifications for all key events.
 
 ---
 
-## 13. models
+## 14. models
 
 Admin-configured fal.ai models available for generation tasks.
 
@@ -263,7 +298,7 @@ Admin-configured fal.ai models available for generation tasks.
 
 ---
 
-## 14. taxonomy
+## 15. taxonomy
 
 Admin-managed taxonomy for all configurable categories and properties.
 
@@ -285,7 +320,7 @@ Admin-managed taxonomy for all configurable categories and properties.
 
 ---
 
-## 15. marketplace_listings
+## 16. marketplace_listings
 
 Assets listed for sale on the Studio marketplace. Only Studio Workspace assets can be listed.
 
@@ -319,6 +354,8 @@ workspaces
   |     +-- assets (creator_id, client_id, workspace_id)
   |     |     |
   |     |     +-- asset_outputs (asset_id)
+  |     |     |     |
+  |     |     |     +-- asset_output_versions (asset_output_id)
   |     |     |
   |     |     +-- asset_permissions (asset_id, grantee_id)
   |     |

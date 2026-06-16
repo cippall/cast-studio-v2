@@ -470,7 +470,7 @@ Generation is async. The client polls or waits for notification.
 
 #### POST /api/actors/:id/regenerate
 
-Regenerate a specific layout (marks old outputs as obsolete).
+Regenerate a specific layout (replaces old output, increments version).
 
 **Request:**
 ```json
@@ -482,9 +482,10 @@ Regenerate a specific layout (marks old outputs as obsolete).
 ```
 
 This:
-1. Marks all existing non-obsolete outputs of this layout_type as `is_obsolete: true`
+1. Moves current asset_output row(s) for this layout_type to `asset_output_versions` (archive)
 2. Marks all downstream outputs as obsolete with reason
-3. Creates new PENDING outputs
+3. Creates new PENDING asset_output row(s) with `version = old_version + 1`
+4. Stores `generation_params`, `reference_images`, and `source_asset_outputs` on the new row
 
 **Response (202):** Same as generate.
 
@@ -1644,6 +1645,49 @@ Returns dashboard data for the authenticated role.
   "recent_activity": [ ... ],
   "commissions": [
     { "id": "uuid", "title": "Need cyberpunk actor", "status": "REQUESTED", "client_name": "Brand Client" }
+  ]
+}
+```
+
+---
+
+## 16. Asset Version History
+
+### GET /api/assets/:id/outputs/:outputId/versions
+
+Get version history for a specific asset output.
+
+**Response (200):**
+```json
+{
+  "current": {
+    "id": "uuid",
+    "version": 3,
+    "image_url": "https://fal.ai/...",
+    "model": "flux-pro",
+    "status": "SUCCESS",
+    "generation_params": { "seed": 12345, "resolution": "1024x1024", "steps": 30 },
+    "reference_images": [],
+    "source_asset_outputs": [],
+    "created_at": "2026-06-16T10:00:00Z"
+  },
+  "versions": [
+    {
+      "version": 2,
+      "image_url": "https://fal.ai/...",
+      "model": "flux-pro",
+      "status": "SUCCESS",
+      "generation_params": { "seed": 12345, "resolution": "1024x1024", "steps": 30 },
+      "archived_at": "2026-06-15T10:00:00Z"
+    },
+    {
+      "version": 1,
+      "image_url": "https://fal.ai/...",
+      "model": "flux-pro",
+      "status": "SUCCESS",
+      "generation_params": { "seed": 12345, "resolution": "1024x1024", "steps": 25 },
+      "archived_at": "2026-06-14T10:00:00Z"
+    }
   ]
 }
 ```
