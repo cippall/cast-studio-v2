@@ -596,6 +596,27 @@ describe('DELETE /api/looks/:id', () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
 
+    // findAssetById (client_id check)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: LOOK_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: artist.id,
+          client_id: null,
+          asset_type: 'LOOK',
+          name: 'Test Look',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'ORIGINAL',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // softDeleteAsset returns a row (success)
     mockQuery.mockResolvedValueOnce({ rows: [{ id: LOOK_UUID }] } as any);
 
@@ -604,7 +625,7 @@ describe('DELETE /api/looks/:id', () => {
     expect(res.body).toEqual({ message: 'Look deleted successfully' });
 
     // Verify soft-delete SQL was used
-    const deleteCall = mockQuery.mock.calls[2];
+    const deleteCall = mockQuery.mock.calls[3];
     expect(deleteCall[0]).toContain('SET deleted_at = NOW()');
     expect(deleteCall[0]).toContain('assets');
   });

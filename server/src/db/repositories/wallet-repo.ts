@@ -1,4 +1,4 @@
-import { query } from '../db/pool.js';
+import { query } from '../pool.js';
 import type { AccountRow } from '../middleware/requireSession.js';
 import { StripeWebhookNotFoundError } from '../errors/stripe-error.js';
 

@@ -159,7 +159,17 @@ router.patch('/:id', requireSession, requireWorkspace, async (req: Request, res:
     }
 
     res.json(item);
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'statusCode' in err) {
+      const statusCode = (err as Error & { statusCode: number }).statusCode;
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR',
+          message: err.message,
+        },
+      });
+      return;
+    }
     console.error('Update fashion item error:', err);
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to update fashion item' },
@@ -186,7 +196,17 @@ router.delete('/:id', requireSession, requireWorkspace, async (req: Request, res
     }
 
     res.json({ message: 'Fashion item deleted successfully' });
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'statusCode' in err) {
+      const statusCode = (err as Error & { statusCode: number }).statusCode;
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR',
+          message: err.message,
+        },
+      });
+      return;
+    }
     console.error('Delete fashion item error:', err);
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to delete fashion item' },

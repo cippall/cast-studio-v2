@@ -5,6 +5,7 @@ import {
   updateAsset,
   softDeleteAsset,
   getAssetOutputs,
+  isClientOwnedBlocked,
 } from '../db/repositories/asset-repo.js';
 import type { AssetRow, AssetOutputRow } from '../db/repositories/asset-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -214,6 +215,11 @@ export async function updateActor(
     return null;
   }
 
+  // Client-owned assets cannot be edited by artists
+  if (isClientOwnedBlocked(current, account.role, adminBypass)) {
+    throw Object.assign(new Error('Cannot edit a client-owned asset'), { statusCode: 403 });
+  }
+
   const updatePayload: {
     name?: string | null;
     prompt_recipe?: Record<string, unknown>;
@@ -250,5 +256,15 @@ export async function deleteActor(
   account: AccountRow,
   adminBypass = false,
 ): Promise<boolean> {
+  const asset = await findAssetById(id, account.workspace_id, adminBypass);
+
+  if (!asset || asset.asset_type !== 'ACTOR') {
+    return false;
+  }
+
+  if (isClientOwnedBlocked(asset, account.role, adminBypass)) {
+    throw Object.assign(new Error('Cannot delete a client-owned asset'), { statusCode: 403 });
+  }
+
   return softDeleteAsset(id, account.workspace_id, adminBypass);
 }

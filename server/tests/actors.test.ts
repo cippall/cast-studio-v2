@@ -623,6 +623,27 @@ describe('DELETE /api/actors/:id', () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
 
+    // findAssetById (client_id check)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ACTOR_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: artist.id,
+          client_id: null,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'ORIGINAL',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // softDeleteAsset returns the deleted id
     mockQuery.mockResolvedValueOnce({ rows: [{ id: ACTOR_UUID }] } as any);
 
@@ -631,7 +652,7 @@ describe('DELETE /api/actors/:id', () => {
     expect(res.body.message).toBe('Actor deleted successfully');
 
     // Verify the soft delete SQL
-    const deleteCall = mockQuery.mock.calls[2] as [string, unknown[]];
+    const deleteCall = mockQuery.mock.calls[3] as [string, unknown[]];
     expect(deleteCall[0]).toContain('UPDATE assets');
     expect(deleteCall[0]).toContain('deleted_at = NOW()');
     expect(deleteCall[1]).toContain(ACTOR_UUID);
@@ -642,13 +663,35 @@ describe('DELETE /api/actors/:id', () => {
     const admin = makeAdminRow();
     seedRequireSessionQueries(admin);
 
+    // findAssetById (client_id check)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ACTOR_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: 'some-creator',
+          client_id: null,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'ORIGINAL',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // softDeleteAsset
     mockQuery.mockResolvedValueOnce({ rows: [{ id: ACTOR_UUID }] } as any);
 
     const res = await request(createRouteApp(admin)).delete(`/api/actors/${ACTOR_UUID}`);
     expect(res.status).toBe(200);
 
     // Admin bypass: no workspace_id in the WHERE clause
-    const deleteCall = mockQuery.mock.calls[2] as [string, unknown[]];
+    const deleteCall = mockQuery.mock.calls[3] as [string, unknown[]];
     expect(deleteCall[0]).not.toContain('workspace_id');
   });
 });

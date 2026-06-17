@@ -163,7 +163,17 @@ router.patch('/:id', requireSession, requireWorkspace, async (req: Request, res:
     }
 
     res.json(look);
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'statusCode' in err) {
+      const statusCode = (err as Error & { statusCode: number }).statusCode;
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR',
+          message: err.message,
+        },
+      });
+      return;
+    }
     console.error('Update look error:', err);
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to update look' },
@@ -186,7 +196,17 @@ router.delete('/:id', requireSession, requireWorkspace, async (req: Request, res
     }
 
     res.json({ message: 'Look deleted successfully' });
-  } catch (err) {
+  } catch (err: unknown) {
+    if (err instanceof Error && 'statusCode' in err) {
+      const statusCode = (err as Error & { statusCode: number }).statusCode;
+      res.status(statusCode).json({
+        error: {
+          code: statusCode === 403 ? 'FORBIDDEN' : 'INTERNAL_ERROR',
+          message: err.message,
+        },
+      });
+      return;
+    }
     console.error('Delete look error:', err);
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to delete look' },

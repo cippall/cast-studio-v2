@@ -485,13 +485,35 @@ describe('DELETE /api/fashion-items/:id', () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
 
+    // findAssetById (client_id check)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ITEM_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: artist.id,
+          client_id: null,
+          asset_type: 'FASHION_ITEM',
+          name: 'Test Item',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'ORIGINAL',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // softDeleteAsset
     mockQuery.mockResolvedValueOnce({ rows: [{ id: ITEM_UUID }] } as any);
 
     const res = await request(createRouteApp(artist)).delete(`/api/fashion-items/${ITEM_UUID}`);
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ message: 'Fashion item deleted successfully' });
 
-    const deleteCall = mockQuery.mock.calls[2];
+    const deleteCall = mockQuery.mock.calls[3];
     expect(deleteCall[0]).toContain('SET deleted_at = NOW()');
     expect(deleteCall[0]).toContain('assets');
   });

@@ -10,6 +10,7 @@ import {
   getCommissionAssets,
   linkAssetToCommission,
 } from '../db/repositories/commission-asset-repo.js';
+import { setAssetOwnership } from '../db/repositories/asset-repo.js';
 import type { CommissionAssetRow } from '../db/repositories/commission-asset-repo.js';
 import type { CommissionRow } from '../db/repositories/commission-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -19,6 +20,7 @@ import {
   findTransition,
   validateTransition,
 } from './commission-state-machine.js';
+import * as walletRepo from '../db/repositories/wallet-repo.js';
 
 // --- Types ---
 
@@ -27,6 +29,19 @@ export interface CommissionDetail extends CommissionRow {
 }
 
 export { InvalidTransitionError, PermissionDeniedError };
+
+// --- Errors ---
+
+export class InsufficientCreditsError extends Error {
+  constructor(
+    public currentBalance: number,
+    public required: number,
+  ) {
+    super(`Insufficient credits. Your balance: ${currentBalance}. Required: ${required}.`);
+    this.name = 'InsufficientCreditsError';
+    Object.assign(this, { statusCode: 402 });
+  }
+}
 
 // --- Create ---
 
@@ -188,6 +203,12 @@ export async function transitionCommissionStatus(
       updateFields.submitted_at = new Date().toISOString();
     }
   }
+
+  // Premium unlock: deduct wallet + transfer asset ownership
+  if (toStatus === 'APPROVED') {
+    await unlockCommissionPremium(commission, id);
+  }
+
   const updated = await updateCommissionStatus(id, toStatus, updateFields as any);
   if (!updated) {
     throw new Error('Failed to update commission status');
@@ -200,4 +221,43 @@ export async function transitionCommissionStatus(
   }
   const assets = await getCommissionAssets(id);
   return { ...updated, assets };
+}
+
+/**
+ * Deduct premium cost from client wallet and transfer asset ownership.
+ * Throws InsufficientCreditsError if balance is too low.
+ */
+async function unlockCommissionPremium(
+  commission: CommissionRow,
+  commissionId: string,
+): Promise<void> {
+  const premiumCost = commission.premium_cost ?? 0;
+  if (premiumCost <= 0) return;
+
+  const wallet = await walletRepo.findWallet({
+    workspaceId: commission.client_workspace_id,
+    accountId: commission.client_id,
+  });
+  if (!wallet) {
+    throw new InsufficientCreditsError(0, premiumCost);
+  }
+
+  const balance = Number.parseFloat(String(wallet.balance_credits));
+  if (balance < premiumCost) {
+    throw new InsufficientCreditsError(balance, premiumCost);
+  }
+
+  const newBalance = Number((balance - premiumCost).toFixed(4));
+  await walletRepo.updateWalletBalance(wallet.id, newBalance);
+  await walletRepo.createLedgerEntry({
+    workspaceId: commission.client_workspace_id,
+    walletId: wallet.id,
+    amount: Number((-premiumCost).toFixed(4)),
+    type: 'CHARGE',
+  });
+
+  const linkedAssets = await getCommissionAssets(commissionId);
+  for (const link of linkedAssets) {
+    await setAssetOwnership(link.asset_id, commission.client_id, 'COMMISSION');
+  }
 }

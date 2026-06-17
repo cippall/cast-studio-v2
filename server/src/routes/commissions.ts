@@ -186,6 +186,10 @@ router.patch(
         res.status(403).json({ error: { code: 'FORBIDDEN', message: err.message } });
         return;
       }
+      if (err instanceof commissionService.InsufficientCreditsError) {
+        res.status(402).json({ error: { code: 'INSUFFICIENT_CREDITS', message: err.message } });
+        return;
+      }
       if (err instanceof Error && err.message === 'Commission not found') {
         res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Commission not found' } });
         return;

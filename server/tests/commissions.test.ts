@@ -658,7 +658,71 @@ describe('PATCH /api/commissions/:id/status', () => {
       approved_at: '2026-06-17T13:00:00.000Z',
     });
     mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
+    // Wallet lookup (findWallet)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 10.0,
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Wallet balance update
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 5.0,
+          updated_at: '2026-06-17T13:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Ledger entry creation
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'l-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          wallet_id: 'w-00000000-0000-4000-8000-000000000001',
+          workflow_id: null,
+          api_key_id: null,
+          amount: -5.0,
+          type: 'CHARGE',
+          created_at: '2026-06-17T13:00:00.000Z',
+        },
+      ],
+    } as any);
+    // getCommissionAssets (for ownership transfer)
+    mockQuery.mockResolvedValueOnce({ rows: [makeCommissionAssetRow()] } as any);
+    // setAssetOwnership
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ASSET_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: ARTIST_UUID,
+          client_id: CLIENT_UUID,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'COMMISSION',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Update commission status
     mockQuery.mockResolvedValueOnce({ rows: [updated] } as any);
+    // getCommissionAssets (for response)
     mockGetCommissionAssets();
 
     const res = await request(createRouteApp(client))
@@ -667,6 +731,54 @@ describe('PATCH /api/commissions/:id/status', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('APPROVED');
     expect(res.body.approved_at).toBeTruthy();
+  });
+
+  it('returns 402 when client has insufficient balance to approve', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+    const commission = makeCommissionRow({
+      status: 'SUBMITTED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
+    // Wallet lookup — balance too low
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 2.0,
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(client))
+      .patch(`/api/commissions/${COMMISSION_UUID}/status`)
+      .send({ status: 'APPROVED' });
+    expect(res.status).toBe(402);
+    expect(res.body.error.code).toBe('INSUFFICIENT_CREDITS');
+  });
+
+  it('returns 402 when client has no wallet to approve', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+    const commission = makeCommissionRow({
+      status: 'SUBMITTED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
+    // Wallet lookup — no wallet found
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createRouteApp(client))
+      .patch(`/api/commissions/${COMMISSION_UUID}/status`)
+      .send({ status: 'APPROVED' });
+    expect(res.status).toBe(402);
+    expect(res.body.error.code).toBe('INSUFFICIENT_CREDITS');
   });
 
   it('returns 403 when non-client tries to approve a commission they do not own', async () => {
@@ -880,6 +992,69 @@ describe('Full commission flow', () => {
     mockQuery.mockResolvedValueOnce({
       rows: [makeCommissionRow({ status: 'SUBMITTED', client_id: CLIENT_UUID, premium_cost: 5.0 })],
     } as any);
+    // Wallet lookup (findWallet)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 10.0,
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Wallet balance update
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 5.0,
+          updated_at: '2026-06-17T14:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Ledger entry creation
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'l-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          wallet_id: 'w-00000000-0000-4000-8000-000000000001',
+          workflow_id: null,
+          api_key_id: null,
+          amount: -5.0,
+          type: 'CHARGE',
+          created_at: '2026-06-17T14:00:00.000Z',
+        },
+      ],
+    } as any);
+    // getCommissionAssets (for ownership transfer)
+    mockQuery.mockResolvedValueOnce({ rows: [makeCommissionAssetRow()] } as any);
+    // setAssetOwnership
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ASSET_UUID,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: ARTIST_UUID,
+          client_id: CLIENT_UUID,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          seed: 12345,
+          prompt_recipe: {},
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          source_asset_id: null,
+          source_type: 'COMMISSION',
+          deleted_at: null,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // Update commission status
     mockQuery.mockResolvedValueOnce({
       rows: [
         makeCommissionRow({
@@ -891,6 +1066,7 @@ describe('Full commission flow', () => {
         }),
       ],
     } as any);
+    // getCommissionAssets (for response)
     mockGetCommissionAssets();
     const res8 = await request(createRouteApp(client))
       .patch(`/api/commissions/${COMMISSION_UUID}/status`)

@@ -488,6 +488,36 @@ export async function updateOutputsStatus(
   await query(sql, params);
 }
 
+// --- Ownership Functions ---
+
+/**
+ * Set client_id and source_type on an asset (commission premium unlock).
+ * Returns the updated asset row, or null if not found.
+ */
+export async function setAssetOwnership(
+  assetId: string,
+  clientId: string,
+  sourceType: string,
+): Promise<AssetRow | null> {
+  const result = await query(
+    `UPDATE assets SET client_id = $1, source_type = $2 WHERE id = $3 AND deleted_at IS NULL RETURNING *`,
+    [clientId, sourceType, assetId],
+  );
+  return (result.rows[0] as AssetRow) ?? null;
+}
+
+/**
+ * Check if an asset is client-owned and the requester is not an admin.
+ * Returns true if the operation should be blocked (client-owned + non-admin).
+ */
+export function isClientOwnedBlocked(
+  asset: AssetRow,
+  accountRole: string,
+  adminBypass: boolean,
+): boolean {
+  return asset.client_id !== null && accountRole !== 'ADMIN' && !adminBypass;
+}
+
 // --- Generation Pipeline Helper Types ---
 
 export interface AssetOutputVersionRow {
