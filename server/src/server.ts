@@ -1,4 +1,5 @@
 import express from 'express';
+import path from 'node:path';
 import cors from 'cors';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
@@ -14,6 +15,7 @@ import commissionsRouter from './routes/commissions.js';
 import looksRouter from './routes/looks.js';
 import fashionItemsRouter from './routes/fashion-items.js';
 import generationJobsRouter from './routes/generation-jobs.js';
+import uploadRouter from './routes/upload.js';
 import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
@@ -55,6 +57,13 @@ app.use('/api/looks', looksRouter);
 app.use('/api/fashion-items', fashionItemsRouter);
 app.use('/api/commissions', commissionsRouter);
 app.use('/api/generation-jobs', generationJobsRouter);
+
+// Static file serving for uploaded images
+const uploadsDir = process.env.UPLOAD_DIR || path.resolve('uploads');
+app.use('/uploads', express.static(uploadsDir));
+
+// Upload route
+app.use('/api/upload', uploadRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

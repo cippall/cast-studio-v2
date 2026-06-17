@@ -1,11 +1,36 @@
+# Dependencies
 node_modules/
+.pnp
+.pnp.js
+
+# Build outputs
 dist/
 build/
-*.tsbuildinfo
+
+# Environment
 .env
 .env.local
-*.db
-*.wal
-*.shm
+.env.*.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
 .DS_Store
-coverage/
+Thumbs.db
+
+# TypeScript
+*.tsbuildinfo
+
+# Vite / vitest cache
+.vite/
+**/.vite/
+
+# Uploaded files (runtime data, not source)
+/server/uploads/ref/*
+# But keep the .gitkeep
+!/server/uploads/ref/.gitkeep
