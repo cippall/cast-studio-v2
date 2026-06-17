@@ -28,10 +28,6 @@ export async function shareAsset(
     throw new SharingError('Asset not found', 'NOT_FOUND');
   }
 
-  if (asset.deleted_at) {
-    throw new SharingError('Asset not found', 'NOT_FOUND');
-  }
-
   // Only creator or admin can share
   if (!adminBypass && asset.creator_id !== account.id) {
     throw new SharingError('Only the asset creator can share it', 'FORBIDDEN');
@@ -61,7 +57,7 @@ export async function getAssetPermissions(
 ): Promise<PermissionRow[]> {
   const asset = await findAssetById(assetId, account.workspace_id, adminBypass);
 
-  if (!asset || asset.deleted_at) {
+  if (!asset) {
     throw new SharingError('Asset not found', 'NOT_FOUND');
   }
 
