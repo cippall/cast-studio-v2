@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { Bell, LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, User } from 'lucide-react';
+import NotificationDropdown from '@/components/NotificationDropdown';
 
 export default function TopBar() {
   const { data: user } = useCurrentUser();
@@ -49,10 +50,7 @@ export default function TopBar() {
 
       {/* Right: notifications + user menu */}
       <div className="flex items-center gap-2">
-        {/* Notifications bell */}
-        <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
-          <Bell className="size-5" />
-        </Button>
+        <NotificationDropdown />
 
         {/* User avatar dropdown */}
         <DropdownMenu>
