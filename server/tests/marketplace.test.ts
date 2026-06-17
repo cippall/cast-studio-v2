@@ -600,3 +600,382 @@ describe('POST /api/admin/marketplace/submissions/:assetId/reject', () => {
     expect(res.body.marketplace_status).toBe('MARKETPLACE_REJECTED');
   });
 });
+
+// ================================================================
+// GET /api/marketplace — Client browses active listings
+// ================================================================
+describe('GET /api/marketplace', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await request(createMarketplaceApp()).get('/api/marketplace');
+    expect(res.status).toBe(401);
+  });
+
+  it('returns paginated active listings', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 1 }] } as any);
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: LISTING_UUID,
+          listing_type: 'ACTOR_PACKAGE',
+          asset_id: ASSET_UUID,
+          seller_id: ARTIST_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+          asset_name: 'Cyberpunk Woman',
+          headshot_url: 'https://fal.ai/headshot.png',
+          fullshot_url: 'https://fal.ai/fullshot.png',
+          seller_name: 'Test Artist',
+        },
+      ],
+    } as any);
+
+    const res = await request(createMarketplaceApp(client)).get('/api/marketplace');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+    expect(res.body.data[0].id).toBe(LISTING_UUID);
+    expect(res.body.data[0].listing_type).toBe('ACTOR_PACKAGE');
+    expect(res.body.data[0].asset.name).toBe('Cyberpunk Woman');
+    expect(res.body.data[0].asset.headshot_url).toBe('https://fal.ai/headshot.png');
+    expect(res.body.data[0].seller_name).toBe('Test Artist');
+    expect(res.body.data[0].price_credits).toBe(10.0);
+    expect(res.body.pagination).toEqual({
+      page: 1,
+      pageSize: 20,
+      totalItems: 1,
+      totalPages: 1,
+    });
+  });
+
+  it('filters by listing_type', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 0 }] } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).get(
+      '/api/marketplace?listing_type=ACTOR_PACKAGE',
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+
+  it('filters by max_price', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 0 }] } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).get('/api/marketplace?max_price=5.00');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+  });
+});
+
+// ================================================================
+// GET /api/marketplace/:id — Client views listing detail
+// ================================================================
+describe('GET /api/marketplace/:id', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await request(createMarketplaceApp()).get(`/api/marketplace/${LISTING_UUID}`);
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when listing not found', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).get(`/api/marketplace/${LISTING_UUID}`);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('returns listing detail with all output URLs', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // SELECT listing
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: LISTING_UUID,
+          listing_type: 'ACTOR_PACKAGE',
+          asset_id: ASSET_UUID,
+          seller_id: ARTIST_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+          asset_name: 'Cyberpunk Woman',
+          asset_type: 'ACTOR',
+          seller_name: 'Test Artist',
+        },
+      ],
+    } as any);
+
+    // getAssetOutputs
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        makeOutputRow('headshot', 'SUCCESS', { image_url: 'https://fal.ai/headshot.png' }),
+        makeOutputRow('fullshot', 'SUCCESS', { image_url: 'https://fal.ai/fullshot.png' }),
+        makeOutputRow('expressions_3x4', 'SUCCESS', {
+          image_url: 'https://fal.ai/expressions.png',
+        }),
+        makeOutputRow('character_sheet', 'SUCCESS', {
+          image_url: 'https://fal.ai/character_sheet.png',
+        }),
+        makeOutputRow('editorial', 'SUCCESS', {
+          image_url: 'https://fal.ai/editorial1.png',
+        }),
+        makeOutputRow('editorial', 'SUCCESS', {
+          image_url: 'https://fal.ai/editorial2.png',
+        }),
+      ],
+    } as any);
+
+    const res = await request(createMarketplaceApp(client)).get(`/api/marketplace/${LISTING_UUID}`);
+    expect(res.status).toBe(200);
+    expect(res.body.id).toBe(LISTING_UUID);
+    expect(res.body.listing_type).toBe('ACTOR_PACKAGE');
+    expect(res.body.asset.name).toBe('Cyberpunk Woman');
+    expect(res.body.asset.headshot_url).toBe('https://fal.ai/headshot.png');
+    expect(res.body.asset.fullshot_url).toBe('https://fal.ai/fullshot.png');
+    expect(res.body.asset.expression_sheet_url).toBe('https://fal.ai/expressions.png');
+    expect(res.body.asset.character_sheet_url).toBe('https://fal.ai/character_sheet.png');
+    expect(res.body.asset.editorial_urls).toHaveLength(2);
+    expect(res.body.asset.editorial_urls[0]).toBe('https://fal.ai/editorial1.png');
+    expect(res.body.seller.name).toBe('Test Artist');
+    expect(res.body.price_credits).toBe(10.0);
+  });
+});
+
+// ================================================================
+// POST /api/marketplace/:id/purchase — Client purchases a listing
+// ================================================================
+describe('POST /api/marketplace/:id/purchase', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('returns 401 when not authenticated', async () => {
+    const res = await request(createMarketplaceApp()).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(401);
+  });
+
+  it('returns 404 when listing not found', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // SELECT listing returns empty
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('returns 409 when listing already purchased', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // SELECT listing — already purchased
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: 'someone-else-uuid',
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+        },
+      ],
+    } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('CONFLICT');
+    expect(res.body.error.message).toContain('already been purchased');
+  });
+
+  it('returns 402 when insufficient balance', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // SELECT listing
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: null,
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+        },
+      ],
+    } as any);
+
+    // SELECT wallet — balance too low
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 'wallet-uuid', balance_credits: 5.0 }],
+    } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(402);
+    expect(res.body.error.code).toBe('PAYMENT_REQUIRED');
+    expect(res.body.error.message).toContain('Insufficient credits');
+  });
+
+  it('returns 402 when no wallet exists', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // SELECT listing
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: null,
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+        },
+      ],
+    } as any);
+
+    // SELECT wallet — no wallet
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(402);
+    expect(res.body.error.code).toBe('PAYMENT_REQUIRED');
+    expect(res.body.error.message).toContain('Insufficient credits');
+  });
+
+  it('returns 200 and completes purchase with sufficient balance', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // 1. SELECT listing
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: null,
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+        },
+      ],
+    } as any);
+
+    // 2. SELECT wallet — sufficient balance
+    mockQuery.mockResolvedValueOnce({
+      rows: [{ id: 'wallet-uuid', balance_credits: 50.0 }],
+    } as any);
+
+    // 3. UPDATE wallet balance
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    // 4. INSERT ledger entry
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    // 5. findAssetById (source asset lookup)
+    const sourceAsset = makeAssetRow();
+    mockQuery.mockResolvedValueOnce({ rows: [sourceAsset] } as any);
+
+    // 6. INSERT duplicate asset
+    const duplicateAssetId = 'g0000000-0000-4000-8000-000000000030';
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: duplicateAssetId }] } as any);
+
+    // 7. getAssetOutputs (source outputs)
+    const sourceOutputs = [
+      makeOutputRow('headshot', 'SUCCESS', { image_url: 'https://fal.ai/headshot.png' }),
+      makeOutputRow('fullshot', 'SUCCESS', { image_url: 'https://fal.ai/fullshot.png' }),
+      makeOutputRow('expressions_3x4', 'SUCCESS', {
+        image_url: 'https://fal.ai/expressions.png',
+      }),
+      makeOutputRow('character_sheet', 'SUCCESS', {
+        image_url: 'https://fal.ai/character_sheet.png',
+      }),
+      makeOutputRow('editorial', 'SUCCESS', {
+        image_url: 'https://fal.ai/editorial1.png',
+      }),
+    ];
+    mockQuery.mockResolvedValueOnce({ rows: sourceOutputs } as any);
+
+    // 8-12. INSERT each output (5 outputs)
+    for (let i = 0; i < 5; i++) {
+      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    }
+
+    // 13. UPDATE marketplace_listings SET purchased_by/purchased_at
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    // 14. Notification dispatch
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.listing_id).toBe(LISTING_UUID);
+    expect(res.body.cost_credits).toBe(10.0);
+    expect(res.body.new_balance).toBe(40.0);
+    expect(res.body.purchased_at).toBeDefined();
+    expect(res.body.assets).toHaveLength(5);
+    expect(res.body.assets[0].layout_type).toBe('headshot');
+    expect(res.body.assets[0].image_url).toBe('https://fal.ai/headshot.png');
+    expect(res.body.assets[1].layout_type).toBe('fullshot');
+    expect(res.body.assets[2].layout_type).toBe('expressions_3x4');
+    expect(res.body.assets[3].layout_type).toBe('character_sheet');
+    expect(res.body.assets[4].layout_type).toBe('editorial');
+  });
+});
+
+// --- Helper for client tests ---
+
+function makeClientRow(overrides: Record<string, unknown> = {}) {
+  return {
+    id: 'b0000000-0000-4000-8000-000000000005',
+    workspace_id: WORKSPACE_UUID,
+    name: 'Test Client',
+    email: 'client@test.com',
+    role: 'CLIENT',
+    is_api_able: false,
+    password_hash: '$2a$10$hashedpassword',
+    created_at: '2026-06-17T10:00:00.000Z',
+    ...overrides,
+  };
+}
