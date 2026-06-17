@@ -57,6 +57,20 @@ function getActorOutputsForMarketplace(
   return result;
 }
 
+function getRequiredOutputsForType(assetType: string): string[] {
+  if (assetType === 'ACTOR') return ACTOR_REQUIRED_OUTPUTS;
+  if (assetType === 'LOOK') return ['look_image'];
+  if (assetType === 'FASHION_ITEM') return ['item_image'];
+  return [];
+}
+
+function findMissingOutputs(outputs: AssetOutputRow[], requiredLayouts: string[]): string[] {
+  return requiredLayouts.filter((layout) => {
+    const output = outputs.find((o) => o.layout_type === layout);
+    return !output || output.status !== 'SUCCESS';
+  });
+}
+
 // --- Artist Submission ---
 
 /**
@@ -90,28 +104,8 @@ export async function submitAssetForMarketplace(
     });
   }
 
-  // Validate required outputs
   const outputs = await getAssetOutputs(assetId);
-  const missing: string[] = [];
-
-  if (asset.asset_type === 'ACTOR') {
-    for (const layout of ACTOR_REQUIRED_OUTPUTS) {
-      const output = outputs.find((o) => o.layout_type === layout);
-      if (!output || output.status !== 'SUCCESS') {
-        missing.push(layout);
-      }
-    }
-  } else if (asset.asset_type === 'LOOK') {
-    const lookOutput = outputs.find((o) => o.layout_type === 'look_image');
-    if (!lookOutput || lookOutput.status !== 'SUCCESS') {
-      missing.push('look_image');
-    }
-  } else if (asset.asset_type === 'FASHION_ITEM') {
-    const itemOutput = outputs.find((o) => o.layout_type === 'item_image');
-    if (!itemOutput || itemOutput.status !== 'SUCCESS') {
-      missing.push('item_image');
-    }
-  }
+  const missing = findMissingOutputs(outputs, getRequiredOutputsForType(asset.asset_type));
 
   if (missing.length > 0) {
     const err = new Error(
@@ -122,7 +116,6 @@ export async function submitAssetForMarketplace(
     throw err;
   }
 
-  // Set marketplace_status to PENDING
   await query(
     `UPDATE assets SET marketplace_status = 'MARKETPLACE_PENDING' WHERE id = $1 AND deleted_at IS NULL`,
     [assetId],
