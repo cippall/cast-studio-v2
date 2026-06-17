@@ -8,6 +8,7 @@ import authRouter from './routes/auth.js';
 import apiKeysRouter from './routes/apiKeys.js';
 import accountsRouter from './routes/accounts.js';
 import workspacesRouter from './routes/workspaces.js';
+import actorsRouter from './routes/actors.js';
 
 const app = express();
 const PORT = 3001;
@@ -42,6 +43,7 @@ app.use('/api/auth', authRouter);
 app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/workspaces', workspacesRouter);
+app.use('/api/actors', actorsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
