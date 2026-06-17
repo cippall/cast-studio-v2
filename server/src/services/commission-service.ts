@@ -5,10 +5,13 @@ import {
   listCommissions,
   assignCommission,
   updateCommissionStatus,
+} from '../db/repositories/commission-repo.js';
+import {
   getCommissionAssets,
   linkAssetToCommission,
-} from '../db/repositories/commission-repo.js';
-import type { CommissionRow, CommissionAssetRow } from '../db/repositories/commission-repo.js';
+} from '../db/repositories/commission-asset-repo.js';
+import type { CommissionAssetRow } from '../db/repositories/commission-asset-repo.js';
+import type { CommissionRow } from '../db/repositories/commission-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
 import {
   InvalidTransitionError,
@@ -25,7 +28,7 @@ export interface CommissionDetail extends CommissionRow {
 
 export { InvalidTransitionError, PermissionDeniedError };
 
-// --- Service Functions ---
+// --- Create ---
 
 /**
  * Create a new commission request.
@@ -175,32 +178,26 @@ export async function transitionCommissionStatus(
 
   // Build update fields
   const updateFields: Record<string, unknown> = {};
-
   if (toStatus === 'SUBMITTED') {
     updateFields.premium_cost = extra?.premium_cost;
     updateFields.submitted_at = new Date().toISOString();
   }
-
   if (toStatus === 'APPROVED') {
     updateFields.approved_at = new Date().toISOString();
     if (!commission.submitted_at) {
       updateFields.submitted_at = new Date().toISOString();
     }
   }
-
   const updated = await updateCommissionStatus(id, toStatus, updateFields as any);
-
   if (!updated) {
     throw new Error('Failed to update commission status');
   }
-
   // Link assets if SUBMITTED
   if (toStatus === 'SUBMITTED' && extra?.asset_ids) {
     for (const assetId of extra.asset_ids) {
       await linkAssetToCommission(id, assetId, null);
     }
   }
-
   const assets = await getCommissionAssets(id);
   return { ...updated, assets };
 }

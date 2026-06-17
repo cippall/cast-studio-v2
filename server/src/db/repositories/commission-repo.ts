@@ -1,7 +1,6 @@
 import { query } from '../pool.js';
 
 // --- Types ---
-
 export interface CommissionRow {
   id: string;
   client_workspace_id: string;
@@ -14,14 +13,6 @@ export interface CommissionRow {
   premium_cost: number | null;
   submitted_at: string | null;
   approved_at: string | null;
-  created_at: string;
-}
-
-export interface CommissionAssetRow {
-  id: string;
-  commission_id: string;
-  asset_id: string;
-  asset_output_id: string | null;
   created_at: string;
 }
 
@@ -65,8 +56,7 @@ export async function createCommission(data: {
 }
 
 /**
- * Find a single commission by id.
- * Workspace filtering is optional — controlled by adminBypass.
+ * Find a single commission by id with optional workspace filtering.
  */
 export async function findCommissionById(
   id: string,
@@ -76,19 +66,16 @@ export async function findCommissionById(
   const params: unknown[] = [id];
   const conditions: string[] = ['id = $1'];
   let idx = 2;
-
   if (clientWorkspaceId && !adminBypass) {
     conditions.push(`client_workspace_id = $${idx++}`);
     params.push(clientWorkspaceId);
   }
-
   const result = await query(`SELECT * FROM commissions WHERE ${conditions.join(' AND ')}`, params);
   return (result.rows[0] as CommissionRow) ?? null;
 }
 
 /**
- * Find a commission by id without workspace filter (for status transitions
- * where we need the full record regardless of workspace).
+ * Find a commission by id without any workspace filter.
  */
 export async function findCommissionByIdUnfiltered(id: string): Promise<CommissionRow | null> {
   const result = await query('SELECT * FROM commissions WHERE id = $1', [id]);
@@ -113,44 +100,33 @@ export async function listCommissions(options: ListCommissionsOptions): Promise<
     sortOrder = 'desc',
     adminBypass = false,
   } = options;
-
   const params: unknown[] = [];
   const conditions: string[] = [];
   let idx = 1;
-
-  // Role-based filtering
   if (clientWorkspaceId && !adminBypass) {
     conditions.push(`client_workspace_id = $${idx++}`);
     params.push(clientWorkspaceId);
   }
-
   if (assigneeId && !adminBypass) {
     conditions.push(`assignee_id = $${idx++}`);
     params.push(assigneeId);
   }
-
   if (clientId && !adminBypass) {
     conditions.push(`client_id = $${idx++}`);
     params.push(clientId);
   }
-
-  // Status filter (optional)
   if (status) {
     conditions.push(`status = $${idx++}`);
     params.push(status);
   }
-
   const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
-
   const safeSortBy = sortBy.replace(/[^a-zA-Z0-9_]/g, '');
   const safeSortOrder = sortOrder === 'asc' ? 'ASC' : 'DESC';
-
   // Count query
   const countSql = `SELECT COUNT(*)::int AS count FROM commissions ${whereClause}`;
   const countResult = await query(countSql, params);
   const countRow = countResult.rows[0] as { count: number } | undefined;
   const totalItems = parseInt(String(countRow?.count ?? '0'), 10);
-
   // Data query with pagination
   const offset = (page - 1) * pageSize;
   const dataSql = `
@@ -161,7 +137,6 @@ export async function listCommissions(options: ListCommissionsOptions): Promise<
   `;
   const dataParams = [...params, pageSize, offset];
   const dataResult = await query(dataSql, dataParams);
-
   return {
     data: dataResult.rows as CommissionRow[],
     pagination: {
@@ -174,45 +149,24 @@ export async function listCommissions(options: ListCommissionsOptions): Promise<
 }
 
 /**
- * Update commission status with optional fields (premium_cost, submitted_at, approved_at).
+ * Update commission status with optional extra fields.
  * Returns null if not found.
  */
 export async function updateCommissionStatus(
   id: string,
   status: string,
-  extraFields: {
-    assignee_id?: string | null;
-    premium_cost?: number | null;
-    submitted_at?: string | null;
-    approved_at?: string | null;
-  } = {},
+  extraFields: Record<string, unknown> = {},
 ): Promise<CommissionRow | null> {
   const setClauses: string[] = ['status = $1'];
   const params: unknown[] = [status];
   let idx = 2;
-
-  if (extraFields.assignee_id !== undefined) {
-    setClauses.push(`assignee_id = $${idx++}`);
-    params.push(extraFields.assignee_id);
+  for (const [key, value] of Object.entries(extraFields)) {
+    if (value !== undefined) {
+      setClauses.push(`${key} = $${idx++}`);
+      params.push(value);
+    }
   }
-
-  if (extraFields.premium_cost !== undefined) {
-    setClauses.push(`premium_cost = $${idx++}`);
-    params.push(extraFields.premium_cost);
-  }
-
-  if (extraFields.submitted_at !== undefined) {
-    setClauses.push(`submitted_at = $${idx++}`);
-    params.push(extraFields.submitted_at);
-  }
-
-  if (extraFields.approved_at !== undefined) {
-    setClauses.push(`approved_at = $${idx++}`);
-    params.push(extraFields.approved_at);
-  }
-
   params.push(id);
-
   const result = await query(
     `UPDATE commissions SET ${setClauses.join(', ')} WHERE id = $${idx} RETURNING *`,
     params,
@@ -222,7 +176,6 @@ export async function updateCommissionStatus(
 
 /**
  * Assign a commission to an artist (sets assignee_id and status to ASSIGNED).
- * Returns null if not found.
  */
 export async function assignCommission(
   id: string,
@@ -233,32 +186,4 @@ export async function assignCommission(
     [assigneeId, id],
   );
   return (result.rows[0] as CommissionRow) ?? null;
-}
-
-/**
- * Get all assets linked to a commission.
- */
-export async function getCommissionAssets(commissionId: string): Promise<CommissionAssetRow[]> {
-  const result = await query(
-    'SELECT * FROM commission_assets WHERE commission_id = $1 ORDER BY created_at',
-    [commissionId],
-  );
-  return result.rows as CommissionAssetRow[];
-}
-
-/**
- * Link an asset to a commission.
- */
-export async function linkAssetToCommission(
-  commissionId: string,
-  assetId: string,
-  assetOutputId?: string | null,
-): Promise<CommissionAssetRow> {
-  const result = await query(
-    `INSERT INTO commission_assets (commission_id, asset_id, asset_output_id)
-     VALUES ($1, $2, $3)
-     RETURNING *`,
-    [commissionId, assetId, assetOutputId ?? null],
-  );
-  return result.rows[0] as CommissionAssetRow;
 }
