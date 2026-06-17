@@ -6,6 +6,8 @@ import {
   softDeleteAsset,
   getAssetOutputs,
   isClientOwnedBlocked,
+  duplicateAsset,
+  duplicateAssetOutputs,
 } from '../db/repositories/asset-repo.js';
 import type { AssetRow, AssetOutputRow } from '../db/repositories/asset-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -267,4 +269,33 @@ export async function deleteActor(
   }
 
   return softDeleteAsset(id, account.workspace_id, adminBypass);
+}
+
+/**
+ * Duplicate an actor: creates a new actor with source_asset_id pointing to original,
+ * copies all asset_outputs with new IDs but same image_urls.
+ * The duplicate is fully editable (not frozen).
+ */
+export async function duplicateActor(
+  sourceActorId: string,
+  account: AccountRow,
+  newName: string | null,
+  adminBypass = false,
+): Promise<ActorDetail> {
+  const sourceAsset = await findAssetById(sourceActorId, account.workspace_id, adminBypass);
+
+  if (!sourceAsset || sourceAsset.asset_type !== 'ACTOR') {
+    throw Object.assign(new Error('Actor not found'), { statusCode: 404 });
+  }
+
+  const duplicatedAsset = await duplicateAsset(
+    sourceAsset,
+    newName,
+    account.workspace_id,
+    account.id,
+  );
+
+  const duplicatedOutputs = await duplicateAssetOutputs(sourceAsset.id, duplicatedAsset.id);
+
+  return toActorDetail(duplicatedAsset, duplicatedOutputs);
 }

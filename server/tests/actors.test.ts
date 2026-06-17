@@ -14,6 +14,7 @@ vi.mock('../src/db/pool.js', () => ({
 
 import * as poolModule from '../src/db/pool.js';
 import actorsRouter from '../src/routes/actors.js';
+import assetVersionsRouter from '../src/routes/asset-versions.js';
 
 const mockQuery = vi.mocked(poolModule.query);
 
@@ -124,6 +125,23 @@ function createRouteApp(accountOverride?: Record<string, unknown>) {
     next();
   });
   app.use('/api/actors', actorsRouter);
+  return app;
+}
+
+/** Build express app with asset-versions router for duplicate endpoint tests */
+function createDuplicateApp(accountOverride?: Record<string, unknown>) {
+  const app = express();
+  app.use(express.json());
+  app.use((req: Request, _res: Response, next: NextFunction) => {
+    (req as any).session = {
+      accountId: accountOverride?.id ?? null,
+      destroy: vi.fn((cb?: (err?: unknown) => void) => {
+        if (cb) cb();
+      }),
+    };
+    next();
+  });
+  app.use('/api/assets', assetVersionsRouter);
   return app;
 }
 
@@ -693,5 +711,189 @@ describe('DELETE /api/actors/:id', () => {
     // Admin bypass: no workspace_id in the WHERE clause
     const deleteCall = mockQuery.mock.calls[3] as [string, unknown[]];
     expect(deleteCall[0]).not.toContain('workspace_id');
+  });
+});
+
+// ================================================================
+// POST /api/assets/:id/duplicate
+// ================================================================
+describe('POST /api/assets/:id/duplicate', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('401 when not authenticated', async () => {
+    const app = express();
+    app.use(express.json());
+    app.use('/api/assets', assetVersionsRouter);
+    const res = await request(app).post(`/api/assets/${ACTOR_UUID}/duplicate`).send({});
+    expect(res.status).toBe(401);
+  });
+
+  it('404 when actor not found', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns empty
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createDuplicateApp(artist))
+      .post(`/api/assets/${ACTOR_UUID}/duplicate`)
+      .send({});
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+  });
+
+  it('201 duplicates actor with same seed, prompt_recipe, and outputs', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const sourceActor = makeActorRow({
+      name: 'Original Actor',
+      seed: 12345,
+      prompt_recipe: { identity: { age: 25, gender: 'female' } },
+    });
+    const headshot = makeAssetOutputRow({
+      id: 'f0000000-0000-4000-8000-000000000005',
+      layout_type: 'headshot',
+      image_url: 'https://fal.ai/headshot.png',
+      status: 'SUCCESS',
+    });
+    const fullshot = makeAssetOutputRow({
+      id: 'f0000000-0000-4000-8000-000000000006',
+      layout_type: 'fullshot',
+      image_url: 'https://fal.ai/fullshot.png',
+      status: 'SUCCESS',
+    });
+
+    // findAssetById (in duplicateActor service)
+    mockQuery.mockResolvedValueOnce({ rows: [sourceActor] } as any);
+
+    // INSERT INTO assets (duplicateAsset)
+    const newActorId = 'a1000000-0000-4000-8000-000000000001';
+    const duplicatedActor = {
+      ...sourceActor,
+      id: newActorId,
+      name: 'Duplicated Actor',
+      source_asset_id: ACTOR_UUID,
+      source_type: 'DUPLICATE',
+      created_at: '2026-06-17T12:00:00.000Z',
+    };
+    mockQuery.mockResolvedValueOnce({ rows: [duplicatedActor] } as any);
+
+    // INSERT INTO asset_outputs (duplicateAssetOutputs)
+    const newHeadshotId = 'b1000000-0000-4000-8000-000000000001';
+    const newFullshotId = 'b1000000-0000-4000-8000-000000000002';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        { ...headshot, id: newHeadshotId, asset_id: newActorId },
+        { ...fullshot, id: newFullshotId, asset_id: newActorId },
+      ],
+    } as any);
+
+    const res = await request(createDuplicateApp(artist))
+      .post(`/api/assets/${ACTOR_UUID}/duplicate`)
+      .send({ name: 'Duplicated Actor' });
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe(newActorId);
+    expect(res.body.name).toBe('Duplicated Actor');
+    expect(res.body.asset_type).toBe('ACTOR');
+    expect(res.body.seed).toBe(12345);
+    expect(res.body.prompt_recipe).toEqual({ identity: { age: 25, gender: 'female' } });
+
+    // Verify outputs are duplicated with new IDs but same image URLs
+    expect(res.body.outputs.headshot).not.toBeNull();
+    expect(res.body.outputs.headshot.id).toBe(newHeadshotId);
+    expect(res.body.outputs.headshot.image_url).toBe('https://fal.ai/headshot.png');
+    expect(res.body.outputs.fullshot).not.toBeNull();
+    expect(res.body.outputs.fullshot.id).toBe(newFullshotId);
+    expect(res.body.outputs.fullshot.image_url).toBe('https://fal.ai/fullshot.png');
+
+    // Verify the duplicate asset INSERT included source_asset_id and source_type
+    // Calls: [0]=session, [1]=workspace, [2]=findAssetById, [3]=INSERT assets, [4]=INSERT outputs
+    const insertCall = mockQuery.mock.calls[3] as [string, unknown[]];
+    expect(insertCall[0]).toContain('INSERT INTO assets');
+    expect(insertCall[1]).toContain(ACTOR_UUID); // source_asset_id
+    expect(insertCall[1]).toContain('DUPLICATE'); // source_type
+  });
+
+  it('201 duplicates actor without name (null name)', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const sourceActor = makeActorRow({ name: 'Original' });
+
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [sourceActor] } as any);
+
+    // INSERT INTO assets
+    const newActorId = 'a1000000-0000-4000-8000-000000000001';
+    const duplicatedActor = {
+      ...sourceActor,
+      id: newActorId,
+      name: null,
+      source_asset_id: ACTOR_UUID,
+      source_type: 'DUPLICATE',
+    };
+    mockQuery.mockResolvedValueOnce({ rows: [duplicatedActor] } as any);
+
+    // INSERT INTO asset_outputs (no outputs)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createDuplicateApp(artist))
+      .post(`/api/assets/${ACTOR_UUID}/duplicate`)
+      .send({});
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe(newActorId);
+    expect(res.body.name).toBeNull();
+  });
+
+  it('201 duplicate is editable (not frozen, no marketplace_status)', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const sourceActor = makeActorRow({
+      marketplace_status: 'MARKETPLACE_APPROVED',
+      is_marketplace_frozen: true,
+    });
+
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [sourceActor] } as any);
+
+    // INSERT INTO assets — duplicate should NOT inherit marketplace_status or frozen
+    const newActorId = 'a1000000-0000-4000-8000-000000000001';
+    const duplicatedActor = {
+      ...sourceActor,
+      id: newActorId,
+      marketplace_status: null,
+      is_marketplace_frozen: false,
+      source_asset_id: ACTOR_UUID,
+      source_type: 'DUPLICATE',
+    };
+    mockQuery.mockResolvedValueOnce({ rows: [duplicatedActor] } as any);
+
+    // No outputs
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createDuplicateApp(artist))
+      .post(`/api/assets/${ACTOR_UUID}/duplicate`)
+      .send({});
+
+    expect(res.status).toBe(201);
+    expect(res.body.id).toBe(newActorId);
+  });
+
+  it('422 when name is empty string', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const res = await request(createDuplicateApp(artist))
+      .post(`/api/assets/${ACTOR_UUID}/duplicate`)
+      .send({ name: '' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });

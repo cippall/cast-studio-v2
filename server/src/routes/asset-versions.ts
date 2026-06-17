@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { z } from 'zod';
 import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
@@ -8,8 +9,13 @@ import {
   getAssetOutputById,
   getOutputVersions,
 } from '../db/repositories/asset-repo.js';
+import * as actorService from '../services/actor-service.js';
 
 const router = Router();
+
+const duplicateSchema = z.object({
+  name: z.string().min(1).max(255).optional(),
+});
 
 router.get(
   '/:id/outputs/:outputId/versions',
@@ -78,6 +84,54 @@ router.get(
       console.error('Get output versions error:', err);
       res.status(500).json({
         error: { code: 'INTERNAL_ERROR', message: 'Failed to load version history' },
+      });
+    }
+  },
+);
+
+// --- POST /api/assets/:id/duplicate — duplicate an asset ---
+
+router.post(
+  '/:id/duplicate',
+  requireSession,
+  requireWorkspace,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = duplicateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input',
+            details: parsed.error.flatten().fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const adminBypass = req.account?.role === 'ADMIN';
+      const newName = parsed.data.name ?? null;
+
+      const result = await actorService.duplicateActor(
+        req.params.id,
+        req.account!,
+        newName,
+        adminBypass,
+      );
+
+      res.status(201).json(result);
+    } catch (err: unknown) {
+      if (err instanceof Error && 'statusCode' in err) {
+        const statusCode = (err as Error & { statusCode: number }).statusCode;
+        const code = statusCode === 404 ? 'NOT_FOUND' : 'INTERNAL_ERROR';
+        res.status(statusCode).json({
+          error: { code, message: err.message },
+        });
+        return;
+      }
+      console.error('Duplicate asset error:', err);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to duplicate asset' },
       });
     }
   },

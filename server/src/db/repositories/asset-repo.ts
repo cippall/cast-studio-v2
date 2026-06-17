@@ -78,8 +78,8 @@ export interface ListAssetOptions {
  */
 export async function createAsset(input: CreateAssetInput): Promise<AssetRow> {
   const result = await query(
-    `INSERT INTO assets (workspace_id, creator_id, asset_type, name, seed, prompt_recipe, source_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `INSERT INTO assets (workspace_id, creator_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
      RETURNING *`,
     [
       input.workspace_id,
@@ -88,10 +88,58 @@ export async function createAsset(input: CreateAssetInput): Promise<AssetRow> {
       input.name ?? null,
       input.seed,
       JSON.stringify(input.prompt_recipe),
+      input.source_asset_id ?? null,
       input.source_type ?? 'ORIGINAL',
     ],
   );
   return result.rows[0] as AssetRow;
+}
+
+/**
+ * Duplicate an existing asset: creates a new asset row with source_asset_id
+ * pointing to the original, then copies all asset_outputs with new IDs.
+ * Returns the new duplicated asset row.
+ */
+export async function duplicateAsset(
+  sourceAsset: AssetRow,
+  newName: string | null,
+  newWorkspaceId: string,
+  newCreatorId: string,
+): Promise<AssetRow> {
+  const result = await query(
+    `INSERT INTO assets (workspace_id, creator_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      newWorkspaceId,
+      newCreatorId,
+      sourceAsset.asset_type,
+      newName,
+      sourceAsset.seed,
+      JSON.stringify(sourceAsset.prompt_recipe),
+      sourceAsset.id,
+      'DUPLICATE',
+    ],
+  );
+  return result.rows[0] as AssetRow;
+}
+
+/**
+ * Duplicate all asset_outputs from a source asset to a new asset.
+ * Creates new rows with new IDs but same image_urls and other field values.
+ */
+export async function duplicateAssetOutputs(
+  sourceAssetId: string,
+  newAssetId: string,
+): Promise<AssetOutputRow[]> {
+  const result = await query(
+    `INSERT INTO asset_outputs (asset_id, layout_type, model, image_url, local_backup_url, cost_credits, status, version, is_obsolete, obsolete_reason, error_message, generation_params, reference_images, source_asset_outputs)
+     SELECT $1, layout_type, model, image_url, local_backup_url, cost_credits, status, version, is_obsolete, obsolete_reason, error_message, generation_params, reference_images, source_asset_outputs
+     FROM asset_outputs WHERE asset_id = $2
+     RETURNING *`,
+    [newAssetId, sourceAssetId],
+  );
+  return result.rows as AssetOutputRow[];
 }
 
 /**
