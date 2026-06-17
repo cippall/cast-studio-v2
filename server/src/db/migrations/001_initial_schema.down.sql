@@ -1,0 +1,25 @@
+-- 001_initial_schema.down.sql
+-- Drop all tables in reverse dependency order
+
+BEGIN;
+
+DROP TABLE IF EXISTS marketplace_listings CASCADE;
+DROP TABLE IF EXISTS taxonomy CASCADE;
+DROP TABLE IF EXISTS models CASCADE;
+DROP TABLE IF EXISTS notifications CASCADE;
+DROP TABLE IF EXISTS commission_assets CASCADE;
+DROP TABLE IF EXISTS commissions CASCADE;
+DROP TABLE IF EXISTS workflows CASCADE;
+DROP TABLE IF EXISTS asset_output_versions CASCADE;
+DROP TABLE IF EXISTS asset_outputs CASCADE;
+DROP TABLE IF EXISTS asset_permissions CASCADE;
+DROP TABLE IF EXISTS assets CASCADE;
+DROP TABLE IF EXISTS ledger CASCADE;
+DROP TABLE IF EXISTS wallets CASCADE;
+DROP TABLE IF EXISTS api_keys CASCADE;
+DROP TABLE IF EXISTS accounts CASCADE;
+DROP TABLE IF EXISTS workspaces CASCADE;
+
+DROP TABLE IF EXISTS _migrations CASCADE;
+
+COMMIT;
