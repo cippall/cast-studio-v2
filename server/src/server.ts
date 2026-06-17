@@ -13,6 +13,8 @@ import sharingRouter from './routes/sharing.js';
 import commissionsRouter from './routes/commissions.js';
 import looksRouter from './routes/looks.js';
 import fashionItemsRouter from './routes/fashion-items.js';
+import generationJobsRouter from './routes/generation-jobs.js';
+import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
 const PORT = 3001;
@@ -52,9 +54,11 @@ app.use('/api', sharingRouter);
 app.use('/api/looks', looksRouter);
 app.use('/api/fashion-items', fashionItemsRouter);
 app.use('/api/commissions', commissionsRouter);
+app.use('/api/generation-jobs', generationJobsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
+  startWorker();
 });
 
 export default app;

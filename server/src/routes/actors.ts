@@ -4,6 +4,7 @@ import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
 import * as actorService from '../services/actor-service.js';
+import * as generationService from '../services/generation-service.js';
 import { findAssetById, checkAssetAccess } from '../db/repositories/asset-repo.js';
 
 const router = Router();
@@ -31,6 +32,32 @@ const createActorSchema = z.discriminatedUnion('entry_method', [
 const updateActorSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   taxonomy_values: z.record(z.string(), z.unknown()).optional(),
+});
+
+const generateSchema = z.object({
+  layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4', 'character_sheet', 'editorial']),
+  model: z.string().min(1).optional(),
+  options: z
+    .object({
+      num_outputs: z.number().int().min(1).max(10).optional(),
+      prompt: z.string().optional(),
+    })
+    .optional(),
+});
+
+const regenerateSchema = z.object({
+  layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4']),
+  model: z.string().min(1).optional(),
+  options: z
+    .object({
+      prompt: z.string().optional(),
+    })
+    .optional(),
+});
+
+const characterSheetSchema = z.object({
+  look_id: z.string().uuid('look_id must be a valid UUID'),
+  model: z.string().min(1).optional(),
 });
 
 // --- Helpers ---
@@ -235,5 +262,163 @@ router.delete('/:id', requireSession, requireWorkspace, async (req: Request, res
     });
   }
 });
+
+// --- POST /api/actors/:id/generate — generate a layout ---
+
+router.post(
+  '/:id/generate',
+  requireSession,
+  requireWorkspace,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = generateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input',
+            details: parsed.error.flatten().fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const adminBypass = req.account?.role === 'ADMIN';
+
+      const result = await generationService.generateActorOutput(
+        req.params.id,
+        req.account!,
+        {
+          layout_type: parsed.data.layout_type,
+          model: parsed.data.model,
+          num_outputs: parsed.data.options?.num_outputs,
+          prompt: parsed.data.options?.prompt,
+        },
+        adminBypass,
+      );
+
+      res.status(202).json(result);
+    } catch (err: unknown) {
+      if (err instanceof Error && 'statusCode' in err) {
+        const statusCode = (err as Error & { statusCode: number }).statusCode;
+        res.status(statusCode).json({
+          error: {
+            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            message: err.message,
+          },
+        });
+        return;
+      }
+      console.error('Generate actor output error:', err);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to generate actor output' },
+      });
+    }
+  },
+);
+
+// --- POST /api/actors/:id/regenerate — regenerate a layout ---
+
+router.post(
+  '/:id/regenerate',
+  requireSession,
+  requireWorkspace,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = regenerateSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input',
+            details: parsed.error.flatten().fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const adminBypass = req.account?.role === 'ADMIN';
+
+      const result = await generationService.regenerateActorOutput(
+        req.params.id,
+        parsed.data.layout_type,
+        req.account!,
+        {
+          layout_type: parsed.data.layout_type,
+          model: parsed.data.model,
+          prompt: parsed.data.options?.prompt,
+        },
+        adminBypass,
+      );
+
+      res.status(202).json(result);
+    } catch (err: unknown) {
+      if (err instanceof Error && 'statusCode' in err) {
+        const statusCode = (err as Error & { statusCode: number }).statusCode;
+        res.status(statusCode).json({
+          error: {
+            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            message: err.message,
+          },
+        });
+        return;
+      }
+      console.error('Regenerate actor output error:', err);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to regenerate actor output' },
+      });
+    }
+  },
+);
+
+// --- POST /api/actors/:id/character-sheet ---
+
+router.post(
+  '/:id/character-sheet',
+  requireSession,
+  requireWorkspace,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = characterSheetSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input',
+            details: parsed.error.flatten().fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const adminBypass = req.account?.role === 'ADMIN';
+
+      const result = await generationService.generateCharacterSheet(
+        req.params.id,
+        parsed.data.look_id,
+        req.account!,
+        parsed.data.model,
+        adminBypass,
+      );
+
+      res.status(202).json(result);
+    } catch (err: unknown) {
+      if (err instanceof Error && 'statusCode' in err) {
+        const statusCode = (err as Error & { statusCode: number }).statusCode;
+        res.status(statusCode).json({
+          error: {
+            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            message: err.message,
+          },
+        });
+        return;
+      }
+      console.error('Generate character sheet error:', err);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to generate character sheet' },
+      });
+    }
+  },
+);
 
 export default router;

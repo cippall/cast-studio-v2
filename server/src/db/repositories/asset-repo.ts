@@ -418,25 +418,7 @@ export async function checkAssetAccess(
   return result.rows.length > 0;
 }
 
-/**
- * Create a single asset output row.
- */
-export async function createAssetOutput(input: CreateAssetOutputInput): Promise<AssetOutputRow> {
-  const result = await query(
-    `INSERT INTO asset_outputs (asset_id, layout_type, model, status, cost_credits, generation_params)
-     VALUES ($1, $2, $3, $4, $5, $6)
-     RETURNING *`,
-    [
-      input.asset_id,
-      input.layout_type,
-      input.model,
-      input.status ?? 'PENDING',
-      input.cost_credits ?? 0,
-      input.generation_params ? JSON.stringify(input.generation_params) : null,
-    ],
-  );
-  return result.rows[0] as AssetOutputRow;
-}
+// --- Asset Output Methods ---
 
 export interface CreateAssetOutputInput {
   asset_id: string;
@@ -445,6 +427,30 @@ export interface CreateAssetOutputInput {
   status?: string;
   cost_credits?: number;
   generation_params?: Record<string, unknown> | null;
+  reference_images?: Record<string, unknown> | null;
+  source_asset_outputs?: Record<string, unknown> | null;
+}
+
+/**
+ * Create a single asset output row.
+ */
+export async function createAssetOutput(input: CreateAssetOutputInput): Promise<AssetOutputRow> {
+  const result = await query(
+    `INSERT INTO asset_outputs (asset_id, layout_type, model, status, cost_credits, generation_params, reference_images, source_asset_outputs)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+     RETURNING *`,
+    [
+      input.asset_id,
+      input.layout_type,
+      input.model,
+      input.status ?? 'PENDING',
+      input.cost_credits ?? 0,
+      input.generation_params ? JSON.stringify(input.generation_params) : null,
+      input.reference_images ? JSON.stringify(input.reference_images) : null,
+      input.source_asset_outputs ? JSON.stringify(input.source_asset_outputs) : null,
+    ],
+  );
+  return result.rows[0] as AssetOutputRow;
 }
 
 /**
@@ -465,9 +471,10 @@ export async function updateOutputsStatus(
 
   if (additionalFields) {
     for (const [key, value] of Object.entries(additionalFields)) {
-      if (key === 'image_url') {
-        setClauses.push(`image_url = $${idx++}`);
-        params.push(value as string);
+      const allowedKeys = ['image_url', 'error_message', 'cost_credits', 'local_backup_url'];
+      if (allowedKeys.includes(key)) {
+        setClauses.push(`${key} = $${idx++}`);
+        params.push(value);
       }
     }
   }
@@ -479,4 +486,130 @@ export async function updateOutputsStatus(
   params.push(assetId);
 
   await query(sql, params);
+}
+
+// --- Generation Pipeline Helper Types ---
+
+export interface AssetOutputVersionRow {
+  id: string;
+  asset_output_id: string;
+  version: number;
+  image_url: string | null;
+  local_backup_url: string | null;
+  model: string;
+  cost_credits: number;
+  status: string;
+  generation_params: Record<string, unknown> | null;
+  reference_images: Record<string, unknown> | null;
+  source_asset_outputs: Record<string, unknown> | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+// --- Generation Pipeline Repository Functions ---
+
+/**
+ * Get layout types that are downstream of the given layout type for a specific asset type.
+ */
+export function getDownstreamLayouts(assetType: string, layoutType: string): string[] {
+  if (assetType === 'ACTOR') {
+    const order = ['headshot', 'fullshot', 'expressions_3x4', 'character_sheet', 'editorial'];
+    const idx = order.indexOf(layoutType);
+    if (idx === -1) return [];
+    return order.slice(idx + 1);
+  }
+  return [];
+}
+
+/**
+ * Archive an asset output row to the asset_output_versions table.
+ * Returns the current row that was archived, or null if not found.
+ */
+export async function archiveAssetOutput(outputId: string): Promise<AssetOutputRow | null> {
+  const current = await query(`SELECT * FROM asset_outputs WHERE id = $1`, [outputId]);
+
+  if (current.rows.length === 0) return null;
+
+  const row = current.rows[0] as AssetOutputRow;
+
+  await query(
+    `INSERT INTO asset_output_versions
+       (asset_output_id, version, image_url, local_backup_url, model,
+        cost_credits, status, generation_params, reference_images,
+        source_asset_outputs, error_message)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    [
+      outputId,
+      row.version,
+      row.image_url,
+      row.local_backup_url,
+      row.model,
+      row.cost_credits,
+      row.status,
+      row.generation_params ? JSON.stringify(row.generation_params) : null,
+      row.reference_images ? JSON.stringify(row.reference_images) : null,
+      row.source_asset_outputs ? JSON.stringify(row.source_asset_outputs) : null,
+      row.error_message,
+    ],
+  );
+
+  return row;
+}
+
+/**
+ * Mark downstream outputs as obsolete for a given asset and layout type.
+ */
+export async function markDownstreamObsolete(
+  assetId: string,
+  assetType: string,
+  layoutType: string,
+  reason: string,
+): Promise<void> {
+  const downstreamLayouts = getDownstreamLayouts(assetType, layoutType);
+
+  if (downstreamLayouts.length === 0) return;
+
+  const placeholders = downstreamLayouts.map((_, i) => `$${i + 2}`).join(', ');
+
+  await query(
+    `UPDATE asset_outputs
+     SET is_obsolete = TRUE, obsolete_reason = $1
+     WHERE asset_id = $2
+       AND layout_type IN (${placeholders})
+       AND is_obsolete = FALSE`,
+    [reason, assetId, ...downstreamLayouts],
+  );
+}
+
+/**
+ * Find PENDING outputs that need to be processed by the generation worker.
+ */
+export async function findPendingOutputs(limit = 10): Promise<AssetOutputRow[]> {
+  const result = await query(
+    `SELECT * FROM asset_outputs
+     WHERE status = 'PENDING'
+     ORDER BY created_at ASC
+     LIMIT $1`,
+    [limit],
+  );
+  return result.rows as AssetOutputRow[];
+}
+
+/**
+ * Get a single asset output by id.
+ */
+export async function getAssetOutputById(outputId: string): Promise<AssetOutputRow | null> {
+  const result = await query(`SELECT * FROM asset_outputs WHERE id = $1`, [outputId]);
+  return (result.rows[0] as AssetOutputRow) ?? null;
+}
+
+/**
+ * Get version history for an asset output.
+ */
+export async function getOutputVersions(outputId: string): Promise<AssetOutputVersionRow[]> {
+  const result = await query(
+    `SELECT * FROM asset_output_versions WHERE asset_output_id = $1 ORDER BY version DESC`,
+    [outputId],
+  );
+  return result.rows as AssetOutputVersionRow[];
 }
