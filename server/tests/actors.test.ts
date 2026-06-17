@@ -457,7 +457,10 @@ describe('GET /api/actors/:id', () => {
       status: 'SUCCESS',
     });
 
-    // findAssetById
+    // findAssetById (route-level access check)
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // checkAssetAccess returns early (artist is creator, no DB call needed)
+    // findAssetById (inside actorService.getActor)
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // getAssetOutputs
     mockQuery.mockResolvedValueOnce({ rows: [headshot, fullshot] } as any);

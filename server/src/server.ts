@@ -9,6 +9,10 @@ import apiKeysRouter from './routes/apiKeys.js';
 import accountsRouter from './routes/accounts.js';
 import workspacesRouter from './routes/workspaces.js';
 import actorsRouter from './routes/actors.js';
+import sharingRouter from './routes/sharing.js';
+import commissionsRouter from './routes/commissions.js';
+import looksRouter from './routes/looks.js';
+import fashionItemsRouter from './routes/fashion-items.js';
 
 const app = express();
 const PORT = 3001;
@@ -44,6 +48,10 @@ app.use('/api/api-keys', apiKeysRouter);
 app.use('/api/accounts', accountsRouter);
 app.use('/api/workspaces', workspacesRouter);
 app.use('/api/actors', actorsRouter);
+app.use('/api', sharingRouter);
+app.use('/api/looks', looksRouter);
+app.use('/api/fashion-items', fashionItemsRouter);
+app.use('/api/commissions', commissionsRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

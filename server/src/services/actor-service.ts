@@ -152,6 +152,7 @@ export async function listActors(
     sortOrder?: 'asc' | 'desc';
     creatorId?: string;
     taxonomyFilters?: Record<string, string>;
+    sharedWithMeAccountId?: string;
   },
   account: AccountRow,
   adminBypass = false,
@@ -169,6 +170,7 @@ export async function listActors(
     sortBy: options.sortBy,
     sortOrder: options.sortOrder,
     adminBypass,
+    sharedWithMeAccountId: options.sharedWithMeAccountId,
   });
 
   return {

@@ -4,6 +4,7 @@ import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
 import * as actorService from '../services/actor-service.js';
+import { findAssetById, checkAssetAccess } from '../db/repositories/asset-repo.js';
 
 const router = Router();
 
@@ -44,6 +45,7 @@ function parseActorQuery(req: Request) {
   const sortBy = (req.query.sortBy as string) || 'created_at';
   const sortOrder = ((req.query.sortOrder as string) || 'desc') as 'asc' | 'desc';
   const creatorId = req.query.creator_id as string | undefined;
+  const sharedWithMe = req.query.shared_with_me === 'true' ? req.account?.id : undefined;
 
   const knownKeys = new Set([
     'page',
@@ -61,7 +63,15 @@ function parseActorQuery(req: Request) {
     }
   }
 
-  return { page, pageSize, sortBy, sortOrder, creatorId, taxonomyFilters };
+  return {
+    page,
+    pageSize,
+    sortBy,
+    sortOrder,
+    creatorId,
+    taxonomyFilters,
+    sharedWithMeAccountId: sharedWithMe,
+  };
 }
 
 // --- POST /api/actors — create actor ---
@@ -107,11 +117,36 @@ router.get('/', requireSession, requireWorkspace, async (req: Request, res: Resp
   }
 });
 
-// --- GET /api/actors/:id — get single actor ---
+// --- GET /api/actors/:id — get single actor (with access check) ---
 
 router.get('/:id', requireSession, requireWorkspace, async (req: Request, res: Response) => {
   try {
     const adminBypass = req.account?.role === 'ADMIN';
+
+    // First verify the actor exists and get creator_id for access check
+    const asset = await findAssetById(req.params.id, req.account?.workspace_id, adminBypass);
+    if (!asset || asset.asset_type !== 'ACTOR') {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Actor not found' },
+      });
+      return;
+    }
+
+    // Check access: creator, admin, or shared via asset_permissions
+    const canAccess = await checkAssetAccess(
+      asset.id,
+      req.account!.id,
+      req.account!.role,
+      asset.creator_id,
+    );
+
+    if (!canAccess) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Actor not found' },
+      });
+      return;
+    }
+
     const actor = await actorService.getActor(req.params.id, req.account!, adminBypass);
 
     if (!actor) {
