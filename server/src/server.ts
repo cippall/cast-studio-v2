@@ -5,6 +5,9 @@ import connectPgSimple from 'connect-pg-simple';
 import pool from './db/pool.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
+import apiKeysRouter from './routes/apiKeys.js';
+import accountsRouter from './routes/accounts.js';
+import workspacesRouter from './routes/workspaces.js';
 
 const app = express();
 const PORT = 3001;
@@ -36,6 +39,9 @@ app.use(
 // Routes
 app.use('/health', healthRouter);
 app.use('/api/auth', authRouter);
+app.use('/api/api-keys', apiKeysRouter);
+app.use('/api/accounts', accountsRouter);
+app.use('/api/workspaces', workspacesRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
