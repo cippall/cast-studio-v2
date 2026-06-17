@@ -1,8 +1,15 @@
 import dotenv from 'dotenv';
 import path from 'path';
 
-// Load .env from project root
-dotenv.config({ path: path.resolve(import.meta.dirname, '../../.env') });
+// Load .env from project root (overrides existing env vars)
+const envPath = path.resolve(import.meta.dirname, '../../.env');
+const dotenvResult = dotenv.config({ path: envPath });
+// Force-override with .env values so DATABASE_URL with credentials wins
+if (dotenvResult.parsed) {
+  for (const [key, value] of Object.entries(dotenvResult.parsed)) {
+    process.env[key] = value;
+  }
+}
 
 export interface DbConfig {
   host: string;
