@@ -1,9 +1,11 @@
 node_modules/
 dist/
 build/
+*.tsbuildinfo
 .env
 .env.local
 *.db
 *.wal
 *.shm
 .DS_Store
+coverage/
