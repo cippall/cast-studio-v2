@@ -141,6 +141,46 @@ function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
   mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);
 }
 
+/** Mock the 3 wallet queries for reserveCreditsForGeneration (findWallet, updateWalletBalance, createLedgerEntry) */
+function seedWalletCreditMocks(accountId: string) {
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: 'wallet-uuid',
+        workspace_id: WORKSPACE_UUID,
+        account_id: accountId,
+        balance_credits: '1000.0000',
+        updated_at: '2026-06-17T10:00:00.000Z',
+      },
+    ],
+  } as any);
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: 'wallet-uuid',
+        workspace_id: WORKSPACE_UUID,
+        account_id: accountId,
+        balance_credits: '999.9500',
+        updated_at: '2026-06-17T10:00:00.000Z',
+      },
+    ],
+  } as any);
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: 'ledger-uuid',
+        workspace_id: WORKSPACE_UUID,
+        wallet_id: 'wallet-uuid',
+        workflow_id: null,
+        api_key_id: null,
+        amount: -0.05,
+        type: 'CHARGE',
+        created_at: '2026-06-17T10:00:00.000Z',
+      },
+    ],
+  } as any);
+}
+
 function resetMock() {
   mockQuery.mockReset();
 }
@@ -232,6 +272,8 @@ describe('POST /api/actors/:id/generate', () => {
     // findAssetById returns actor
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
+    seedWalletCreditMocks(ARTIST_UUID);
     // createAssetOutput returns PENDING output
     const output = makeOutputRow();
     mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
@@ -258,6 +300,9 @@ describe('POST /api/actors/:id/generate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+
+    // reserveCreditsForGeneration for output 1
+    seedWalletCreditMocks(ARTIST_UUID);
 
     // Two outputs
     const output1 = makeOutputRow({ id: OUTPUT_UUID });
@@ -294,6 +339,8 @@ describe('POST /api/actors/:id/generate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
+    seedWalletCreditMocks(ARTIST_UUID);
     const output = makeOutputRow({ layout_type: 'editorial' });
     mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
 
@@ -347,6 +394,9 @@ describe('POST /api/actors/:id/regenerate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+
+    // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
+    seedWalletCreditMocks(ARTIST_UUID);
 
     // getAssetOutputs returns current outputs (headshot v1, fullshot v1)
     const oldHeadshot = makeOutputRow({
@@ -455,6 +505,9 @@ describe('POST /api/actors/:id/character-sheet', () => {
 
     const look = makeLookRow();
     mockQuery.mockResolvedValueOnce({ rows: [look] } as any);
+
+    // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
+    seedWalletCreditMocks(ARTIST_UUID);
 
     // getAssetOutputs for actor — headshot exists
     const headshot = makeOutputRow({

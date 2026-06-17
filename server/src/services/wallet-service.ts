@@ -1,5 +1,6 @@
 import type { AccountRow, WorkspaceRow } from '../middleware/requireSession.js';
 import * as walletRepo from '../db/repositories/wallet-repo.js';
+import * as stripeService from './stripe-service.js';
 
 export type WalletBalance = {
   id: string;
@@ -40,7 +41,7 @@ export async function getWalletBalance(
 
   return {
     id: wallet.id,
-    balance_credits: Number.parseFloat(wallet.balance_credits),
+    balance_credits: wallet.balance_credits,
     updated_at: wallet.updated_at,
   };
 }
@@ -62,7 +63,7 @@ export async function applyStripeTopUp(
   workspaceId: string,
   accountId: string,
   amount: number,
-  paymentIntentId: string,
+  _paymentIntentId: string,
 ): Promise<TopUpResult> {
   const wallet = await walletRepo.findWallet({
     workspaceId,
@@ -74,7 +75,7 @@ export async function applyStripeTopUp(
     throw Object.assign(new Error('Wallet not found'), { statusCode: 404 });
   }
 
-  const currentBalance = Number.parseFloat(wallet.balance_credits);
+  const currentBalance = wallet.balance_credits;
   const normalizedAmount = Number(amount.toFixed(4));
   const newBalance = Number((currentBalance + normalizedAmount).toFixed(4));
 
@@ -90,7 +91,7 @@ export async function applyStripeTopUp(
   return {
     wallet: {
       id: updatedWallet.id,
-      balance_credits: Number.parseFloat(updatedWallet.balance_credits),
+      balance_credits: updatedWallet.balance_credits,
       updated_at: updatedWallet.updated_at,
     },
     ledger,
@@ -134,4 +135,54 @@ export async function listLedgerTransactions(
     page: options?.page,
     pageSize: options?.pageSize,
   });
+}
+
+/**
+ * Handle a Stripe webhook event.
+ * Verifies the event signature and processes checkout.session.completed.
+ * Idempotent: duplicate events are silently ignored.
+ */
+export async function handleStripeWebhook(
+  payload: string,
+  signature: string,
+  _workspaceId: string,
+): Promise<void> {
+  const event = await stripeService.verifyWebhookEvent(payload, signature);
+
+  if (event.type !== 'checkout.session.completed') {
+    return;
+  }
+
+  const session = event.data.object as Record<string, unknown>;
+  const paymentIntentId = session.id as string;
+  const metadata = session.metadata as Record<string, string> | undefined;
+
+  if (!metadata?.workspaceId || !metadata?.accountId) {
+    return;
+  }
+
+  const amount = Number.parseFloat(metadata.amount ?? '0');
+  if (amount <= 0) {
+    return;
+  }
+
+  // Check idempotency: if a ledger entry already exists for this session, skip
+  const existingWallet = await walletRepo.findWallet({
+    workspaceId: metadata.workspaceId,
+    accountId: metadata.accountId,
+  });
+
+  if (existingWallet) {
+    const existingEntries = await walletRepo.listLedgerEntries({
+      walletId: existingWallet.id,
+    });
+    const alreadyProcessed = existingEntries.data.some(
+      (entry) => entry.workflow_id === paymentIntentId,
+    );
+    if (alreadyProcessed) {
+      return;
+    }
+  }
+
+  await applyStripeTopUp(metadata.workspaceId, metadata.accountId, amount, paymentIntentId);
 }
