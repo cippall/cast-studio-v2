@@ -46,9 +46,12 @@ export enum MarketplaceStatus {
 }
 
 export enum CommissionStatus {
-  PENDING = 'PENDING',
+  REQUESTED = 'REQUESTED',
+  ASSIGNED = 'ASSIGNED',
   IN_PROGRESS = 'IN_PROGRESS',
-  COMPLETED = 'COMPLETED',
+  SUBMITTED = 'SUBMITTED',
+  CHANGES_REQUESTED = 'CHANGES_REQUESTED',
+  APPROVED = 'APPROVED',
   CANCELLED = 'CANCELLED',
 }
 
@@ -73,4 +76,99 @@ export interface ApiError {
     message: string;
     details?: unknown;
   };
+}
+
+// --- Commission types ---
+
+export interface CommissionBrief {
+  project_type?: string;
+  style?: string;
+  reference_images?: string[];
+  notes?: string;
+  [key: string]: unknown;
+}
+
+export interface CommissionAsset {
+  id: string;
+  asset_id: string;
+  asset_output_id: string;
+}
+
+export interface Commission {
+  id: string;
+  title: string;
+  status: CommissionStatus | string;
+  client_id: string;
+  client_workspace_id: string;
+  studio_workspace_id: string;
+  assignee_id?: string;
+  brief: CommissionBrief;
+  premium_cost?: number;
+  submitted_at?: string;
+  created_at: string;
+  updated_at?: string;
+  assets?: CommissionAsset[];
+}
+
+export interface CommissionFormTemplate {
+  id: string;
+  name: string;
+  fields: FormField[];
+  is_active: boolean;
+}
+
+export interface FormField {
+  key: string;
+  label: string;
+  type: 'text' | 'textarea' | 'select' | 'number' | 'file';
+  required: boolean;
+  options?: string[];
+  placeholder?: string;
+}
+
+// --- Asset list types ---
+
+export interface ActorListItem {
+  id: string;
+  name: string;
+  creator_id: string;
+  asset_type: string;
+  seed: number;
+  prompt_recipe: Record<string, unknown>;
+  headshot_url: string | null;
+  created_at: string;
+  taxonomy_values?: Record<string, string>;
+}
+
+export interface LookListItem {
+  id: string;
+  name: string;
+  creator_id: string;
+  asset_type: string;
+  image_url: string | null;
+  created_at: string;
+  taxonomy_values?: Record<string, string>;
+}
+
+export interface FashionItemListItem {
+  id: string;
+  name: string;
+  creator_id: string;
+  asset_type: string;
+  image_url: string | null;
+  created_at: string;
+  taxonomy_values?: Record<string, string>;
+}
+
+export interface WalletBalance {
+  balance: number;
+  currency: string;
+}
+
+export interface DashboardStats {
+  totalActors: number;
+  totalLooks: number;
+  totalItems: number;
+  activeMembers: number;
+  pendingCommissions: number;
 }

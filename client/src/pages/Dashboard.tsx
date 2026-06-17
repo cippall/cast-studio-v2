@@ -1,15 +1,34 @@
 /**
- * Dashboard — quick actions + recent activity.
+ * Dashboard — quick actions + recent activity + role-specific sections.
+ * Client: wallet balance card.
+ * Admin: stats row.
  */
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
+import { useWalletBalance, useDashboardStats } from '@/hooks/useDashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { User, Shirt, Image, MessageSquare } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
+import {
+  User,
+  Shirt,
+  Image,
+  MessageSquare,
+  Wallet,
+  Users,
+  Layers,
+  ShirtIcon,
+  ClipboardList,
+} from 'lucide-react';
 
 export default function Dashboard() {
   const navigate = useNavigate();
   const { data: user } = useCurrentUser();
+  const isClient = user?.role === 'CLIENT';
+  const isAdmin = user?.role === 'ADMIN';
+
+  const { data: wallet, isLoading: walletLoading } = useWalletBalance();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   const quickActions = [
     { label: 'New Actor', icon: User, path: '/actors/new' },
@@ -17,7 +36,7 @@ export default function Dashboard() {
     { label: 'New Item', icon: Image, path: '/fashion-items/new' },
   ];
 
-  if (user?.role !== 'ADMIN' && user?.role !== 'ARTIST') {
+  if (isClient) {
     quickActions.push({ label: 'New Commission', icon: MessageSquare, path: '/commissions/new' });
   }
 
@@ -52,7 +71,80 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Recent Activity (placeholder) */}
+      {/* Client: Wallet Balance */}
+      {isClient && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold">Wallet</h2>
+          <Card className="w-full sm:w-80">
+            <CardHeader className="flex flex-row items-center gap-3 pb-2">
+              <div className="flex size-10 items-center justify-center rounded-lg bg-primary/10">
+                <Wallet className="size-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle className="text-base">Balance</CardTitle>
+                <CardDescription>Available credits</CardDescription>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {walletLoading ? (
+                <Skeleton className="h-8 w-32" />
+              ) : (
+                <div className="flex items-baseline gap-1">
+                  <span className="text-3xl font-bold">
+                    {wallet?.balance?.toFixed(2) ?? '0.00'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">credits</span>
+                </div>
+              )}
+              <Button
+                variant="outline"
+                size="sm"
+                className="mt-3"
+                onClick={() => navigate('/settings/wallet')}
+              >
+                Top Up
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* Admin: Stats */}
+      {isAdmin && (
+        <div>
+          <h2 className="mb-3 text-lg font-semibold">Overview</h2>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            {[
+              { label: 'Actors', icon: User, value: stats?.totalActors, loading: statsLoading },
+              { label: 'Looks', icon: ShirtIcon, value: stats?.totalLooks, loading: statsLoading },
+              { label: 'Items', icon: Layers, value: stats?.totalItems, loading: statsLoading },
+              { label: 'Members', icon: Users, value: stats?.activeMembers, loading: statsLoading },
+              {
+                label: 'Commissions',
+                icon: ClipboardList,
+                value: stats?.pendingCommissions,
+                loading: statsLoading,
+              },
+            ].map((stat) => (
+              <Card key={stat.label}>
+                <CardHeader className="flex flex-row items-center gap-2 pb-2">
+                  <stat.icon className="size-4 text-muted-foreground" />
+                  <CardDescription className="text-xs">{stat.label}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {stat.loading ? (
+                    <Skeleton className="h-6 w-12" />
+                  ) : (
+                    <span className="text-2xl font-bold">{stat.value ?? 0}</span>
+                  )}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Recent Activity */}
       <div>
         <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
         <Card>
