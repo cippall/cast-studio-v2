@@ -132,4 +132,78 @@ router.post(
   },
 );
 
+// --- Marketplace Settings ---
+
+const settingsPackageSchema = z.object({
+  required_outputs: z.array(z.string()).optional(),
+  generic_standard_look_id: z.string().uuid().nullable().optional(),
+  editorial_count: z.number().int().positive().optional(),
+});
+
+const settingsUpdateSchema = z.object({
+  actor_package: settingsPackageSchema.optional(),
+  look_package: z
+    .object({
+      required_outputs: z.array(z.string()).optional(),
+    })
+    .optional(),
+  fashion_item_package: z
+    .object({
+      required_outputs: z.array(z.string()).optional(),
+    })
+    .optional(),
+});
+
+// GET /api/admin/marketplace/settings
+router.get('/settings', requireSession, requireWorkspace, async (req: Request, res: Response) => {
+  try {
+    if (req.account?.role !== 'ADMIN') {
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'Only admins can view marketplace settings' },
+      });
+      return;
+    }
+
+    const settings = await marketplaceService.getMarketplaceSettings();
+    res.json(settings);
+  } catch (err) {
+    console.error('Get marketplace settings error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to get marketplace settings' },
+    });
+  }
+});
+
+// PUT /api/admin/marketplace/settings
+router.put('/settings', requireSession, requireWorkspace, async (req: Request, res: Response) => {
+  try {
+    if (req.account?.role !== 'ADMIN') {
+      res.status(403).json({
+        error: { code: 'FORBIDDEN', message: 'Only admins can update marketplace settings' },
+      });
+      return;
+    }
+
+    const parsed = settingsUpdateSchema.safeParse(req.body);
+    if (!parsed.success) {
+      res.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'Invalid input',
+          details: parsed.error.flatten().fieldErrors,
+        },
+      });
+      return;
+    }
+
+    const result = await marketplaceService.updateMarketplaceSettings(parsed.data as never);
+    res.json(result);
+  } catch (err) {
+    console.error('Update marketplace settings error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to update marketplace settings' },
+    });
+  }
+});
+
 export default router;
