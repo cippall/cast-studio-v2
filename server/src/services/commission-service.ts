@@ -21,6 +21,12 @@ import {
   validateTransition,
 } from './commission-state-machine.js';
 import * as walletRepo from '../db/repositories/wallet-repo.js';
+import {
+  notifyCommissionAssigned,
+  notifyCommissionSubmitted,
+  notifyCommissionApproved,
+  notifyCommissionChangesRequested,
+} from './notification-service.js';
 
 // --- Types ---
 
@@ -152,6 +158,15 @@ export async function assignCommissionToArtist(
     throw new Error('Failed to assign commission');
   }
 
+  // Notify the assigned artist (fire-and-forget)
+  notifyCommissionAssigned({
+    recipientId: assigneeId,
+    title: updated.title,
+    commissionId: id,
+  }).catch((err) => {
+    console.error('[commission-service] Failed to notify assignee:', err);
+  });
+
   return updated;
 }
 
@@ -220,7 +235,46 @@ export async function transitionCommissionStatus(
     }
   }
   const assets = await getCommissionAssets(id);
-  return { ...updated, assets };
+  const result = { ...updated, assets };
+
+  // Dispatch notifications based on the transition (fire-and-forget)
+  dispatchCommissionNotification(toStatus, commission, updated).catch((err) => {
+    console.error('[commission-service] Failed to dispatch notification:', err);
+  });
+
+  return result;
+}
+
+/**
+ * Dispatch the appropriate notification for a commission status transition.
+ */
+function dispatchCommissionNotification(
+  toStatus: string,
+  commission: CommissionRow,
+  updated: CommissionRow,
+): Promise<void> {
+  switch (toStatus) {
+    case 'SUBMITTED':
+      return notifyCommissionSubmitted({
+        recipientId: commission.client_id,
+        title: updated.title,
+        commissionId: commission.id,
+      });
+    case 'APPROVED':
+      return notifyCommissionApproved({
+        recipientId: commission.assignee_id ?? '',
+        title: updated.title,
+        commissionId: commission.id,
+      });
+    case 'CHANGES_REQUESTED':
+      return notifyCommissionChangesRequested({
+        recipientId: commission.assignee_id ?? '',
+        title: updated.title,
+        commissionId: commission.id,
+      });
+    default:
+      return Promise.resolve();
+  }
 }
 
 /**

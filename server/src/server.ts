@@ -17,6 +17,7 @@ import fashionItemsRouter from './routes/fashion-items.js';
 import generationJobsRouter from './routes/generation-jobs.js';
 import assetVersionsRouter from './routes/asset-versions.js';
 import walletRouter from './routes/wallet.js';
+import notificationsRouter from './routes/notifications.js';
 import { stripeWebhookHandler } from './routes/wallet.js';
 import uploadRouter from './routes/upload.js';
 import { startWorker } from './workers/generation-worker.js';
@@ -62,6 +63,7 @@ app.use('/api/commissions', commissionsRouter);
 app.use('/api/generation-jobs', generationJobsRouter);
 app.use('/api/assets', assetVersionsRouter);
 app.use('/api/wallet', walletRouter);
+app.use('/api/notifications', notificationsRouter);
 
 // Stripe webhook needs raw body for signature verification
 app.post(

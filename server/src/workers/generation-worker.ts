@@ -1,9 +1,7 @@
 import * as fal from '../services/fal-service.js';
-import {
-  findPendingOutputs,
-  updateOutputsStatus,
-  getAssetOutputById,
-} from '../db/repositories/asset-repo.js';
+import { findPendingOutputs, updateOutputsStatus } from '../db/repositories/asset-repo.js';
+import { notifyWorkflowCompleted, notifyWorkflowFailed } from '../services/notification-service.js';
+import { query } from '../db/pool.js';
 
 // --- Debounce Flag ---
 
@@ -62,6 +60,7 @@ async function processSingleOutput(output: {
   id: string;
   asset_id: string;
   model: string;
+  layout_type: string;
   generation_params: Record<string, unknown> | null;
 }): Promise<void> {
   // If generation_params has a fal_job_id, poll that job
@@ -77,11 +76,22 @@ async function processSingleOutput(output: {
         image_url: result.image_url,
         cost_credits: result.cost_credits,
       } as Record<string, unknown>);
+      // Notify asset creator (fire-and-forget)
+      notifyAssetCreator(output.asset_id, 'WORKFLOW_COMPLETED', {
+        title: 'Generation Complete',
+        message: `Your ${output.layout_type} generation has completed successfully.`,
+      }).catch(() => {});
     } else if (result.status === 'FAILED') {
       await updateOutputsStatus(output.asset_id, [output.id], 'FAILED', {
         error_message: result.error_message,
         image_url: null,
       } as Record<string, unknown>);
+      // Notify asset creator (fire-and-forget)
+      notifyAssetCreator(output.asset_id, 'WORKFLOW_FAILED', {
+        title: 'Generation Failed',
+        message: `Your ${output.layout_type} generation failed.`,
+        reason: result.error_message ?? undefined,
+      }).catch(() => {});
     }
     // If still PENDING, do nothing — will pick it up on next poll
   } else {
@@ -91,6 +101,36 @@ async function processSingleOutput(output: {
       image_url: `https://fal.ai/sim/${output.id}.png`,
       cost_credits: 0.05,
     } as Record<string, unknown>);
+  }
+}
+
+/**
+ * Look up the asset creator and dispatch a notification.
+ */
+async function notifyAssetCreator(
+  assetId: string,
+  type: 'WORKFLOW_COMPLETED' | 'WORKFLOW_FAILED',
+  data: { title: string; message: string; reason?: string },
+): Promise<void> {
+  try {
+    const assetResult = await query('SELECT creator_id FROM assets WHERE id = $1', [assetId]);
+    const creatorId = (assetResult.rows[0] as { creator_id: string } | undefined)?.creator_id;
+    if (!creatorId) return;
+
+    if (type === 'WORKFLOW_COMPLETED') {
+      await notifyWorkflowCompleted({
+        recipientId: creatorId,
+        title: data.title,
+      });
+    } else {
+      await notifyWorkflowFailed({
+        recipientId: creatorId,
+        title: data.title,
+        reason: data.reason,
+      });
+    }
+  } catch (err) {
+    console.error('[generation-worker] Notification error:', err);
   }
 }
 
