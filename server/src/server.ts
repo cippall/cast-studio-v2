@@ -21,6 +21,8 @@ import notificationsRouter from './routes/notifications.js';
 import workflowsRouter from './routes/workflows.js';
 import { stripeWebhookHandler } from './routes/wallet.js';
 import uploadRouter from './routes/upload.js';
+import marketplaceRouter from './routes/marketplace.js';
+import adminMarketplaceRouter from './routes/admin/marketplace.js';
 import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
@@ -80,6 +82,8 @@ app.use('/uploads', express.static(uploadsDir));
 
 // Upload route
 app.use('/api/upload', uploadRouter);
+app.use('/api/marketplace', marketplaceRouter);
+app.use('/api/admin/marketplace', adminMarketplaceRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
