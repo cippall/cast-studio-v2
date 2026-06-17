@@ -426,6 +426,7 @@ export interface CreateAssetOutputInput {
   model: string;
   status?: string;
   cost_credits?: number;
+  version?: number;
   generation_params?: Record<string, unknown> | null;
   reference_images?: Record<string, unknown> | null;
   source_asset_outputs?: Record<string, unknown> | null;
@@ -436,8 +437,8 @@ export interface CreateAssetOutputInput {
  */
 export async function createAssetOutput(input: CreateAssetOutputInput): Promise<AssetOutputRow> {
   const result = await query(
-    `INSERT INTO asset_outputs (asset_id, layout_type, model, status, cost_credits, generation_params, reference_images, source_asset_outputs)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO asset_outputs (asset_id, layout_type, model, status, cost_credits, version, generation_params, reference_images, source_asset_outputs)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING *`,
     [
       input.asset_id,
@@ -445,6 +446,7 @@ export async function createAssetOutput(input: CreateAssetOutputInput): Promise<
       input.model,
       input.status ?? 'PENDING',
       input.cost_credits ?? 0,
+      input.version ?? 1,
       input.generation_params ? JSON.stringify(input.generation_params) : null,
       input.reference_images ? JSON.stringify(input.reference_images) : null,
       input.source_asset_outputs ? JSON.stringify(input.source_asset_outputs) : null,

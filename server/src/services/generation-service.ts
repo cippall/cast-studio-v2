@@ -9,8 +9,11 @@ import {
 } from '../db/repositories/asset-repo.js';
 import type { AssetOutputRow, CreateAssetOutputInput } from '../db/repositories/asset-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
+import type { WorkspaceRow } from '../middleware/requireWorkspace.js';
 import { generateSeed } from './actor-service.js';
 import * as fal from './fal-service.js';
+import { reserveCreditsForGeneration } from './wallet-service.js';
+import { InsufficientCreditsError } from '../db/repositories/wallet-repo.js';
 
 // --- Constants ---
 
@@ -80,6 +83,29 @@ export async function generateActorOutput(
     (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))
       ? JSON.stringify(asset.prompt_recipe.identity)
       : '';
+
+  // Reserve credits before generation
+  const totalCost = DEFAULT_COST * numOutputs;
+  const workspaceRow = {
+    id: account.workspace_id,
+    name: '',
+    slug: '',
+    workspace_type: '',
+    created_at: '',
+  } as WorkspaceRow;
+  try {
+    await reserveCreditsForGeneration(account, workspaceRow, totalCost);
+  } catch (err) {
+    if (err instanceof InsufficientCreditsError) {
+      throw Object.assign(
+        new Error(
+          `Insufficient credits. Balance: ${err.currentBalance}, Required: ${err.required}. Please top up your wallet.`,
+        ),
+        { statusCode: 422 },
+      );
+    }
+    throw err;
+  }
 
   const outputs: Array<{
     id: string;
@@ -170,6 +196,28 @@ export async function regenerateActorOutput(
       ? JSON.stringify(asset.prompt_recipe.identity)
       : '';
 
+  // Reserve credits before regeneration
+  const workspaceRow = {
+    id: account.workspace_id,
+    name: '',
+    slug: '',
+    workspace_type: '',
+    created_at: '',
+  } as WorkspaceRow;
+  try {
+    await reserveCreditsForGeneration(account, workspaceRow, DEFAULT_COST);
+  } catch (err) {
+    if (err instanceof InsufficientCreditsError) {
+      throw Object.assign(
+        new Error(
+          `Insufficient credits. Balance: ${err.currentBalance}, Required: ${err.required}. Please top up your wallet.`,
+        ),
+        { statusCode: 422 },
+      );
+    }
+    throw err;
+  }
+
   // Find current outputs for this layout type
   const allOutputs = await getAssetOutputs(assetId);
   const currentOutputs = allOutputs.filter(
@@ -207,6 +255,7 @@ export async function regenerateActorOutput(
     model,
     status: 'PENDING',
     cost_credits: DEFAULT_COST,
+    version: newVersion,
     generation_params: generationParams,
   };
 
@@ -275,6 +324,28 @@ export async function generateCharacterSheet(
   const prompt = (asset.prompt_recipe?.identity as Record<string, unknown>)
     ? JSON.stringify(asset.prompt_recipe.identity)
     : '';
+
+  // Reserve credits before generation
+  const workspaceRow = {
+    id: account.workspace_id,
+    name: '',
+    slug: '',
+    workspace_type: '',
+    created_at: '',
+  } as WorkspaceRow;
+  try {
+    await reserveCreditsForGeneration(account, workspaceRow, DEFAULT_COST);
+  } catch (err) {
+    if (err instanceof InsufficientCreditsError) {
+      throw Object.assign(
+        new Error(
+          `Insufficient credits. Balance: ${err.currentBalance}, Required: ${err.required}. Please top up your wallet.`,
+        ),
+        { statusCode: 422 },
+      );
+    }
+    throw err;
+  }
 
   // Find the actor's headshot output and the look's selected output
   const actorOutputs = await getAssetOutputs(assetId);
