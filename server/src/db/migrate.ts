@@ -102,8 +102,9 @@ async function migrateDown(targetVersion?: string): Promise<void> {
     if (!applied.has(migration.version)) continue;
 
     console.log(`Running down migration: ${migration.version}_${migration.name}...`);
-    await runSqlFile(migration.downPath);
+    // Delete the record FIRST (before the down SQL drops the table)
     await pool.query('DELETE FROM _migrations WHERE version = $1', [migration.version]);
+    await runSqlFile(migration.downPath);
     console.log(`  Complete.`);
 
     if (targetVersion && migration.version === targetVersion) break;

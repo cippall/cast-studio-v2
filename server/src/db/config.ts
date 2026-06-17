@@ -2,7 +2,7 @@ import dotenv from 'dotenv';
 import path from 'path';
 
 // Load .env from project root
-dotenv.config({ path: path.resolve(import.meta.dirname, '../../../.env') });
+dotenv.config({ path: path.resolve(import.meta.dirname, '../../.env') });
 
 export interface DbConfig {
   host: string;
