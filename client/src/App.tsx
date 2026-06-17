@@ -1,12 +1,18 @@
-import { AssetType } from '@cast/types';
+/**
+ * App root — providers and router.
+ */
+import { RouterProvider } from 'react-router-dom';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { queryClient } from '@/lib/query-client';
+import { router } from '@/router';
+import { TooltipProvider } from '@/components/ui/tooltip';
 
-function App() {
+export default function App() {
   return (
-    <div>
-      <h1>Cast Studio v2</h1>
-      <p>Shared types loaded: {Object.values(AssetType).join(', ')}</p>
-    </div>
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider delay={300}>
+        <RouterProvider router={router} />
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
-
-export default App;
