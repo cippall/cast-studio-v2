@@ -15,7 +15,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, User } from 'lucide-react';
+import { LogOut, Settings, Sun, Moon, User } from 'lucide-react';
+import { useTheme } from '@/hooks/useTheme';
 import NotificationDropdown from '@/components/NotificationDropdown';
 
 export default function TopBar() {
@@ -23,6 +24,7 @@ export default function TopBar() {
   const logout = useLogout();
   const navigate = useNavigate();
   const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const { theme, toggleTheme } = useTheme();
 
   const initials = user?.name
     ? user.name
@@ -48,8 +50,17 @@ export default function TopBar() {
         </span>
       </div>
 
-      {/* Right: notifications + user menu */}
+      {/* Right: theme toggle + notifications + user menu */}
       <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={toggleTheme}
+          aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
+        >
+          {theme === 'light' ? <Moon className="size-4" /> : <Sun className="size-4" />}
+        </Button>
+
         <NotificationDropdown />
 
         {/* User avatar dropdown */}
