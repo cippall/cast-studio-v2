@@ -25,6 +25,8 @@ import {
 import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 
 type EntryMethod = 'PROMPT' | 'REFERENCE';
 type WizardStep = 1 | 2;
@@ -101,7 +103,7 @@ function Step1({
       <RadioGroup
         value={entryMethod}
         onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-2 gap-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
       >
         {ENTRY_METHODS.map((method) => (
           <Label
@@ -190,7 +192,7 @@ interface ImageGridProps {
 
 function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       {options.map((option) => (
         <Card
           key={option.id}
@@ -424,14 +426,15 @@ export default function FashionItemCreator() {
   }, [saveItemMutation]);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">New Fashion Item</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {step === 1 && 'Choose how to define your fashion item.'}
-          {step === 2 && 'Select the best option and name your item.'}
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="New Fashion Item"
+        description={
+          step === 1
+            ? 'Choose how to define your fashion item.'
+            : 'Select the best option and name your item.'
+        }
+      />
 
       {step === 1 && (
         <Step1
@@ -460,6 +463,6 @@ export default function FashionItemCreator() {
           isRegenerating={regenerateMutation.isPending}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

@@ -29,6 +29,8 @@ import {
 import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 
 type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT' | 'RANDOMIZE';
 type WizardStage = 1 | 2 | 3;
@@ -108,7 +110,7 @@ function Stage1({
       <RadioGroup
         value={entryMethod}
         onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-2 gap-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
         {ENTRY_METHODS.map((method) => (
           <Label
@@ -176,7 +178,7 @@ interface ImageGridProps {
 
 function ImageGrid({ options, selectedId, isStepConfirmed, onSelect }: ImageGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       {options.map((option) => (
         <Card
           key={option.id}
@@ -248,7 +250,7 @@ function Stage3({
 
   return (
     <div className="space-y-6">
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div className="space-y-2">
           <Label htmlFor="actor-name">Actor Name</Label>
           <Input
@@ -475,15 +477,17 @@ export default function ActorDesigner() {
   );
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">New Actor</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {stage === 1 && "Choose how to define your actor's identity."}
-          {stage === 2 && 'Generate and select the best options for each layout.'}
-          {stage === 3 && 'Name your actor and set properties.'}
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="New Actor"
+        description={
+          stage === 1
+            ? "Choose how to define your actor's identity."
+            : stage === 2
+              ? 'Generate and select the best options for each layout.'
+              : 'Name your actor and set properties.'
+        }
+      />
 
       {stage === 1 && (
         <Stage1
@@ -498,13 +502,13 @@ export default function ActorDesigner() {
 
       {stage === 2 && (
         <div className="space-y-6">
-          {/* Horizontal stepper */}
-          <div className="flex items-center gap-2">
+          {/* Horizontal stepper — scrollable on mobile */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-2">
             {LAYOUT_STEPS.map((step, index) => {
               const isActive = index === currentStepIndex;
               const isComplete = confirmedSteps.has(step.key);
               return (
-                <div key={step.key} className="flex items-center gap-2">
+                <div key={step.key} className="flex shrink-0 items-center gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -513,7 +517,7 @@ export default function ActorDesigner() {
                       }
                     }}
                     className={cn(
-                      'flex items-center gap-2 rounded-full px-4 py-2 text-sm font-medium transition-colors',
+                      'flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
                       isActive && 'bg-primary text-primary-foreground',
                       isComplete &&
                         !isActive &&
@@ -525,7 +529,7 @@ export default function ActorDesigner() {
                     {step.label}
                   </button>
                   {index < LAYOUT_STEPS.length - 1 && (
-                    <ChevronRight className="size-4 text-muted-foreground" />
+                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
                   )}
                 </div>
               );
@@ -533,7 +537,7 @@ export default function ActorDesigner() {
           </div>
 
           {/* Step header */}
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h2 className="text-lg font-semibold">
                 {currentStep.label}
@@ -562,7 +566,7 @@ export default function ActorDesigner() {
             onSelect={handleSelectOption}
           />
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             {!hasGeneratedImages ? (
               <Button onClick={handleGenerate} disabled={isGenerating}>
                 {isGenerating ? (
@@ -607,6 +611,6 @@ export default function ActorDesigner() {
           isSaving={saveActorMutation.isPending}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }

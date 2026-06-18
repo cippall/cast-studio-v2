@@ -29,6 +29,8 @@ import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import { useFashionItems } from '@/hooks/useFashionItems';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 
 type EntryMethod = 'PROMPT' | 'REFERENCE' | 'COMPOSITE';
 type WizardStep = 1 | 2;
@@ -145,7 +147,7 @@ function Step1({
       <RadioGroup
         value={entryMethod}
         onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-3 gap-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         {ENTRY_METHODS.map((method) => (
           <Label
@@ -199,11 +201,11 @@ function Step1({
           </div>
 
           {referenceImage && (
-            <div className="flex gap-4">
+            <div className="flex flex-col gap-4 sm:flex-row">
               <img
                 src={referenceImage}
                 alt="Reference"
-                className="h-32 w-32 rounded-lg object-cover"
+                className="h-32 w-32 shrink-0 rounded-lg object-cover"
                 width={128}
                 height={128}
               />
@@ -238,7 +240,7 @@ function Step1({
               No fashion items in your library. Create some first.
             </p>
           ) : (
-            <div className="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-6">
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
               {fashionItems.map((item) => (
                 <Card
                   key={item.id}
@@ -307,7 +309,7 @@ interface ImageGridProps {
 
 function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
   return (
-    <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
       {options.map((option) => (
         <Card
           key={option.id}
@@ -549,14 +551,15 @@ export default function LookDesigner() {
   }, [saveLookMutation]);
 
   return (
-    <div className="mx-auto max-w-5xl">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight">New Look</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {step === 1 && 'Choose how to define your look.'}
-          {step === 2 && 'Select the best option and name your look.'}
-        </p>
-      </div>
+    <PageContainer>
+      <PageHeader
+        title="New Look"
+        description={
+          step === 1
+            ? 'Choose how to define your look.'
+            : 'Select the best option and name your look.'
+        }
+      />
 
       {step === 1 && (
         <Step1
@@ -590,6 +593,6 @@ export default function LookDesigner() {
           isRegenerating={regenerateMutation.isPending}
         />
       )}
-    </div>
+    </PageContainer>
   );
 }
