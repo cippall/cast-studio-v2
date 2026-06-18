@@ -1,6 +1,7 @@
 /**
  * AdminListingsSettings — configure marketplace package rules.
  * Required outputs per package type, generic standard look, editorial count.
+ * Responsive: stacked mobile, 2-column desktop.
  */
 import { useEffect, useState } from 'react';
 import { useMarketplaceSettings, useUpdateMarketplaceSettings } from '@/hooks/useMarketplace';
@@ -17,6 +18,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -75,119 +78,124 @@ export default function AdminListingsSettings() {
 
   if (isLoading || !settings) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-2xl font-bold tracking-tight">Listings Settings</h1>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Listings Settings" description="Configure marketplace package rules">
+          <Button onClick={handleSave} disabled={updateSettings.isPending}>
+            {updateSettings.isPending ? (
+              <>
+                <Loader2 className="mr-2 size-4 animate-spin" />
+                Saving...
+              </>
+            ) : (
+              'Save Changes'
+            )}
+          </Button>
+        </PageHeader>
 
-      {/* Actor Package */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Actor Package</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Required outputs</Label>
-            <div className="grid grid-cols-2 gap-2">
-              {ACTOR_OUTPUT_OPTIONS.map((opt) => (
-                <div key={opt.key} className="flex items-center gap-2">
-                  <Checkbox
-                    id={`output-${opt.key}`}
-                    checked={requiredOutputs.includes(opt.key)}
-                    onCheckedChange={() => toggleOutput(opt.key)}
-                  />
-                  <Label htmlFor={`output-${opt.key}`} className="text-sm">
-                    {opt.label}
-                  </Label>
+        {/* Package cards: stacked mobile, 2-column desktop */}
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          {/* Actor Package */}
+          <Card className="md:col-span-2">
+            <CardHeader>
+              <CardTitle>Actor Package</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Required outputs</Label>
+                <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                  {ACTOR_OUTPUT_OPTIONS.map((opt) => (
+                    <div key={opt.key} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`output-${opt.key}`}
+                        checked={requiredOutputs.includes(opt.key)}
+                        onCheckedChange={() => toggleOutput(opt.key)}
+                      />
+                      <Label htmlFor={`output-${opt.key}`} className="text-sm">
+                        {opt.label}
+                      </Label>
+                    </div>
+                  ))}
                 </div>
-              ))}
-            </div>
-          </div>
+              </div>
 
-          <div className="space-y-2">
-            <Label>Generic Standard Look</Label>
-            <Select value={genericLookId} onValueChange={setGenericLookId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select a look for character sheet & editorials..." />
-              </SelectTrigger>
-              <SelectContent>
-                {looks.map((look) => (
-                  <SelectItem key={look.id} value={look.id}>
-                    {look.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <p className="text-xs text-muted-foreground">
-              This look is used when generating Character Sheet and Editorial outputs for Actor
-              Packages.
-            </p>
-          </div>
+              <div className="space-y-2">
+                <Label>Generic Standard Look</Label>
+                <Select value={genericLookId} onValueChange={setGenericLookId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a look for character sheet and editorials..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {looks.map((look) => (
+                      <SelectItem key={look.id} value={look.id}>
+                        {look.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  This look is used when generating Character Sheet and Editorial outputs for Actor
+                  Packages.
+                </p>
+              </div>
 
-          {requiredOutputs.includes('editorial') && (
-            <div className="space-y-2">
-              <Label htmlFor="editorialCount">Editorial shot count</Label>
-              <Input
-                id="editorialCount"
-                type="number"
-                min="1"
-                max="10"
-                value={editorialCount}
-                onChange={(e) => setEditorialCount(e.target.value)}
-                className="w-32"
-              />
-            </div>
-          )}
-        </CardContent>
-      </Card>
+              {requiredOutputs.includes('editorial') && (
+                <div className="space-y-2">
+                  <Label htmlFor="editorialCount">Editorial shot count</Label>
+                  <Input
+                    id="editorialCount"
+                    type="number"
+                    min="1"
+                    max="10"
+                    value={editorialCount}
+                    onChange={(e) => setEditorialCount(e.target.value)}
+                    className="w-32"
+                  />
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
-      {/* Look Package */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Look</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Checkbox id="look-image" checked disabled />
-            <Label htmlFor="look-image" className="text-sm">
-              Look Image
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
+          {/* Look Package */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Look</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="look-image" checked disabled />
+                <Label htmlFor="look-image" className="text-sm">
+                  Look Image
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
 
-      {/* Fashion Item Package */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Fashion Item</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Checkbox id="item-image" checked disabled />
-            <Label htmlFor="item-image" className="text-sm">
-              Item Image
-            </Label>
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="flex gap-2">
-        <Button onClick={handleSave} disabled={updateSettings.isPending}>
-          {updateSettings.isPending ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Changes'
-          )}
-        </Button>
+          {/* Fashion Item Package */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Fashion Item</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex items-center gap-2">
+                <Checkbox id="item-image" checked disabled />
+                <Label htmlFor="item-image" className="text-sm">
+                  Item Image
+                </Label>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
-    </div>
+    </PageContainer>
   );
 }

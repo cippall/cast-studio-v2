@@ -1,19 +1,19 @@
 /**
  * AdminSubmissions — review queue for marketplace submissions.
  * Artists submit assets → Admin previews, approves (with price), or rejects.
+ * Uses DataTable for desktop table + mobile card list with status filter tabs.
  */
 import { useState } from 'react';
 import {
   useAdminSubmissions,
   useApproveSubmission,
   useRejectSubmission,
+  type MarketplaceSubmission,
 } from '@/hooks/useMarketplace';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -22,9 +22,17 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import EmptyState from '@/components/EmptyState';
+import { DataTable, type Column } from '@/components/DataTable';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Check, Eye, Loader2, X } from 'lucide-react';
 import { toast } from 'sonner';
+
+const STATUS_TABS = [
+  { value: 'MARKETPLACE_PENDING', label: 'Pending' },
+  { value: 'MARKETPLACE_APPROVED', label: 'Approved' },
+  { value: 'MARKETPLACE_REJECTED', label: 'Rejected' },
+];
 
 export default function AdminSubmissions() {
   const [status, setStatus] = useState('MARKETPLACE_PENDING');
@@ -37,7 +45,9 @@ export default function AdminSubmissions() {
   const reject = useRejectSubmission();
 
   const submissions = data?.data ?? [];
-  const pendingCount = status === 'MARKETPLACE_PENDING' ? submissions.length : 0;
+
+  // DataTable requires { id: string }; map asset_id → id
+  const tableData = submissions.map((s) => ({ ...s, id: s.asset_id }));
 
   const preview = submissions.find((s) => s.asset_id === previewId);
 
@@ -64,157 +74,177 @@ export default function AdminSubmissions() {
     }
   };
 
+  const columns: Column<MarketplaceSubmission & { id: string }>[] = [
+    {
+      key: 'asset_name',
+      header: 'Asset',
+      sortable: false,
+      render: (row) => (
+        <div className="flex flex-col gap-0.5">
+          <span className="font-medium">{row.asset_name}</span>
+          {row.creator_name && (
+            <span className="text-xs text-muted-foreground">by {row.creator_name}</span>
+          )}
+        </div>
+      ),
+    },
+    {
+      key: 'asset_type',
+      header: 'Type',
+      sortable: false,
+      render: (row) => (
+        <Badge variant="outline">{row.asset_type === 'ACTOR' ? 'Actor Package' : 'Look'}</Badge>
+      ),
+    },
+    {
+      key: 'submitted_at',
+      header: 'Submitted',
+      sortable: false,
+      render: (row) =>
+        row.submitted_at
+          ? new Date(row.submitted_at).toLocaleDateString(undefined, {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric',
+            })
+          : '—',
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold tracking-tight">Submissions</h1>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Submissions" description="Review and manage marketplace submissions" />
 
-      <Tabs value={status} onValueChange={setStatus}>
-        <TabsList>
-          <TabsTrigger value="MARKETPLACE_PENDING">
-            Pending {pendingCount > 0 && `(${pendingCount})`}
-          </TabsTrigger>
-          <TabsTrigger value="MARKETPLACE_APPROVED">Approved</TabsTrigger>
-          <TabsTrigger value="MARKETPLACE_REJECTED">Rejected</TabsTrigger>
-        </TabsList>
+        <Tabs value={status} onValueChange={setStatus}>
+          <TabsList>
+            {STATUS_TABS.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+                {tab.value === 'MARKETPLACE_PENDING' && submissions.length > 0 && (
+                  <span className="ml-1">({submissions.length})</span>
+                )}
+              </TabsTrigger>
+            ))}
+          </TabsList>
 
-        <TabsContent value={status} className="mt-4">
-          {isLoading ? (
-            <div className="space-y-3">
-              {Array.from({ length: 3 }).map((_, i) => (
-                <Skeleton key={i} className="h-24 w-full" />
-              ))}
-            </div>
-          ) : submissions.length === 0 ? (
-            <EmptyState
-              title="No submissions"
-              description={`No ${status.replace('MARKETPLACE_', '').toLowerCase()} submissions.`}
-            />
-          ) : (
-            <div className="space-y-3">
-              {submissions.map((sub) => (
-                <Card key={sub.asset_id}>
-                  <CardContent className="flex items-center gap-4 p-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold">{sub.asset_name}</span>
-                        <Badge variant="outline">
-                          {sub.asset_type === 'ACTOR' ? 'Actor Package' : 'Look'}
-                        </Badge>
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        by {sub.creator_name ?? 'Unknown'}
-                        {sub.submitted_at && ` • ${new Date(sub.submitted_at).toLocaleString()}`}
-                      </p>
-                    </div>
-
-                    {status === 'MARKETPLACE_PENDING' && (
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setPreviewId(sub.asset_id)}
+          {STATUS_TABS.map((tab) => (
+            <TabsContent key={tab.value} value={tab.value} className="mt-4">
+              <DataTable<MarketplaceSubmission & { id: string }>
+                columns={columns}
+                data={status === tab.value ? tableData : []}
+                isLoading={isLoading && status === tab.value}
+                emptyTitle="No submissions"
+                emptyDescription={`No ${tab.label.toLowerCase()} submissions.`}
+                cardTitleKey="asset_name"
+                rowActions={
+                  status === 'MARKETPLACE_PENDING'
+                    ? (row) => [
+                        <button
+                          key="preview"
+                          className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-sm"
+                          onClick={() => setPreviewId(row.asset_id)}
                         >
-                          <Eye className="mr-2 size-4" />
+                          <Eye className="size-4" />
                           Preview
-                        </Button>
-                        <Button
-                          size="sm"
+                        </button>,
+                        <button
+                          key="approve"
+                          className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-sm"
                           onClick={() => {
-                            setApproveId(sub.asset_id);
+                            setApproveId(row.asset_id);
                             setApprovePrice('');
                           }}
                         >
-                          <Check className="mr-2 size-4" />
+                          <Check className="size-4" />
                           Approve
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => handleReject(sub.asset_id)}
-                          disabled={reject.isPending}
+                        </button>,
+                        <button
+                          key="reject"
+                          className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-destructive"
+                          onClick={() => handleReject(row.asset_id)}
                         >
-                          <X className="mr-2 size-4" />
+                          <X className="size-4" />
                           Reject
-                        </Button>
+                        </button>,
+                      ]
+                    : undefined
+                }
+              />
+            </TabsContent>
+          ))}
+        </Tabs>
+
+        {/* Preview dialog */}
+        <Dialog open={!!previewId} onOpenChange={() => setPreviewId(null)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{preview?.asset_name}</DialogTitle>
+            </DialogHeader>
+            {preview?.outputs && (
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {Object.entries(preview.outputs).map(([key, output]) => (
+                  <div key={key} className="space-y-1">
+                    <p className="text-sm font-medium capitalize">{key.replace('_', ' ')}</p>
+                    {output.image_url ? (
+                      <img
+                        src={output.image_url}
+                        alt={key}
+                        className="w-full object-cover"
+                        width={200}
+                        height={200}
+                      />
+                    ) : (
+                      <div className="flex aspect-square items-center justify-center border border-border bg-surface">
+                        <span className="text-xs text-muted-foreground">No image</span>
                       </div>
                     )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
+                  </div>
+                ))}
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
 
-      {/* Preview dialog */}
-      <Dialog open={!!previewId} onOpenChange={() => setPreviewId(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>{preview?.asset_name}</DialogTitle>
-          </DialogHeader>
-          {preview?.outputs && (
-            <div className="grid grid-cols-2 gap-4">
-              {Object.entries(preview.outputs).map(([key, output]) => (
-                <div key={key} className="space-y-1">
-                  <p className="text-sm font-medium capitalize">{key.replace('_', ' ')}</p>
-                  {output.image_url ? (
-                    <img
-                      src={output.image_url}
-                      alt={key}
-                      className="w-full rounded object-cover"
-                      width={200}
-                      height={200}
-                    />
-                  ) : (
-                    <div className="flex aspect-square items-center justify-center rounded bg-muted">
-                      <span className="text-xs text-muted-foreground">No image</span>
-                    </div>
-                  )}
-                </div>
-              ))}
+        {/* Approve dialog */}
+        <Dialog open={!!approveId} onOpenChange={() => setApproveId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Approve Listing</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p className="text-sm text-muted-foreground">
+                Set the price for this listing. The asset will be frozen and listed on the
+                marketplace.
+              </p>
+              <div className="space-y-2">
+                <Label htmlFor="approvePrice">Price (credits)</Label>
+                <Input
+                  id="approvePrice"
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={approvePrice}
+                  onChange={(e) => setApprovePrice(e.target.value)}
+                  placeholder="10.00"
+                />
+              </div>
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-
-      {/* Approve dialog */}
-      <Dialog open={!!approveId} onOpenChange={() => setApproveId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Approve Listing</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              Set the price for this listing. The asset will be frozen and listed on the
-              marketplace.
-            </p>
-            <div className="space-y-2">
-              <Label htmlFor="approvePrice">Price (credits)</Label>
-              <Input
-                id="approvePrice"
-                type="number"
-                min="0"
-                step="0.01"
-                value={approvePrice}
-                onChange={(e) => setApprovePrice(e.target.value)}
-                placeholder="10.00"
-              />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setApproveId(null)}>
-              Cancel
-            </Button>
-            <Button onClick={handleApprove} disabled={approve.isPending || !approvePrice}>
-              {approve.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                'Approve & List'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setApproveId(null)}>
+                Cancel
+              </Button>
+              <Button onClick={handleApprove} disabled={approve.isPending || !approvePrice}>
+                {approve.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  'Approve & List'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }
