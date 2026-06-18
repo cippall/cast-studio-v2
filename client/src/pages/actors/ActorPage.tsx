@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
+import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
 
 interface ActorOutput {
   id: string;
@@ -143,7 +144,7 @@ function OutputSectionContent({
           <img
             src={output.image_url}
             alt={sectionLabel}
-            className="max-w-md rounded-lg"
+            className="max-w-md object-cover"
             width={512}
             height={512}
           />
@@ -209,7 +210,7 @@ function OutputSectionContent({
             <img
               src={output.image_url}
               alt="Character Sheet"
-              className="max-w-md rounded-lg"
+              className="max-w-md object-cover"
               width={512}
               height={512}
             />
@@ -224,7 +225,7 @@ function OutputSectionContent({
               <img
                 src={output.image_url}
                 alt="Editorial"
-                className="max-w-md rounded-lg"
+                className="max-w-md object-cover"
                 width={512}
                 height={512}
               />
@@ -382,148 +383,206 @@ export default function ActorPage() {
   const headshotOutput = actor.outputs?.headshot;
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
 
-  return (
-    <div className="space-y-6">
-      {/* Top bar: name + headshot + actions */}
-      <div className="flex items-start gap-6">
-        <div className="shrink-0">
-          {headshotOutput?.image_url ? (
-            <img
-              src={headshotOutput.image_url}
-              alt={actor.name}
-              className="size-40 rounded-lg object-cover"
-              width={160}
-              height={160}
-            />
-          ) : (
-            <div className="flex size-40 items-center justify-center rounded-lg bg-muted">
-              <ImageIcon className="size-12 text-muted-foreground" />
-            </div>
-          )}
-        </div>
+  /* -- Render helpers for AssetDetailLayout slots -- */
 
-        <div className="flex-1 space-y-4">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{actor.name}</h1>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {Object.entries(actor.taxonomy_values ?? {}).map(
-                ([key, value]) =>
-                  value && (
-                    <Badge key={key} variant="secondary">
-                      {key}: {value}
-                    </Badge>
-                  ),
-              )}
-              {marketplaceStatus && marketplaceStatus !== 'NONE' && (
-                <Badge
-                  variant={marketplaceStatus === 'MARKETPLACE_APPROVED' ? 'default' : 'outline'}
-                >
-                  <Lock className="mr-1 size-3" />
-                  {marketplaceStatus.replace('MARKETPLACE_', '')}
-                </Badge>
-              )}
-            </div>
-          </div>
-
-          <div className="flex flex-wrap gap-2">
-            {isArtist && (
-              <>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isFrozen}
-                  onClick={() => navigate(`/actors/${id}/edit`)}
-                >
-                  <Edit3 className="mr-2 size-4" />
-                  Edit Fields
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  disabled={isFrozen}
-                  onClick={() => regenerateMutation.mutate('headshot')}
-                >
-                  <RotateCcw className="mr-2 size-4" />
-                  Regenerate Headshot
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()}>
-                  <Copy className="mr-2 size-4" />
-                  Duplicate
-                </Button>
-                <Button
-                  size="sm"
-                  disabled={!hasRequiredOutputs || isFrozen}
-                  onClick={() => submitMarketplaceMutation.mutate()}
-                >
-                  <Send className="mr-2 size-4" />
-                  Submit to Marketplace
-                </Button>
-              </>
-            )}
-          </div>
-
-          {isFrozen && (
-            <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
-              <Lock className="size-4" />
-              This actor is marketplace-listed and frozen. Editing and regeneration are disabled.
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Output sections */}
-      <div className="space-y-4">
-        {OUTPUT_SECTIONS.map((section) => {
-          const output = actor.outputs?.[section.key];
-          const isObsolete = output?.is_obsolete === true;
-          const isOpen = openSections.has(section.key);
-          const sectionStatus = getOutputStatus(output);
-
-          return (
-            <Collapsible
-              key={section.key}
-              open={isOpen}
-              onOpenChange={() => toggleSection(section.key)}
-            >
-              <Card>
-                <CollapsibleTrigger className="w-full">
-                  <div className="flex items-center justify-between px-6 py-4">
-                    <div className="flex items-center gap-3">
-                      <h3 className="text-lg font-semibold">{section.label}</h3>
-                      <GenerationStatus status={sectionStatus} />
-                    </div>
-                    <ChevronDown
-                      className={cn(
-                        'size-5 text-muted-foreground transition-transform',
-                        isOpen && 'rotate-180',
-                      )}
-                    />
-                  </div>
-                </CollapsibleTrigger>
-
-                <CollapsibleContent>
-                  <CardContent className="pt-0">
-                    <OutputSectionContent
-                      sectionKey={section.key}
-                      sectionLabel={section.label}
-                      output={output}
-                      isObsolete={isObsolete}
-                      isGenerating={isGenerating}
-                      isArtist={isArtist}
-                      isFrozen={isFrozen}
-                      characterSheetLookId={characterSheetLookId}
-                      onCharacterSheetLookChange={setCharacterSheetLookId}
-                      looks={looks}
-                      onGenerate={(lt) => generateMutation.mutate(lt)}
-                      onRegenerate={(lt) => regenerateMutation.mutate(lt)}
-                    />
-                  </CardContent>
-                </CollapsibleContent>
-              </Card>
-            </Collapsible>
-          );
-        })}
-      </div>
+  const imageSlot = headshotOutput?.image_url ? (
+    <img
+      src={headshotOutput.image_url}
+      alt={actor.name}
+      className="w-full object-cover"
+      width={512}
+      height={512}
+    />
+  ) : (
+    <div className="flex flex-col items-center gap-4 py-12">
+      <ImageIcon className="size-16 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">No headshot generated yet.</p>
     </div>
+  );
+
+  const overviewContent = (
+    <div className="flex flex-col gap-6">
+      {headshotOutput?.image_url && (
+        <img
+          src={headshotOutput.image_url}
+          alt={actor.name}
+          className="max-w-md object-cover"
+          width={512}
+          height={512}
+        />
+      )}
+      {Object.keys(actor.taxonomy_values ?? {}).length > 0 && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          {Object.entries(actor.taxonomy_values ?? {}).map(
+            ([key, value]) =>
+              value && (
+                <div key={key} className="border p-4">
+                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                    {key}
+                  </p>
+                  <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+                </div>
+              ),
+          )}
+        </div>
+      )}
+      {actor.source_type && actor.source_type !== 'ORIGINAL' && (
+        <p className="text-sm text-muted-foreground">
+          Source: {actor.source_type.replace('_', ' ').toLowerCase()}
+        </p>
+      )}
+    </div>
+  );
+
+  const outputsContent = (
+    <div className="space-y-4">
+      {OUTPUT_SECTIONS.map((section) => {
+        const output = actor.outputs?.[section.key];
+        const isObsolete = output?.is_obsolete === true;
+        const isOpen = openSections.has(section.key);
+        const sectionStatus = getOutputStatus(output);
+
+        return (
+          <Collapsible
+            key={section.key}
+            open={isOpen}
+            onOpenChange={() => toggleSection(section.key)}
+          >
+            <Card>
+              <CollapsibleTrigger className="w-full">
+                <div className="flex items-center justify-between px-6 py-4">
+                  <div className="flex items-center gap-3">
+                    <h3 className="text-lg font-semibold">{section.label}</h3>
+                    <GenerationStatus status={sectionStatus} />
+                  </div>
+                  <ChevronDown
+                    className={cn(
+                      'size-5 text-muted-foreground transition-transform',
+                      isOpen && 'rotate-180',
+                    )}
+                  />
+                </div>
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <CardContent className="pt-0">
+                  <OutputSectionContent
+                    sectionKey={section.key}
+                    sectionLabel={section.label}
+                    output={output}
+                    isObsolete={isObsolete}
+                    isGenerating={isGenerating}
+                    isArtist={isArtist}
+                    isFrozen={isFrozen}
+                    characterSheetLookId={characterSheetLookId}
+                    onCharacterSheetLookChange={setCharacterSheetLookId}
+                    looks={looks}
+                    onGenerate={(lt) => generateMutation.mutate(lt)}
+                    onRegenerate={(lt) => regenerateMutation.mutate(lt)}
+                  />
+                </CardContent>
+              </CollapsibleContent>
+            </Card>
+          </Collapsible>
+        );
+      })}
+    </div>
+  );
+
+  const propertiesContent = (
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+      {Object.entries(actor.taxonomy_values ?? {}).map(
+        ([key, value]) =>
+          value && (
+            <div key={key} className="border p-4">
+              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                {key}
+              </p>
+              <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+            </div>
+          ),
+      )}
+      {Object.keys(actor.taxonomy_values ?? {}).length === 0 && (
+        <p className="text-sm text-muted-foreground sm:col-span-2">No taxonomy properties set.</p>
+      )}
+    </div>
+  );
+
+  /* -- Status badge -- */
+
+  const statusBadge = (
+    <>
+      {marketplaceStatus && marketplaceStatus !== 'NONE' && (
+        <Badge variant={marketplaceStatus === 'MARKETPLACE_APPROVED' ? 'default' : 'outline'}>
+          <Lock className="mr-1 size-3" />
+          {marketplaceStatus.replace('MARKETPLACE_', '')}
+        </Badge>
+      )}
+    </>
+  );
+
+  /* -- Actions -- */
+
+  const actions = (
+    <>
+      {isArtist && (
+        <>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFrozen}
+            onClick={() => navigate(`/actors/${id}/edit`)}
+          >
+            <Edit3 className="mr-2 size-4" />
+            Edit Fields
+          </Button>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={isFrozen}
+            onClick={() => regenerateMutation.mutate('headshot')}
+          >
+            <RotateCcw className="mr-2 size-4" />
+            Regenerate Headshot
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()}>
+            <Copy className="mr-2 size-4" />
+            Duplicate
+          </Button>
+          <Button
+            size="sm"
+            disabled={!hasRequiredOutputs || isFrozen}
+            onClick={() => submitMarketplaceMutation.mutate()}
+          >
+            <Send className="mr-2 size-4" />
+            Submit to Marketplace
+          </Button>
+        </>
+      )}
+    </>
+  );
+
+  /* -- Banner -- */
+
+  const banner = isFrozen ? (
+    <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+      <Lock className="size-4" />
+      This actor is marketplace-listed and frozen. Editing and regeneration are disabled.
+    </div>
+  ) : undefined;
+
+  return (
+    <AssetDetailLayout
+      libraryLabel="Actors"
+      libraryPath="/actors"
+      name={actor.name}
+      typeLabel="Actor"
+      statusBadge={statusBadge}
+      actions={actions}
+      image={imageSlot}
+      overviewContent={overviewContent}
+      outputsContent={outputsContent}
+      propertiesContent={propertiesContent}
+      banner={banner}
+    />
   );
 }
