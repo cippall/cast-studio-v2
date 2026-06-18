@@ -137,7 +137,7 @@ export default function Sidebar() {
     <aside
       className={cn(
         'hidden lg:flex flex-col border-r bg-background transition-all duration-200',
-        useUIStore.getState().sidebarCollapsed ? 'lg:w-16' : 'lg:w-60',
+        useUIStore((s) => s.sidebarCollapsed) ? 'lg:w-16' : 'lg:w-60',
       )}
     >
       <SidebarNavContent />
