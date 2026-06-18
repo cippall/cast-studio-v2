@@ -9,6 +9,7 @@ import { useMarketplaceDetail, usePurchaseListing } from '@/hooks/useMarketplace
 import { useWalletBalance } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import {
   Dialog,
   DialogContent,
@@ -19,7 +20,7 @@ import {
 } from '@/components/ui/dialog';
 import PageContainer from '@/components/layout/PageContainer';
 import LoadingState from '@/components/LoadingState';
-import { ImageIcon, Loader2, ShoppingBag, Wallet } from 'lucide-react';
+import { AlertCircle, ImageIcon, Loader2, ShoppingBag, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function MarketplaceDetail() {
@@ -27,7 +28,7 @@ export default function MarketplaceDetail() {
   const navigate = useNavigate();
   const [showPurchase, setShowPurchase] = useState(false);
 
-  const { data: listing, isLoading } = useMarketplaceDetail(id ?? '');
+  const { data: listing, isLoading, error } = useMarketplaceDetail(id ?? '');
   const { data: wallet } = useWalletBalance();
   const purchase = usePurchaseListing();
 
@@ -56,14 +57,22 @@ export default function MarketplaceDetail() {
     );
   }
 
-  if (!listing) {
+  if (error || !listing) {
     return (
       <PageContainer>
-        <div className="flex flex-col items-center py-24 text-center">
-          <p className="text-muted-foreground">Listing not found.</p>
-          <Button variant="outline" className="mt-4" onClick={() => navigate('/marketplace')}>
-            Back to Marketplace
-          </Button>
+        <div className="flex flex-col gap-4">
+          <div className="flex items-center gap-3">
+            <Button variant="ghost" size="sm" onClick={() => navigate('/marketplace')}>
+              {'← Back to Marketplace'}
+            </Button>
+            <h1 className="font-heading text-2xl font-bold tracking-tight">Listing</h1>
+          </div>
+          <Card>
+            <CardContent className="flex items-center gap-2 py-8 text-destructive">
+              <AlertCircle className="size-4" />
+              <span className="text-sm">Failed to load listing details.</span>
+            </CardContent>
+          </Card>
         </div>
       </PageContainer>
     );
