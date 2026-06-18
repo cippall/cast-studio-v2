@@ -6,11 +6,18 @@ import request from 'supertest';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Mock pool before importing modules that use it
-vi.mock('../src/db/pool.js', () => ({
-  query: vi.fn(),
-  getClient: vi.fn(),
-  default: {},
-}));
+vi.mock('../src/db/pool.js', () => {
+  const mockPoolClient = {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    release: vi.fn(),
+    on: vi.fn(),
+  };
+  return {
+    query: vi.fn(),
+    getClient: vi.fn().mockResolvedValue(mockPoolClient),
+    default: { connect: vi.fn().mockResolvedValue(mockPoolClient) },
+  };
+});
 
 import * as poolModule from '../src/db/pool.js';
 import walletRouter, { handleStripeWebhook } from '../src/routes/wallet.js';

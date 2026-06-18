@@ -6,11 +6,19 @@ import request from 'supertest';
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 // Mock pool before importing modules that use it
-vi.mock('../src/db/pool.js', () => ({
-  query: vi.fn(),
-  getClient: vi.fn(),
-  default: {},
-}));
+// vi.mock is hoisted, so mock client must be created inside the factory
+vi.mock('../src/db/pool.js', () => {
+  const mockPoolClient = {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    release: vi.fn(),
+    on: vi.fn(),
+  };
+  return {
+    query: vi.fn(),
+    getClient: vi.fn().mockResolvedValue(mockPoolClient),
+    default: { connect: vi.fn().mockResolvedValue(mockPoolClient) },
+  };
+});
 
 import * as poolModule from '../src/db/pool.js';
 import commissionsRouter from '../src/routes/commissions.js';
@@ -185,6 +193,8 @@ describe('POST /api/commissions', () => {
     const client = makeClientRow();
     seedRequireSessionQueries(client);
 
+    // createCommissionRequest: SELECT studio workspace
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: STUDIO_UUID }] } as any);
     const createdCommission = makeCommissionRow();
     mockQuery.mockResolvedValueOnce({ rows: [createdCommission] } as any);
 
@@ -210,6 +220,8 @@ describe('POST /api/commissions', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
+    // SELECT studio workspace
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: STUDIO_UUID }] } as any);
     const createdCommission = makeCommissionRow({
       client_id: ARTIST_UUID,
     });
@@ -658,8 +670,10 @@ describe('PATCH /api/commissions/:id/status', () => {
       approved_at: '2026-06-17T13:00:00.000Z',
     });
     mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
-    // Wallet lookup (findWallet)
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT wallet FOR UPDATE + UPDATE wallet + INSERT ledger + SELECT assets + UPDATE assets + COMMIT
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           id: 'w-00000000-0000-4000-8000-000000000001',
@@ -669,57 +683,18 @@ describe('PATCH /api/commissions/:id/status', () => {
           updated_at: '2026-06-17T10:00:00.000Z',
         },
       ],
-    } as any);
-    // Wallet balance update
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: 'w-00000000-0000-4000-8000-000000000001',
-          workspace_id: WORKSPACE_UUID,
-          account_id: CLIENT_UUID,
-          balance_credits: 5.0,
-          updated_at: '2026-06-17T13:00:00.000Z',
-        },
-      ],
-    } as any);
-    // Ledger entry creation
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: 'l-00000000-0000-4000-8000-000000000001',
-          workspace_id: WORKSPACE_UUID,
-          wallet_id: 'w-00000000-0000-4000-8000-000000000001',
-          workflow_id: null,
-          api_key_id: null,
-          amount: -5.0,
-          type: 'CHARGE',
-          created_at: '2026-06-17T13:00:00.000Z',
-        },
-      ],
-    } as any);
-    // getCommissionAssets (for ownership transfer)
+    }); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [{ id: 'l-00000000-0000-4000-8000-000000000001' }],
+    }); // INSERT ledger
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ asset_id: ASSET_UUID }] }); // SELECT commission_assets
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets ownership
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+    // updateCommissionStatus
+    mockQuery.mockResolvedValueOnce({ rows: [updated] } as any);
+    // getCommissionAssets
     mockQuery.mockResolvedValueOnce({ rows: [makeCommissionAssetRow()] } as any);
-    // setAssetOwnership
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: ASSET_UUID,
-          workspace_id: WORKSPACE_UUID,
-          creator_id: ARTIST_UUID,
-          client_id: CLIENT_UUID,
-          asset_type: 'ACTOR',
-          name: 'Test Actor',
-          seed: 12345,
-          prompt_recipe: {},
-          marketplace_status: null,
-          is_marketplace_frozen: false,
-          source_asset_id: null,
-          source_type: 'COMMISSION',
-          deleted_at: null,
-          created_at: '2026-06-17T10:00:00.000Z',
-        },
-      ],
-    } as any);
     // Update commission status
     mockQuery.mockResolvedValueOnce({ rows: [updated] } as any);
     // getCommissionAssets (for response)
@@ -742,8 +717,10 @@ describe('PATCH /api/commissions/:id/status', () => {
       premium_cost: 5.0,
     });
     mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
-    // Wallet lookup — balance too low
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT wallet FOR UPDATE (insufficient) + ROLLBACK
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           id: 'w-00000000-0000-4000-8000-000000000001',
@@ -753,7 +730,8 @@ describe('PATCH /api/commissions/:id/status', () => {
           updated_at: '2026-06-17T10:00:00.000Z',
         },
       ],
-    } as any);
+    }); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createRouteApp(client))
       .patch(`/api/commissions/${COMMISSION_UUID}/status`)
@@ -771,8 +749,11 @@ describe('PATCH /api/commissions/:id/status', () => {
       premium_cost: 5.0,
     });
     mockQuery.mockResolvedValueOnce({ rows: [commission] } as any);
-    // Wallet lookup — no wallet found
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // Transaction: BEGIN + SELECT wallet (empty) + ROLLBACK
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // SELECT wallet — no rows
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createRouteApp(client))
       .patch(`/api/commissions/${COMMISSION_UUID}/status`)
@@ -992,8 +973,10 @@ describe('Full commission flow', () => {
     mockQuery.mockResolvedValueOnce({
       rows: [makeCommissionRow({ status: 'SUBMITTED', client_id: CLIENT_UUID, premium_cost: 5.0 })],
     } as any);
-    // Wallet lookup (findWallet)
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT wallet FOR UPDATE + UPDATE wallet + INSERT ledger + SELECT assets + UPDATE assets + COMMIT
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           id: 'w-00000000-0000-4000-8000-000000000001',
@@ -1003,57 +986,14 @@ describe('Full commission flow', () => {
           updated_at: '2026-06-17T10:00:00.000Z',
         },
       ],
-    } as any);
-    // Wallet balance update
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: 'w-00000000-0000-4000-8000-000000000001',
-          workspace_id: WORKSPACE_UUID,
-          account_id: CLIENT_UUID,
-          balance_credits: 5.0,
-          updated_at: '2026-06-17T14:00:00.000Z',
-        },
-      ],
-    } as any);
-    // Ledger entry creation
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: 'l-00000000-0000-4000-8000-000000000001',
-          workspace_id: WORKSPACE_UUID,
-          wallet_id: 'w-00000000-0000-4000-8000-000000000001',
-          workflow_id: null,
-          api_key_id: null,
-          amount: -5.0,
-          type: 'CHARGE',
-          created_at: '2026-06-17T14:00:00.000Z',
-        },
-      ],
-    } as any);
-    // getCommissionAssets (for ownership transfer)
-    mockQuery.mockResolvedValueOnce({ rows: [makeCommissionAssetRow()] } as any);
-    // setAssetOwnership
-    mockQuery.mockResolvedValueOnce({
-      rows: [
-        {
-          id: ASSET_UUID,
-          workspace_id: WORKSPACE_UUID,
-          creator_id: ARTIST_UUID,
-          client_id: CLIENT_UUID,
-          asset_type: 'ACTOR',
-          name: 'Test Actor',
-          seed: 12345,
-          prompt_recipe: {},
-          marketplace_status: null,
-          is_marketplace_frozen: false,
-          source_asset_id: null,
-          source_type: 'COMMISSION',
-          deleted_at: null,
-          created_at: '2026-06-17T10:00:00.000Z',
-        },
-      ],
-    } as any);
+    } as any); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [{ id: 'l-00000000-0000-4000-8000-000000000001' }],
+    }); // INSERT ledger
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ asset_id: ASSET_UUID }] }); // SELECT commission_assets
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets ownership
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
     // Update commission status
     mockQuery.mockResolvedValueOnce({
       rows: [

@@ -5,12 +5,19 @@ import request from 'supertest';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Mock pool before importing modules that use it
-vi.mock('../src/db/pool.js', () => ({
-  query: vi.fn(),
-  getClient: vi.fn(),
-  default: {},
-}));
+// Mock pool — vi.mock is hoisted, so mock client must be created inside the factory
+vi.mock('../src/db/pool.js', () => {
+  const mockPoolClient = {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    release: vi.fn(),
+    on: vi.fn(),
+  };
+  return {
+    query: vi.fn(),
+    getClient: vi.fn().mockResolvedValue(mockPoolClient),
+    default: { connect: vi.fn().mockResolvedValue(mockPoolClient) },
+  };
+});
 
 import * as poolModule from '../src/db/pool.js';
 import marketplaceRouter from '../src/routes/marketplace.js';
@@ -212,9 +219,12 @@ describe('POST /api/marketplace/submit', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
-    // Asset belongs to a different creator
-    const asset = makeAssetRow({ creator_id: 'e0000000-0000-4000-8000-000000000099' });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ creator_id: 'e0000000-0000-4000-8000-000000000099' })],
+    } as any); // SELECT FOR UPDATE
 
     const res = await request(createMarketplaceApp(artist))
       .post('/api/marketplace/submit')
@@ -227,8 +237,13 @@ describe('POST /api/marketplace/submit', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
-    const asset = makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' })],
+    } as any); // SELECT FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(artist))
       .post('/api/marketplace/submit')
@@ -242,8 +257,13 @@ describe('POST /api/marketplace/submit', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
-    const asset = makeAssetRow({ marketplace_status: 'MARKETPLACE_APPROVED' });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ marketplace_status: 'MARKETPLACE_APPROVED' })],
+    } as any); // SELECT FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(artist))
       .post('/api/marketplace/submit')
@@ -257,12 +277,14 @@ describe('POST /api/marketplace/submit', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
-    const asset = makeAssetRow();
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
-
-    // Only headshot SUCCESS, missing fullshot, expressions, character_sheet, editorial
-    const outputs = [makeOutputRow('headshot', 'SUCCESS'), makeOutputRow('fullshot', 'PENDING')];
-    mockQuery.mockResolvedValueOnce({ rows: outputs } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [makeAssetRow()] } as any); // SELECT FOR UPDATE
+    mockQuery.mockResolvedValueOnce({
+      rows: [makeOutputRow('headshot', 'SUCCESS'), makeOutputRow('fullshot', 'PENDING')],
+    } as any); // getAssetOutputs (uses module-level query)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(artist))
       .post('/api/marketplace/submit')
@@ -280,8 +302,10 @@ describe('POST /api/marketplace/submit', () => {
     const artist = makeArtistRow();
     seedRequireSessionQueries(artist);
 
-    const asset = makeAssetRow();
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [makeAssetRow()] } as any); // SELECT FOR UPDATE
 
     // All 5 required outputs are SUCCESS
     const outputs = [
@@ -291,10 +315,10 @@ describe('POST /api/marketplace/submit', () => {
       makeOutputRow('character_sheet', 'SUCCESS'),
       makeOutputRow('editorial', 'SUCCESS'),
     ];
-    mockQuery.mockResolvedValueOnce({ rows: outputs } as any);
+    mockQuery.mockResolvedValueOnce({ rows: outputs } as any); // getAssetOutputs (module-level query)
 
-    // UPDATE to set marketplace_status
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE marketplace_status
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     const res = await request(createMarketplaceApp(artist))
       .post('/api/marketplace/submit')
@@ -512,17 +536,15 @@ describe('POST /api/admin/marketplace/submissions/:assetId/approve', () => {
     const admin = makeAdminRow();
     seedRequireSessionQueries(admin);
 
-    // SELECT asset (pending)
-    const asset = makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
-
-    // UPDATE assets SET marketplace_status = APPROVED
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
-
-    // INSERT marketplace_listings
-    mockQuery.mockResolvedValueOnce({
-      rows: [{ id: LISTING_UUID }],
-    } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' })],
+    } as any); // SELECT FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: LISTING_UUID }] } as any); // INSERT listing
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     // Notification: dispatchNotification -> notificationRepo.createNotification (1 query)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
@@ -582,12 +604,14 @@ describe('POST /api/admin/marketplace/submissions/:assetId/reject', () => {
     const admin = makeAdminRow();
     seedRequireSessionQueries(admin);
 
-    // SELECT asset (pending)
-    const asset = makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
-
-    // UPDATE assets SET marketplace_status = REJECTED
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE + UPDATE + COMMIT
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ marketplace_status: 'MARKETPLACE_PENDING' })],
+    } as any); // SELECT FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
     // Notification: dispatchNotification -> notificationRepo.createNotification (1 query)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
@@ -796,8 +820,10 @@ describe('POST /api/marketplace/:id/purchase', () => {
     const client = makeClientRow();
     seedRequireSessionQueries(client);
 
-    // SELECT listing — already purchased
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT listing FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           listing_id: LISTING_UUID,
@@ -809,7 +835,8 @@ describe('POST /api/marketplace/:id/purchase', () => {
           asset_type: 'ACTOR',
         },
       ],
-    } as any);
+    } as any); // SELECT listing FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(client)).post(
       `/api/marketplace/${LISTING_UUID}/purchase`,
@@ -823,8 +850,10 @@ describe('POST /api/marketplace/:id/purchase', () => {
     const client = makeClientRow();
     seedRequireSessionQueries(client);
 
-    // SELECT listing
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT listing FOR UPDATE + SELECT wallet FOR UPDATE + ROLLBACK
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           listing_id: LISTING_UUID,
@@ -836,12 +865,11 @@ describe('POST /api/marketplace/:id/purchase', () => {
           asset_type: 'ACTOR',
         },
       ],
-    } as any);
-
-    // SELECT wallet — balance too low
-    mockQuery.mockResolvedValueOnce({
+    } as any); // SELECT listing FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [{ id: 'wallet-uuid', balance_credits: 5.0 }],
-    } as any);
+    } as any); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(client)).post(
       `/api/marketplace/${LISTING_UUID}/purchase`,
@@ -855,8 +883,10 @@ describe('POST /api/marketplace/:id/purchase', () => {
     const client = makeClientRow();
     seedRequireSessionQueries(client);
 
-    // SELECT listing
-    mockQuery.mockResolvedValueOnce({
+    // Transaction: BEGIN + SELECT listing FOR UPDATE + SELECT wallet (empty) + ROLLBACK
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           listing_id: LISTING_UUID,
@@ -868,10 +898,9 @@ describe('POST /api/marketplace/:id/purchase', () => {
           asset_type: 'ACTOR',
         },
       ],
-    } as any);
-
-    // SELECT wallet — no wallet
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    } as any); // SELECT listing FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // SELECT wallet — no wallet
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
 
     const res = await request(createMarketplaceApp(client)).post(
       `/api/marketplace/${LISTING_UUID}/purchase`,
@@ -885,8 +914,9 @@ describe('POST /api/marketplace/:id/purchase', () => {
     const client = makeClientRow();
     seedRequireSessionQueries(client);
 
-    // 1. SELECT listing
-    mockQuery.mockResolvedValueOnce({
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [
         {
           listing_id: LISTING_UUID,
@@ -898,52 +928,31 @@ describe('POST /api/marketplace/:id/purchase', () => {
           asset_type: 'ACTOR',
         },
       ],
-    } as any);
-
-    // 2. SELECT wallet — sufficient balance
-    mockQuery.mockResolvedValueOnce({
+    } as any); // SELECT listing FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({
       rows: [{ id: 'wallet-uuid', balance_credits: 50.0 }],
-    } as any);
-
-    // 3. UPDATE wallet balance
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
-
-    // 4. INSERT ledger entry
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
-
-    // 5. findAssetById (source asset lookup)
+    } as any); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger
     const sourceAsset = makeAssetRow();
-    mockQuery.mockResolvedValueOnce({ rows: [sourceAsset] } as any);
-
-    // 6. INSERT duplicate asset
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [sourceAsset] }); // SELECT source asset
     const duplicateAssetId = 'g0000000-0000-4000-8000-000000000030';
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: duplicateAssetId }] } as any);
-
-    // 7. getAssetOutputs (source outputs)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: duplicateAssetId }] }); // INSERT duplicate asset
     const sourceOutputs = [
       makeOutputRow('headshot', 'SUCCESS', { image_url: 'https://fal.ai/headshot.png' }),
       makeOutputRow('fullshot', 'SUCCESS', { image_url: 'https://fal.ai/fullshot.png' }),
-      makeOutputRow('expressions_3x4', 'SUCCESS', {
-        image_url: 'https://fal.ai/expressions.png',
-      }),
+      makeOutputRow('expressions_3x4', 'SUCCESS', { image_url: 'https://fal.ai/expressions.png' }),
       makeOutputRow('character_sheet', 'SUCCESS', {
         image_url: 'https://fal.ai/character_sheet.png',
       }),
-      makeOutputRow('editorial', 'SUCCESS', {
-        image_url: 'https://fal.ai/editorial1.png',
-      }),
+      makeOutputRow('editorial', 'SUCCESS', { image_url: 'https://fal.ai/editorial1.png' }),
     ];
-    mockQuery.mockResolvedValueOnce({ rows: sourceOutputs } as any);
+    mockPoolClient.query.mockResolvedValueOnce({ rows: sourceOutputs } as any); // SELECT source outputs
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // INSERT duplicate outputs bulk
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
-    // 8-12. INSERT each output (5 outputs)
-    for (let i = 0; i < 5; i++) {
-      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
-    }
-
-    // 13. UPDATE marketplace_listings SET purchased_by/purchased_at
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
-
-    // 14. Notification dispatch
+    // Notification dispatch (post-COMMIT, uses module-level query via notificationRepo)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     const res = await request(createMarketplaceApp(client)).post(

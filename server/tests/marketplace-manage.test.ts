@@ -5,12 +5,19 @@ import request from 'supertest';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Mock pool before importing modules that use it
-vi.mock('../src/db/pool.js', () => ({
-  query: vi.fn(),
-  getClient: vi.fn(),
-  default: {},
-}));
+// Mock pool — vi.mock is hoisted, so mock client must be created inside the factory
+vi.mock('../src/db/pool.js', () => {
+  const mockPoolClient = {
+    query: vi.fn().mockResolvedValue({ rows: [], rowCount: 0 }),
+    release: vi.fn(),
+    on: vi.fn(),
+  };
+  return {
+    query: vi.fn(),
+    getClient: vi.fn().mockResolvedValue(mockPoolClient),
+    default: { connect: vi.fn().mockResolvedValue(mockPoolClient) },
+  };
+});
 
 // Mock requireApiKey to simply set req.account from a header and call next
 vi.mock('../src/middleware/requireApiKey.js', () => ({
@@ -633,10 +640,16 @@ describe('POST /api/agent/marketplace/submit', () => {
   });
 
   it('returns 409 when asset is missing required outputs', async () => {
-    const asset = makeAssetRow({ creator_id: AGENT_UUID });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
-    const outputs = [makeOutputRow('headshot', 'SUCCESS'), makeOutputRow('fullshot', 'PENDING')];
-    mockQuery.mockResolvedValueOnce({ rows: outputs } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ creator_id: AGENT_UUID })],
+    } as any); // SELECT FOR UPDATE
+    mockQuery.mockResolvedValueOnce({
+      rows: [makeOutputRow('headshot', 'SUCCESS'), makeOutputRow('fullshot', 'PENDING')],
+    } as any); // getAssetOutputs
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // ROLLBACK
     const res = await request(agentApp(AGENT_UUID))
       .post('/api/agent/marketplace/submit')
       .send({ asset_id: ASSET_UUID });
@@ -649,8 +662,12 @@ describe('POST /api/agent/marketplace/submit', () => {
   });
 
   it('returns 201 when agent submits valid asset', async () => {
-    const asset = makeAssetRow({ creator_id: AGENT_UUID });
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    // Transaction: BEGIN + SELECT FOR UPDATE
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [makeAssetRow({ creator_id: AGENT_UUID })],
+    } as any); // SELECT FOR UPDATE
     const outputs = [
       makeOutputRow('headshot', 'SUCCESS'),
       makeOutputRow('fullshot', 'SUCCESS'),
@@ -658,8 +675,9 @@ describe('POST /api/agent/marketplace/submit', () => {
       makeOutputRow('character_sheet', 'SUCCESS'),
       makeOutputRow('editorial', 'SUCCESS'),
     ];
-    mockQuery.mockResolvedValueOnce({ rows: outputs } as any);
-    mockQuery.mockResolvedValueOnce({ rows: [asset] } as any);
+    mockQuery.mockResolvedValueOnce({ rows: outputs } as any); // getAssetOutputs
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE marketplace_status
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
     const res = await request(agentApp(AGENT_UUID))
       .post('/api/agent/marketplace/submit')
       .send({ asset_id: ASSET_UUID });
