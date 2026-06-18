@@ -5,13 +5,12 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useActors } from '@/hooks/useActors';
-import AssetCard from '@/components/AssetCard';
+import AssetCardV2 from '@/components/AssetCardV2';
 import AssetCardSkeleton from '@/components/AssetCardSkeleton';
 import FilterPanel from '@/components/FilterPanel';
 import type { FilterGroup } from '@/components/FilterPanel';
 import EmptyState from '@/components/EmptyState';
 import { Button } from '@/components/ui/button';
-import { Separator } from '@/components/ui/separator';
 import { ChevronLeft, ChevronRight, SlidersHorizontal } from 'lucide-react';
 
 const ACTOR_FILTER_GROUPS: FilterGroup[] = [
@@ -88,8 +87,6 @@ export default function ActorLibrary() {
     };
     Object.entries(filters).forEach(([key, vals]) => {
       if (vals.length === 1) result[key] = vals[0];
-      // For multi-value, we send the first one (API handles single value per key)
-      // In a real app, the API would support multi-value
     });
     if (sharedWithMe) result.sharedWithMe = true;
     return result;
@@ -111,7 +108,6 @@ export default function ActorLibrary() {
       }
       return next;
     });
-    // Reset to page 1 on filter change
     setSearchParams((prev) => {
       prev.delete('page');
       return prev;
@@ -206,7 +202,7 @@ export default function ActorLibrary() {
             <>
               <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
                 {data.data.map((actor) => (
-                  <AssetCard
+                  <AssetCardV2
                     key={actor.id}
                     id={actor.id}
                     name={actor.name}
