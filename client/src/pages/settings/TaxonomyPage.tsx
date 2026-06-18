@@ -1,6 +1,7 @@
 /**
  * TaxonomyPage — admin taxonomy entry management (CRUD).
  * Category is passed via URL param.
+ * Uses DataTable for desktop table + mobile card list.
  */
 import { useState } from 'react';
 import { useParams } from 'react-router-dom';
@@ -9,21 +10,12 @@ import {
   useCreateTaxonomyEntry,
   useUpdateTaxonomyEntry,
   useDeleteTaxonomyEntry,
+  type TaxonomyEntry,
 } from '@/hooks/useAdmin';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -38,7 +30,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import EmptyState from '@/components/EmptyState';
+import { DataTable, type Column } from '@/components/DataTable';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Loader2, Plus, Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -143,176 +137,194 @@ export default function TaxonomyPage() {
     }
   };
 
+  const columns: Column<TaxonomyEntry>[] = [
+    {
+      key: 'key',
+      header: 'Key',
+      sortable: true,
+      render: (row) => <span className="font-mono text-sm">{row.key}</span>,
+    },
+    {
+      key: 'label',
+      header: 'Label',
+      sortable: true,
+      render: (row) => row.label,
+    },
+    {
+      key: 'input_type',
+      header: 'Input Type',
+      sortable: true,
+      render: (row) => <Badge variant="secondary">{row.input_type}</Badge>,
+    },
+    {
+      key: 'is_required',
+      header: 'Required',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.is_required ? 'default' : 'outline'}>
+          {row.is_required ? 'Yes' : 'No'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'is_active',
+      header: 'Active',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.is_active ? 'default' : 'outline'}>
+          {row.is_active ? 'Yes' : 'No'}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">
-          {CATEGORY_LABELS[category] ?? category}
-        </h1>
-        <Button onClick={handleOpenNew}>
-          <Plus className="mr-2 size-4" />
-          Add Entry
-        </Button>
-      </div>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title={CATEGORY_LABELS[category] ?? category}
+          description="Manage taxonomy entries for this category"
+        >
+          <Button onClick={handleOpenNew}>
+            <Plus className="mr-2 size-4" />
+            Add Entry
+          </Button>
+        </PageHeader>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : !entries || entries.length === 0 ? (
-        <EmptyState
-          title="No entries"
-          description="No taxonomy entries for this category yet."
-          actionLabel="Add Entry"
-          actionPath="#"
-        />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Key</TableHead>
-              <TableHead>Label</TableHead>
-              <TableHead>Input Type</TableHead>
-              <TableHead>Required</TableHead>
-              <TableHead>Active</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((entry) => (
-              <TableRow key={entry.id}>
-                <TableCell className="font-mono text-sm">{entry.key}</TableCell>
-                <TableCell>{entry.label}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">{entry.input_type}</Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={entry.is_required ? 'default' : 'outline'}>
-                    {entry.is_required ? 'Yes' : 'No'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={entry.is_active ? 'default' : 'outline'}>
-                    {entry.is_active ? 'Yes' : 'No'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(entry.id)}>
-                      <Pencil className="size-4" />
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(entry.id)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-
-      {/* Add/Edit dialog */}
-      <Dialog
-        open={showForm}
-        onOpenChange={() => {
-          setShowForm(false);
-          resetForm();
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{editId ? 'Edit Entry' : 'Add Entry'}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="formKey">Key</Label>
-              <Input
-                id="formKey"
-                value={formKey}
-                onChange={(e) => setFormKey(e.target.value)}
-                placeholder="body_type"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="formLabel">Label</Label>
-              <Input
-                id="formLabel"
-                value={formLabel}
-                onChange={(e) => setFormLabel(e.target.value)}
-                placeholder="Body Type"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="formInputType">Input Type</Label>
-              <Select value={formInputType} onValueChange={setFormInputType}>
-                <SelectTrigger id="formInputType">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {INPUT_TYPES.map((t) => (
-                    <SelectItem key={t.value} value={t.value}>
-                      {t.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="formRequired"
-                checked={formRequired}
-                onChange={(e) => setFormRequired(e.target.checked)}
-                className="size-4"
-              />
-              <Label htmlFor="formRequired">Required</Label>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => {
-                setShowForm(false);
-                resetForm();
-              }}
+        <DataTable<TaxonomyEntry>
+          columns={columns}
+          data={entries ?? []}
+          isLoading={isLoading}
+          emptyTitle="No entries"
+          emptyDescription="No taxonomy entries for this category yet."
+          cardTitleKey="label"
+          rowActions={(row) => [
+            <button
+              key="edit"
+              className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-sm"
+              onClick={() => handleOpenEdit(row.id)}
             >
-              Cancel
-            </Button>
-            <Button onClick={handleSave} disabled={createEntry.isPending || updateEntry.isPending}>
-              {createEntry.isPending || updateEntry.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : editId ? (
-                'Update'
-              ) : (
-                'Create'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+              <Pencil className="size-4" />
+              Edit
+            </button>,
+            <button
+              key="delete"
+              className="flex w-full cursor-pointer items-center gap-2 px-2 py-1.5 text-sm text-destructive"
+              onClick={() => setDeleteId(row.id)}
+            >
+              <Trash2 className="size-4" />
+              Delete
+            </button>,
+          ]}
+        />
 
-      {/* Delete confirmation */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Entry</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this taxonomy entry?
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteEntry.isPending}>
-              {deleteEntry.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        {/* Add/Edit dialog */}
+        <Dialog
+          open={showForm}
+          onOpenChange={() => {
+            setShowForm(false);
+            resetForm();
+          }}
+        >
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{editId ? 'Edit Entry' : 'Add Entry'}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="formKey">Key</Label>
+                <Input
+                  id="formKey"
+                  value={formKey}
+                  onChange={(e) => setFormKey(e.target.value)}
+                  placeholder="body_type"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="formLabel">Label</Label>
+                <Input
+                  id="formLabel"
+                  value={formLabel}
+                  onChange={(e) => setFormLabel(e.target.value)}
+                  placeholder="Body Type"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="formInputType">Input Type</Label>
+                <Select value={formInputType} onValueChange={setFormInputType}>
+                  <SelectTrigger id="formInputType">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {INPUT_TYPES.map((t) => (
+                      <SelectItem key={t.value} value={t.value}>
+                        {t.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="checkbox"
+                  id="formRequired"
+                  checked={formRequired}
+                  onChange={(e) => setFormRequired(e.target.checked)}
+                  className="size-4"
+                />
+                <Label htmlFor="formRequired">Required</Label>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setShowForm(false);
+                  resetForm();
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSave}
+                disabled={createEntry.isPending || updateEntry.isPending}
+              >
+                {createEntry.isPending || updateEntry.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : editId ? (
+                  'Update'
+                ) : (
+                  'Create'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete confirmation */}
+        <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Entry</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this taxonomy entry?
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteId(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteEntry.isPending}>
+                {deleteEntry.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }

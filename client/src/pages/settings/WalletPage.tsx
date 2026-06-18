@@ -1,21 +1,20 @@
 /**
  * WalletPage — Client wallet balance, top-up, and transaction history.
+ * Uses PageContainer for responsive padding.
+ * Transactions use DataTable (table on desktop, card list on mobile).
  */
 import { useState } from 'react';
-import { useWalletBalance, useWalletTransactions, useTopUpWallet } from '@/hooks/useWallet';
+import {
+  useWalletBalance,
+  useWalletTransactions,
+  useTopUpWallet,
+  type LedgerEntry,
+} from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -23,6 +22,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { DataTable, type Column } from '@/components/DataTable';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -60,73 +62,81 @@ export default function WalletPage() {
     }
   };
 
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold tracking-tight">Wallet</h1>
+  const columns: Column<LedgerEntry>[] = [
+    {
+      key: 'amount',
+      header: 'Amount',
+      sortable: true,
+      render: (row) => (
+        <span className={row.amount >= 0 ? 'text-success' : 'text-destructive'}>
+          {formatCredits(row.amount)}
+        </span>
+      ),
+    },
+    {
+      key: 'type',
+      header: 'Type',
+      sortable: true,
+      render: (row) => row.type,
+    },
+    {
+      key: 'created_at',
+      header: 'Date',
+      sortable: true,
+      render: (row) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(row.created_at).toLocaleString()}
+        </span>
+      ),
+    },
+  ];
 
-      {/* Balance card */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Balance</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {loadingBalance ? (
-            <Skeleton className="h-10 w-32" />
-          ) : (
-            <div className="flex items-baseline gap-2">
-              <span className="text-4xl font-bold">
-                {wallet?.balance_credits.toFixed(2) ?? '0.00'}
-              </span>
-              <span className="text-muted-foreground">credits</span>
-            </div>
-          )}
+  return (
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Wallet" description="Balance, top-up, and transaction history">
           <Button onClick={() => setShowTopUp(true)}>
             <Plus className="mr-2 size-4" />
             Top Up
           </Button>
-        </CardContent>
-      </Card>
+        </PageHeader>
 
-      {/* Transactions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Transactions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {loadingTx ? (
-            <div className="space-y-2">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-10 w-full" />
-              ))}
-            </div>
-          ) : transactions.length === 0 ? (
-            <p className="py-8 text-center text-sm text-muted-foreground">No transactions yet.</p>
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((tx) => (
-                  <TableRow key={tx.id}>
-                    <TableCell className={tx.amount >= 0 ? 'text-emerald-600' : 'text-destructive'}>
-                      {formatCredits(tx.amount)}
-                    </TableCell>
-                    <TableCell>{tx.type}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(tx.created_at).toLocaleString()}
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </CardContent>
-      </Card>
+        {/* Balance card */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Balance</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingBalance ? (
+              <Skeleton className="h-10 w-32" />
+            ) : (
+              <div className="flex items-baseline gap-2">
+                <span className="text-4xl font-bold">
+                  {wallet?.balance_credits.toFixed(2) ?? '0.00'}
+                </span>
+                <span className="text-muted-foreground">credits</span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Transactions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Recent Transactions</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DataTable<LedgerEntry>
+              columns={columns}
+              data={transactions}
+              isLoading={loadingTx}
+              emptyTitle="No transactions"
+              emptyDescription="No transactions yet."
+              cardTitleKey="type"
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Top-up dialog */}
       <Dialog open={showTopUp} onOpenChange={setShowTopUp}>
@@ -162,6 +172,6 @@ export default function WalletPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </PageContainer>
   );
 }

@@ -1,5 +1,6 @@
 /**
  * ModelsPage — admin model management table using DataTable.
+ * Wrapped in PageContainer for responsive padding.
  */
 import { useState } from 'react';
 import { useAdminModels, useDeleteModel, useUpdateModel, type ModelConfig } from '@/hooks/useAdmin';
@@ -13,6 +14,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -44,7 +47,6 @@ export default function ModelsPage() {
     }
   };
 
-  // Ensure models is always an array
   const modelList = models ?? [];
 
   const columns: Column<ModelConfig>[] = [
@@ -79,59 +81,64 @@ export default function ModelsPage() {
   ];
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight font-heading">Models</h1>
-        <Button disabled>
-          <Plus className="mr-2 size-4" />
-          Add Model
-        </Button>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Models" description="Configure AI models for generation tasks">
+          <Button disabled>
+            <Plus className="mr-2 size-4" />
+            Add Model
+          </Button>
+        </PageHeader>
+
+        <DataTable<ModelConfig>
+          columns={columns}
+          data={modelList}
+          isLoading={isLoading}
+          emptyTitle="No models"
+          emptyDescription="No AI models configured yet."
+          cardTitleKey="name"
+          rowActions={(row) => [
+            <button
+              key="toggle"
+              className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
+              onClick={() => handleToggleActive(row.id, row.is_active)}
+            >
+              {row.is_active ? 'Deactivate' : 'Activate'}
+            </button>,
+            <button
+              key="delete"
+              className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm text-destructive"
+              onClick={() => setDeleteId(row.id)}
+            >
+              Delete
+            </button>,
+          ]}
+        />
+
+        {/* Delete confirmation */}
+        <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Model</DialogTitle>
+            </DialogHeader>
+            <p className="text-sm text-muted-foreground">
+              Are you sure you want to delete this model? This action cannot be undone.
+            </p>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteId(null)}>
+                Cancel
+              </Button>
+              <Button variant="destructive" onClick={handleDelete} disabled={deleteModel.isPending}>
+                {deleteModel.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
-
-      <DataTable<ModelConfig>
-        columns={columns}
-        data={modelList}
-        isLoading={isLoading}
-        emptyTitle="No models"
-        emptyDescription="No AI models configured yet."
-        cardTitleKey="name"
-        rowActions={(row) => [
-          <button
-            key="toggle"
-            className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
-            onClick={() => handleToggleActive(row.id, row.is_active)}
-          >
-            {row.is_active ? 'Deactivate' : 'Activate'}
-          </button>,
-          <button
-            key="delete"
-            className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm text-destructive"
-            onClick={() => setDeleteId(row.id)}
-          >
-            Delete
-          </button>,
-        ]}
-      />
-
-      {/* Delete confirmation */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Model</DialogTitle>
-          </DialogHeader>
-          <p className="text-sm text-muted-foreground">
-            Are you sure you want to delete this model? This action cannot be undone.
-          </p>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteModel.isPending}>
-              {deleteModel.isPending ? <Loader2 className="mr-2 size-4 animate-spin" /> : 'Delete'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+    </PageContainer>
   );
 }
