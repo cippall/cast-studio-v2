@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import StatCard from '@/components/StatCard';
 import {
   User,
   Shirt,
@@ -114,42 +115,36 @@ export default function Dashboard() {
           <div>
             <h2 className="mb-3 text-lg font-semibold">Overview</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
-              {[
-                { label: 'Actors', icon: User, value: stats?.totalActors, loading: statsLoading },
-                {
-                  label: 'Looks',
-                  icon: ShirtIcon,
-                  value: stats?.totalLooks,
-                  loading: statsLoading,
-                },
-                { label: 'Items', icon: Layers, value: stats?.totalItems, loading: statsLoading },
-                {
-                  label: 'Members',
-                  icon: Users,
-                  value: stats?.activeMembers,
-                  loading: statsLoading,
-                },
-                {
-                  label: 'Commissions',
-                  icon: ClipboardList,
-                  value: stats?.pendingCommissions,
-                  loading: statsLoading,
-                },
-              ].map((stat) => (
-                <Card key={stat.label}>
-                  <CardHeader className="flex flex-row items-center gap-2 pb-2">
-                    <stat.icon className="size-4 text-muted-foreground" />
-                    <CardDescription className="text-xs">{stat.label}</CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    {stat.loading ? (
-                      <Skeleton className="h-6 w-12" />
-                    ) : (
-                      <span className="text-2xl font-bold">{stat.value ?? 0}</span>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
+              <StatCard
+                icon={User}
+                label="Actors"
+                value={stats?.totalActors ?? 0}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={ShirtIcon}
+                label="Looks"
+                value={stats?.totalLooks ?? 0}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={Layers}
+                label="Items"
+                value={stats?.totalItems ?? 0}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={Users}
+                label="Members"
+                value={stats?.activeMembers ?? 0}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={ClipboardList}
+                label="Commissions"
+                value={stats?.pendingCommissions ?? 0}
+                isLoading={statsLoading}
+              />
             </div>
           </div>
         )}
