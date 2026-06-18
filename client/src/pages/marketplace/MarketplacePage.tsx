@@ -6,9 +6,9 @@ import { useState, useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useMarketplace } from '@/hooks/useMarketplace';
 import { useWalletBalance } from '@/hooks/useWallet';
-import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import ProductCard from '@/components/ProductCard';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
@@ -21,61 +21,6 @@ const LISTING_TYPE_OPTIONS = [
   { value: 'ACTOR_PACKAGE', label: 'Actor Packages' },
   { value: 'LOOK', label: 'Looks' },
 ];
-
-function ListingCard({
-  listing,
-  balance,
-  onBuy,
-}: {
-  listing: {
-    id: string;
-    listing_type: string;
-    asset: { name: string; headshot_url: string | null; image_url: string | null };
-    seller_name: string;
-    price_credits: number;
-  };
-  balance: number | undefined;
-  onBuy: (id: string) => void;
-}) {
-  const thumbnail =
-    listing.listing_type === 'ACTOR_PACKAGE' ? listing.asset.headshot_url : listing.asset.image_url;
-  const canAfford = balance !== undefined && balance >= listing.price_credits;
-
-  return (
-    <Card className="group overflow-hidden transition-colors hover:border-border-medium">
-      <div className="relative aspect-square overflow-hidden bg-muted">
-        {thumbnail ? (
-          <img
-            src={thumbnail}
-            alt={listing.asset.name}
-            className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
-            loading="lazy"
-            width={300}
-            height={300}
-          />
-        ) : (
-          <div className="flex size-full items-center justify-center bg-muted">
-            <span className="text-sm text-muted-foreground">No image</span>
-          </div>
-        )}
-      </div>
-      <CardContent className="p-3">
-        <h3 className="truncate text-sm font-semibold">{listing.asset.name}</h3>
-        <p className="text-xs text-muted-foreground">by {listing.seller_name}</p>
-        <div className="mt-2 flex items-center justify-between">
-          <span className="text-sm font-semibold">{listing.price_credits.toFixed(2)} cr</span>
-          <Button
-            size="sm"
-            variant={canAfford ? 'default' : 'outline'}
-            onClick={() => onBuy(listing.id)}
-          >
-            {canAfford ? 'Buy' : `Need ${(listing.price_credits - (balance ?? 0)).toFixed(2)} more`}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
 
 export default function MarketplacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -159,9 +104,18 @@ export default function MarketplacePage() {
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
             {listings.map((listing) => (
-              <ListingCard
+              <ProductCard
                 key={listing.id}
-                listing={listing}
+                id={listing.id}
+                name={listing.asset.name}
+                sellerName={listing.seller_name}
+                priceCredits={listing.price_credits}
+                listingType={listing.listing_type}
+                thumbnailUrl={
+                  listing.listing_type === 'ACTOR_PACKAGE'
+                    ? listing.asset.headshot_url
+                    : listing.asset.image_url
+                }
                 balance={balance}
                 onBuy={(id) => {
                   window.location.href = `/marketplace/${id}`;
