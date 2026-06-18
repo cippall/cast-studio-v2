@@ -71,7 +71,7 @@ export default function CommissionFormsPage() {
                   <div>
                     <h3 className="font-semibold">{form.name}</h3>
                     <p className="text-sm text-muted-foreground">
-                      {form.fields.length} field{form.fields.length !== 1 ? 's' : ''}
+                      {form.fields?.length ?? 0} field{(form.fields?.length ?? 0) !== 1 ? 's' : ''}
                       {form.is_active ? ' \u2022 Active' : ' \u2022 Inactive'}
                     </p>
                   </div>
