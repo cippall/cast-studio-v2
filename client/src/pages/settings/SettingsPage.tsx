@@ -1,7 +1,8 @@
 /**
- * SettingsPage — role-based settings landing page.
- * Shows different tabs/sections based on user role.
+ * SettingsPage — role-based settings page using SettingsLayout.
+ * Shows different sections based on user role.
  */
+import { useState } from 'react';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,46 +21,73 @@ import {
   ShoppingBag,
   Wallet,
 } from 'lucide-react';
+import SettingsLayout from '@/components/layout/SettingsLayout';
+import type { SettingsSection } from '@/components/layout/SettingsLayout';
 
 export default function SettingsPage() {
   const { data: user } = useCurrentUser();
   const navigate = useNavigate();
+  const [activeSection, setActiveSection] = useState('profile');
 
   const isAdmin = user?.role === 'ADMIN';
   const isArtist = user?.role === 'ARTIST' || isAdmin;
   const isClient = user?.role === 'CLIENT';
 
-  return (
-    <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+  // Build sections based on role
+  const sections: SettingsSection[] = [
+    { id: 'profile', label: 'Profile' },
+    ...(isArtist ? [{ id: 'api-keys', label: 'API Keys', icon: <Key className="size-4" /> }] : []),
+    ...(isClient ? [{ id: 'wallet', label: 'Wallet', icon: <Wallet className="size-4" /> }] : []),
+    ...(isAdmin
+      ? [
+          { id: 'users', label: 'Users & Roles', icon: <Users className="size-4" /> },
+          { id: 'models', label: 'Models', icon: <Wand2 className="size-4" /> },
+          { id: 'prompts', label: 'System Prompts', icon: <FileText className="size-4" /> },
+          { id: 'taxonomy-actor', label: 'Actor Properties', icon: <Tag className="size-4" /> },
+          { id: 'taxonomy-look', label: 'Look Taxonomy', icon: <Palette className="size-4" /> },
+          {
+            id: 'taxonomy-fashion',
+            label: 'Fashion Item Taxonomy',
+            icon: <ShoppingBag className="size-4" />,
+          },
+          {
+            id: 'commission-forms',
+            label: 'Commission Forms',
+            icon: <Settings2 className="size-4" />,
+          },
+        ]
+      : []),
+  ];
 
-      {/* Profile section */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Profile</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label>Name</Label>
-            <Input defaultValue={user?.name ?? ''} disabled />
-          </div>
-          <div className="space-y-2">
-            <Label>Email</Label>
-            <Input defaultValue={user?.email ?? ''} disabled />
-          </div>
-          <div className="flex items-center gap-2">
-            <Label>Role:</Label>
-            <Badge variant={isAdmin ? 'default' : 'secondary'}>{user?.role}</Badge>
-          </div>
-        </CardContent>
-      </Card>
+  const renderSectionContent = () => {
+    switch (activeSection) {
+      case 'profile':
+        return (
+          <Card>
+            <CardHeader>
+              <CardTitle>Profile</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="space-y-2">
+                <Label>Name</Label>
+                <Input defaultValue={user?.name ?? ''} disabled />
+              </div>
+              <div className="space-y-2">
+                <Label>Email</Label>
+                <Input defaultValue={user?.email ?? ''} disabled />
+              </div>
+              <div className="flex items-center gap-2">
+                <Label>Role:</Label>
+                <Badge variant={isAdmin ? 'default' : 'secondary'}>{user?.role}</Badge>
+              </div>
+            </CardContent>
+          </Card>
+        );
 
-      {/* Role-specific settings */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {/* Artist: API Keys */}
-        {isArtist && (
+      case 'api-keys':
+        return (
           <Card
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
             onClick={() => navigate('/settings/api-keys')}
           >
             <CardHeader>
@@ -69,13 +97,18 @@ export default function SettingsPage() {
               </CardTitle>
               <CardDescription>Manage API keys for programmatic access</CardDescription>
             </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Keys
+              </Button>
+            </CardContent>
           </Card>
-        )}
+        );
 
-        {/* Client: Wallet */}
-        {isClient && (
+      case 'wallet':
+        return (
           <Card
-            className="cursor-pointer transition-shadow hover:shadow-md"
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
             onClick={() => navigate('/settings/wallet')}
           >
             <CardHeader>
@@ -85,105 +118,173 @@ export default function SettingsPage() {
               </CardTitle>
               <CardDescription>Balance, top-up, and transaction history</CardDescription>
             </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                View Wallet
+              </Button>
+            </CardContent>
           </Card>
-        )}
+        );
 
-        {/* Admin: Users & Roles */}
-        {isAdmin && (
-          <>
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/users')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="size-5" />
-                  Users & Roles
-                </CardTitle>
-                <CardDescription>Manage accounts and permissions</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'users':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/users')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="size-5" />
+                Users & Roles
+              </CardTitle>
+              <CardDescription>Manage accounts and permissions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Users
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/models')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Wand2 className="size-5" />
-                  Models
-                </CardTitle>
-                <CardDescription>Configure AI models</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'models':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/models')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wand2 className="size-5" />
+                Models
+              </CardTitle>
+              <CardDescription>Configure AI models</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Configure Models
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/prompts')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="size-5" />
-                  System Prompts
-                </CardTitle>
-                <CardDescription>Edit prompt templates</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'prompts':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/prompts')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <FileText className="size-5" />
+                System Prompts
+              </CardTitle>
+              <CardDescription>Edit prompt templates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Edit Prompts
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/taxonomy/ACTOR_PROPERTY')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Tag className="size-5" />
-                  Actor Properties
-                </CardTitle>
-                <CardDescription>Manage actor taxonomy</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'taxonomy-actor':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/taxonomy/ACTOR_PROPERTY')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Tag className="size-5" />
+                Actor Properties
+              </CardTitle>
+              <CardDescription>Manage actor taxonomy</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Taxonomy
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/taxonomy/LOOK_TAXONOMY')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Palette className="size-5" />
-                  Look Taxonomy
-                </CardTitle>
-                <CardDescription>Manage look taxonomy</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'taxonomy-look':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/taxonomy/LOOK_TAXONOMY')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Palette className="size-5" />
+                Look Taxonomy
+              </CardTitle>
+              <CardDescription>Manage look taxonomy</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Taxonomy
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/taxonomy/FASHION_ITEM_TAXONOMY')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <ShoppingBag className="size-5" />
-                  Fashion Item Taxonomy
-                </CardTitle>
-                <CardDescription>Manage fashion item taxonomy</CardDescription>
-              </CardHeader>
-            </Card>
+      case 'taxonomy-fashion':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/taxonomy/FASHION_ITEM_TAXONOMY')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <ShoppingBag className="size-5" />
+                Fashion Item Taxonomy
+              </CardTitle>
+              <CardDescription>Manage fashion item taxonomy</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Taxonomy
+              </Button>
+            </CardContent>
+          </Card>
+        );
 
-            <Card
-              className="cursor-pointer transition-shadow hover:shadow-md"
-              onClick={() => navigate('/settings/commission-forms')}
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Settings2 className="size-5" />
-                  Commission Forms
-                </CardTitle>
-                <CardDescription>Manage commission form templates</CardDescription>
-              </CardHeader>
-            </Card>
-          </>
-        )}
-      </div>
-    </div>
+      case 'commission-forms':
+        return (
+          <Card
+            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            onClick={() => navigate('/settings/commission-forms')}
+          >
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Settings2 className="size-5" />
+                Commission Forms
+              </CardTitle>
+              <CardDescription>Manage commission form templates</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Button variant="outline" size="sm">
+                Manage Forms
+              </Button>
+            </CardContent>
+          </Card>
+        );
+
+      default:
+        return null;
+    }
+  };
+
+  return (
+    <SettingsLayout
+      sections={sections}
+      activeSection={activeSection}
+      onSectionChange={setActiveSection}
+    >
+      {renderSectionContent()}
+    </SettingsLayout>
   );
 }
