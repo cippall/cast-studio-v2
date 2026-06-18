@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useFashionItems } from '@/hooks/useFashionItems';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
+import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -199,58 +200,60 @@ export default function FashionItemLibrary() {
   );
 
   return (
-    <LibraryLayout
-      title="Fashion Items"
-      description="items"
-      filterGroups={FASHION_FILTER_GROUPS}
-      selectedFilters={filters}
-      onFilterChange={handleFilterChange}
-      onResetFilters={handleResetFilters}
-      items={data?.data ?? []}
-      total={data?.total}
-      page={page}
-      totalPages={totalPages}
-      onPageChange={handlePageChange}
-      isLoading={isLoading}
-      isError={isError}
-      error={error}
-      newItemPath="/fashion-items/new"
-      newItemLabel="+ New Item"
-      sort={sort}
-      onSortChange={handleSortChange}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      showFilters={showFilters}
-      onToggleFilters={() => setShowFilters((v) => !v)}
-      extraActions={
-        isClient ? (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="shared-with-me"
-              checked={sharedWithMe}
-              onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
-            />
-            <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
-              Shared with Me
-            </label>
-          </div>
-        ) : undefined
-      }
-      renderCard={(item) => (
-        <AssetCardV2
-          key={item.id}
-          id={item.id}
-          name={item.name}
-          type="fashion-item"
-          imageUrl={item.image_url}
-          tags={extractTags(item)}
-          createdAt={item.created_at}
-        />
-      )}
-      emptyTitle="No fashion items yet"
-      emptyDescription="Create your first fashion item to get started."
-      emptyActionLabel="New Item"
-      emptyActionPath="/fashion-items/new"
-    />
+    <PageContainer>
+      <LibraryLayout
+        title="Fashion Items"
+        description="items"
+        filterGroups={FASHION_FILTER_GROUPS}
+        selectedFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        items={data?.data ?? []}
+        total={data?.total}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        newItemPath="/fashion-items/new"
+        newItemLabel="+ New Item"
+        sort={sort}
+        onSortChange={handleSortChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((v) => !v)}
+        extraActions={
+          isClient ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="shared-with-me"
+                checked={sharedWithMe}
+                onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
+              />
+              <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
+                Shared with Me
+              </label>
+            </div>
+          ) : undefined
+        }
+        renderCard={(item) => (
+          <AssetCardV2
+            key={item.id}
+            id={item.id}
+            name={item.name}
+            type="fashion-item"
+            imageUrl={item.image_url}
+            tags={extractTags(item)}
+            createdAt={item.created_at}
+          />
+        )}
+        emptyTitle="No fashion items yet"
+        emptyDescription="Create your first fashion item to get started."
+        emptyActionLabel="New Item"
+        emptyActionPath="/fashion-items/new"
+      />
+    </PageContainer>
   );
 }

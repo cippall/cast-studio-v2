@@ -213,7 +213,7 @@ export default function LibraryLayout({
           ) : items.length > 0 ? (
             <>
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                   {items.map((item, i) => renderCard(item, i))}
                 </div>
               ) : (
@@ -226,7 +226,7 @@ export default function LibraryLayout({
 
               {/* Pagination */}
               {totalPages > 1 && (
-                <div className="mt-6 flex items-center justify-center gap-2">
+                <div className="mt-6 flex items-center justify-center gap-1 sm:gap-2">
                   <Button
                     variant="outline"
                     size="sm"
@@ -234,8 +234,22 @@ export default function LibraryLayout({
                     onClick={() => onPageChange(page - 1)}
                   >
                     <ChevronLeft className="size-4" />
+                    <span className="hidden sm:inline ml-1">Prev</span>
                   </Button>
-                  <span className="text-sm text-muted-foreground">
+                  <span className="hidden sm:inline-flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
+                      <Button
+                        key={p}
+                        variant={p === page ? 'default' : 'outline'}
+                        size="sm"
+                        className="hidden lg:inline-flex w-8"
+                        onClick={() => onPageChange(p)}
+                      >
+                        {p}
+                      </Button>
+                    ))}
+                  </span>
+                  <span className="text-sm text-muted-foreground px-2">
                     Page {page} of {totalPages}
                   </span>
                   <Button
@@ -244,6 +258,7 @@ export default function LibraryLayout({
                     disabled={page >= totalPages}
                     onClick={() => onPageChange(page + 1)}
                   >
+                    <span className="hidden sm:inline mr-1">Next</span>
                     <ChevronRight className="size-4" />
                   </Button>
                 </div>

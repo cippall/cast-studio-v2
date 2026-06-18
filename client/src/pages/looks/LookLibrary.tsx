@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useLooks } from '@/hooks/useLooks';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
+import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -187,58 +188,60 @@ export default function LookLibrary() {
   );
 
   return (
-    <LibraryLayout
-      title="Looks"
-      description="looks"
-      filterGroups={LOOK_FILTER_GROUPS}
-      selectedFilters={filters}
-      onFilterChange={handleFilterChange}
-      onResetFilters={handleResetFilters}
-      items={data?.data ?? []}
-      total={data?.total}
-      page={page}
-      totalPages={totalPages}
-      onPageChange={handlePageChange}
-      isLoading={isLoading}
-      isError={isError}
-      error={error}
-      newItemPath="/looks/new"
-      newItemLabel="+ New Look"
-      sort={sort}
-      onSortChange={handleSortChange}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      showFilters={showFilters}
-      onToggleFilters={() => setShowFilters((v) => !v)}
-      extraActions={
-        isClient ? (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="shared-with-me"
-              checked={sharedWithMe}
-              onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
-            />
-            <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
-              Shared with Me
-            </label>
-          </div>
-        ) : undefined
-      }
-      renderCard={(look) => (
-        <AssetCardV2
-          key={look.id}
-          id={look.id}
-          name={look.name}
-          type="look"
-          imageUrl={look.image_url}
-          tags={extractTags(look)}
-          createdAt={look.created_at}
-        />
-      )}
-      emptyTitle="No looks yet"
-      emptyDescription="Create your first look to get started."
-      emptyActionLabel="New Look"
-      emptyActionPath="/looks/new"
-    />
+    <PageContainer>
+      <LibraryLayout
+        title="Looks"
+        description="looks"
+        filterGroups={LOOK_FILTER_GROUPS}
+        selectedFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        items={data?.data ?? []}
+        total={data?.total}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        newItemPath="/looks/new"
+        newItemLabel="+ New Look"
+        sort={sort}
+        onSortChange={handleSortChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((v) => !v)}
+        extraActions={
+          isClient ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="shared-with-me"
+                checked={sharedWithMe}
+                onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
+              />
+              <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
+                Shared with Me
+              </label>
+            </div>
+          ) : undefined
+        }
+        renderCard={(look) => (
+          <AssetCardV2
+            key={look.id}
+            id={look.id}
+            name={look.name}
+            type="look"
+            imageUrl={look.image_url}
+            tags={extractTags(look)}
+            createdAt={look.created_at}
+          />
+        )}
+        emptyTitle="No looks yet"
+        emptyDescription="Create your first look to get started."
+        emptyActionLabel="New Look"
+        emptyActionPath="/looks/new"
+      />
+    </PageContainer>
   );
 }

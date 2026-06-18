@@ -28,7 +28,12 @@ export default function LoadingState({ variant = 'grid', count, className }: Loa
 
   if (variant === 'grid') {
     return (
-      <div className={cn('grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4', className)}>
+      <div
+        className={cn(
+          'grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4',
+          className,
+        )}
+      >
         {Array.from({ length: n }).map((_, i) => (
           <Skeleton key={i} className="aspect-square w-full" />
         ))}

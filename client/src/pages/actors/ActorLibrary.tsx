@@ -7,6 +7,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useActors } from '@/hooks/useActors';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
+import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -170,58 +171,60 @@ export default function ActorLibrary() {
   );
 
   return (
-    <LibraryLayout
-      title="Actors"
-      description="actors"
-      filterGroups={ACTOR_FILTER_GROUPS}
-      selectedFilters={filters}
-      onFilterChange={handleFilterChange}
-      onResetFilters={handleResetFilters}
-      items={data?.data ?? []}
-      total={data?.total}
-      page={page}
-      totalPages={totalPages}
-      onPageChange={handlePageChange}
-      isLoading={isLoading}
-      isError={isError}
-      error={error}
-      newItemPath="/actors/new"
-      newItemLabel="+ New Actor"
-      sort={sort}
-      onSortChange={handleSortChange}
-      viewMode={viewMode}
-      onViewModeChange={setViewMode}
-      showFilters={showFilters}
-      onToggleFilters={() => setShowFilters((v) => !v)}
-      extraActions={
-        isClient ? (
-          <div className="flex items-center gap-2">
-            <Checkbox
-              id="shared-with-me"
-              checked={sharedWithMe}
-              onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
-            />
-            <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
-              Shared with Me
-            </label>
-          </div>
-        ) : undefined
-      }
-      renderCard={(actor) => (
-        <AssetCardV2
-          key={actor.id}
-          id={actor.id}
-          name={actor.name}
-          type="actor"
-          imageUrl={actor.headshot_url}
-          tags={extractTags(actor)}
-          createdAt={actor.created_at}
-        />
-      )}
-      emptyTitle="No actors yet"
-      emptyDescription="Create your first actor to get started."
-      emptyActionLabel="New Actor"
-      emptyActionPath="/actors/new"
-    />
+    <PageContainer>
+      <LibraryLayout
+        title="Actors"
+        description="actors"
+        filterGroups={ACTOR_FILTER_GROUPS}
+        selectedFilters={filters}
+        onFilterChange={handleFilterChange}
+        onResetFilters={handleResetFilters}
+        items={data?.data ?? []}
+        total={data?.total}
+        page={page}
+        totalPages={totalPages}
+        onPageChange={handlePageChange}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        newItemPath="/actors/new"
+        newItemLabel="+ New Actor"
+        sort={sort}
+        onSortChange={handleSortChange}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
+        showFilters={showFilters}
+        onToggleFilters={() => setShowFilters((v) => !v)}
+        extraActions={
+          isClient ? (
+            <div className="flex items-center gap-2">
+              <Checkbox
+                id="shared-with-me"
+                checked={sharedWithMe}
+                onCheckedChange={(checked) => handleSharedWithMe(checked === true)}
+              />
+              <label htmlFor="shared-with-me" className="cursor-pointer text-sm">
+                Shared with Me
+              </label>
+            </div>
+          ) : undefined
+        }
+        renderCard={(actor) => (
+          <AssetCardV2
+            key={actor.id}
+            id={actor.id}
+            name={actor.name}
+            type="actor"
+            imageUrl={actor.headshot_url}
+            tags={extractTags(actor)}
+            createdAt={actor.created_at}
+          />
+        )}
+        emptyTitle="No actors yet"
+        emptyDescription="Create your first actor to get started."
+        emptyActionLabel="New Actor"
+        emptyActionPath="/actors/new"
+      />
+    </PageContainer>
   );
 }
