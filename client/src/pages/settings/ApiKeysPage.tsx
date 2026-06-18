@@ -16,7 +16,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
-import { Trash2, Loader2, Plus, Copy, Check } from 'lucide-react';
+import { Trash2, Loader2, Plus, Copy, Check, KeyRound } from 'lucide-react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { DataTable, Column } from '@/components/DataTable';
@@ -140,16 +140,30 @@ export default function ApiKeysPage() {
           </Button>
         </PageHeader>
 
-        <DataTable<ApiKey>
-          columns={columns}
-          data={keys}
-          isLoading={isLoading}
-          emptyTitle="No API keys"
-          emptyDescription="Create an API key to enable programmatic access."
-          loadingRowCount={3}
-          rowActions={rowActions}
-          cardTitleKey="name"
-        />
+        {keys.length === 0 && !isLoading ? (
+          <div className="flex flex-col items-center justify-center py-16 text-center">
+            <div className="mb-4 flex size-16 items-center justify-center bg-surface">
+              <KeyRound className="size-8 text-muted-foreground" />
+            </div>
+            <h2 className="mb-1 text-xl font-semibold text-foreground">No API keys</h2>
+            <p className="mb-6 max-w-sm text-sm text-muted-foreground">
+              Create an API key to enable programmatic access.
+            </p>
+            <Button onClick={() => setShowCreate(true)}>
+              <Plus className="mr-2 size-4" />
+              New Key
+            </Button>
+          </div>
+        ) : (
+          <DataTable<ApiKey>
+            columns={columns}
+            data={keys}
+            isLoading={isLoading}
+            loadingRowCount={3}
+            rowActions={rowActions}
+            cardTitleKey="name"
+          />
+        )}
       </div>
 
       {/* Create key dialog */}
