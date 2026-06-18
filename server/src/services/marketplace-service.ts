@@ -1,6 +1,6 @@
-import { findAssetById, getAssetOutputs } from '../db/repositories/asset-repo.js';
+import { findAssetById, getAssetOutputs, getAssetOutputsBatch } from '../db/repositories/asset-repo.js';
 import type { AssetRow, AssetOutputRow } from '../db/repositories/asset-repo.js';
-import { query } from '../db/pool.js';
+import { query, getClient } from '../db/pool.js';
 import type { AccountRow } from '../middleware/requireSession.js';
 import { dispatchNotification } from './notification-service.js';
 
@@ -82,54 +82,76 @@ export async function submitAssetForMarketplace(
   assetId: string,
   account: AccountRow,
 ): Promise<MarketplaceSubmission> {
-  const asset = await findAssetById(assetId, account.workspace_id);
+  const dbClient = await getClient();
+  try {
+    await dbClient.query('BEGIN');
 
-  if (!asset) {
-    throw Object.assign(new Error('Asset not found'), { statusCode: 404 });
-  }
-
-  if (asset.creator_id !== account.id && account.role !== 'ADMIN') {
-    throw Object.assign(new Error('You can only submit your own assets'), { statusCode: 403 });
-  }
-
-  if (asset.marketplace_status === 'MARKETPLACE_PENDING') {
-    throw Object.assign(new Error('Asset already has an active marketplace submission'), {
-      statusCode: 409,
-    });
-  }
-
-  if (asset.marketplace_status === 'MARKETPLACE_APPROVED') {
-    throw Object.assign(new Error('Asset is already listed on the marketplace'), {
-      statusCode: 409,
-    });
-  }
-
-  const outputs = await getAssetOutputs(assetId);
-  const missing = findMissingOutputs(outputs, getRequiredOutputsForType(asset.asset_type));
-
-  if (missing.length > 0) {
-    const err = new Error(
-      `Asset is missing required outputs for marketplace submission. Missing: ${missing.join(', ')}`,
+    // Lock the asset row to prevent concurrent submissions
+    const assetResult = await dbClient.query(
+      `SELECT * FROM assets WHERE id = $1  FOR UPDATE`,
+      [assetId],
     );
-    (err as Error & { statusCode: number; missing: string[] }).statusCode = 409;
-    (err as Error & { statusCode: number; missing: string[] }).missing = missing;
+    const asset = assetResult.rows[0] as AssetRow | undefined;
+
+    if (!asset) {
+      throw Object.assign(new Error('Asset not found'), { statusCode: 404 });
+    }
+
+    // Verify workspace isolation
+    if (asset.workspace_id !== account.workspace_id && account.role !== 'ADMIN') {
+      throw Object.assign(new Error('Asset not found'), { statusCode: 404 });
+    }
+
+    if (asset.creator_id !== account.id && account.role !== 'ADMIN') {
+      throw Object.assign(new Error('You can only submit your own assets'), { statusCode: 403 });
+    }
+
+    if (asset.marketplace_status === 'MARKETPLACE_PENDING') {
+      throw Object.assign(new Error('Asset already has an active marketplace submission'), {
+        statusCode: 409,
+      });
+    }
+
+    if (asset.marketplace_status === 'MARKETPLACE_APPROVED') {
+      throw Object.assign(new Error('Asset is already listed on the marketplace'), {
+        statusCode: 409,
+      });
+    }
+
+    const outputs = await getAssetOutputs(assetId);
+    const missing = findMissingOutputs(outputs, getRequiredOutputsForType(asset.asset_type));
+
+    if (missing.length > 0) {
+      const err = new Error(
+        `Asset is missing required outputs for marketplace submission. Missing: ${missing.join(', ')}`,
+      );
+      (err as Error & { statusCode: number; missing: string[] }).statusCode = 409;
+      (err as Error & { statusCode: number; missing: string[] }).missing = missing;
+      throw err;
+    }
+
+    await dbClient.query(
+      `UPDATE assets SET marketplace_status = 'MARKETPLACE_PENDING' WHERE id = $1`,
+      [assetId],
+    );
+
+    await dbClient.query('COMMIT');
+
+    return {
+      asset_id: asset.id,
+      asset_name: asset.name,
+      asset_type: asset.asset_type,
+      creator_id: asset.creator_id,
+      creator_name: account.name,
+      marketplace_status: 'MARKETPLACE_PENDING',
+      submitted_at: new Date().toISOString(),
+    };
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
     throw err;
+  } finally {
+    dbClient.release();
   }
-
-  await query(
-    `UPDATE assets SET marketplace_status = 'MARKETPLACE_PENDING' WHERE id = $1 AND deleted_at IS NULL`,
-    [assetId],
-  );
-
-  return {
-    asset_id: asset.id,
-    asset_name: asset.name,
-    asset_type: asset.asset_type,
-    creator_id: asset.creator_id,
-    creator_name: account.name,
-    marketplace_status: 'MARKETPLACE_PENDING',
-    submitted_at: new Date().toISOString(),
-  };
 }
 
 /**
@@ -144,7 +166,7 @@ export async function listArtistSubmissions(
 }> {
   const { status, page = 1, pageSize = 20 } = options;
   const params: unknown[] = [account.workspace_id, account.id];
-  const conditions: string[] = ['a.workspace_id = $1', 'a.creator_id = $2', 'a.deleted_at IS NULL'];
+  const conditions: string[] = ['a.workspace_id = $1', 'a.creator_id = $2', ''];
   let idx = 3;
 
   conditions.push('a.marketplace_status IS NOT NULL');
@@ -209,7 +231,7 @@ export async function listAllSubmissions(
 }> {
   const { status, page = 1, pageSize = 20 } = options;
   const params: unknown[] = [];
-  const conditions: string[] = ['a.deleted_at IS NULL'];
+  const conditions: string[] = [''];
   let idx = 1;
 
   conditions.push('a.marketplace_status IS NOT NULL');
@@ -243,8 +265,10 @@ export async function listAllSubmissions(
   );
 
   const data: AdminSubmissionDetail[] = [];
+  const assetIds = (dataResult.rows as Record<string, unknown>[]).map((r) => r.asset_id as string);
+  const outputsMap = await getAssetOutputsBatch(assetIds);
   for (const row of dataResult.rows as Record<string, unknown>[]) {
-    const outputs = await getAssetOutputs(row.asset_id as string);
+    const outputs = outputsMap.get(row.asset_id as string) ?? [];
     data.push({
       asset_id: row.asset_id as string,
       asset_name: row.asset_name as string | null,
@@ -281,60 +305,72 @@ export async function approveSubmission(
   listing_id: string;
   price_credits: number;
 }> {
-  // Check asset is in PENDING state
-  const assetResult = await query(
-    `SELECT * FROM assets WHERE id = $1 AND marketplace_status = 'MARKETPLACE_PENDING' AND deleted_at IS NULL`,
-    [assetId],
-  );
-
-  if (assetResult.rows.length === 0) {
-    throw Object.assign(new Error('Submission not found or not in pending status'), {
-      statusCode: 404,
-    });
-  }
-
-  const asset = assetResult.rows[0] as AssetRow;
-
-  // 1. Set marketplace_status = APPROVED, freeze asset
-  await query(
-    `UPDATE assets SET marketplace_status = 'MARKETPLACE_APPROVED', is_marketplace_frozen = TRUE WHERE id = $1`,
-    [assetId],
-  );
-
-  // 2. Create marketplace_listing
-  const listingResult = await query(
-    `INSERT INTO marketplace_listings (asset_id, seller_id, price_credits, listing_type)
-     VALUES ($1, $2, $3, $4)
-     RETURNING id`,
-    [
-      assetId,
-      sellerId,
-      priceCredits,
-      asset.asset_type === 'ACTOR' ? 'ACTOR_PACKAGE' : asset.asset_type,
-    ],
-  );
-
-  const listingId = listingResult.rows[0].id as string;
-
-  // 3. Notify the artist
+  const dbClient = await getClient();
   try {
-    await dispatchNotification({
-      type: 'WORKFLOW_COMPLETED',
-      recipientId: asset.creator_id,
-      title: 'Marketplace Submission Approved',
-      message: `Your asset "${asset.name ?? asset.asset_type}" has been approved for the marketplace at ${priceCredits} credits.`,
-      templateData: { title: asset.name ?? asset.asset_type },
-    });
-  } catch {
-    // Notification failure is non-blocking
-  }
+    await dbClient.query('BEGIN');
 
-  return {
-    asset_id: assetId,
-    marketplace_status: 'MARKETPLACE_APPROVED',
-    listing_id: listingId,
-    price_credits: priceCredits,
-  };
+    // Lock the asset row to prevent concurrent approvals
+    const assetResult = await dbClient.query(
+      `SELECT * FROM assets WHERE id = $1 AND marketplace_status = 'MARKETPLACE_PENDING'  FOR UPDATE`,
+      [assetId],
+    );
+
+    if (assetResult.rows.length === 0) {
+      throw Object.assign(new Error('Submission not found or not in pending status'), {
+        statusCode: 404,
+      });
+    }
+
+    const asset = assetResult.rows[0] as AssetRow;
+
+    // 1. Set marketplace_status = APPROVED, freeze asset
+    await dbClient.query(
+      `UPDATE assets SET marketplace_status = 'MARKETPLACE_APPROVED', is_marketplace_frozen = TRUE WHERE id = $1`,
+      [assetId],
+    );
+
+    // 2. Create marketplace_listing
+    const listingResult = await dbClient.query(
+      `INSERT INTO marketplace_listings (asset_id, seller_id, price_credits, listing_type)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [
+        assetId,
+        sellerId,
+        priceCredits,
+        asset.asset_type === 'ACTOR' ? 'ACTOR_PACKAGE' : asset.asset_type,
+      ],
+    );
+
+    await dbClient.query('COMMIT');
+
+    const listingId = listingResult.rows[0].id as string;
+
+    // 3. Notify the artist (non-blocking, outside transaction)
+    try {
+      await dispatchNotification({
+        type: 'WORKFLOW_COMPLETED',
+        recipientId: asset.creator_id,
+        title: 'Marketplace Submission Approved',
+        message: `Your asset "${asset.name ?? asset.asset_type}" has been approved for the marketplace at ${priceCredits} credits.`,
+        templateData: { title: asset.name ?? asset.asset_type },
+      });
+    } catch {
+      // Notification failure is non-blocking
+    }
+
+    return {
+      asset_id: assetId,
+      marketplace_status: 'MARKETPLACE_APPROVED',
+      listing_id: listingId,
+      price_credits: priceCredits,
+    };
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
+    throw err;
+  } finally {
+    dbClient.release();
+  }
 }
 
 /**
@@ -343,40 +379,52 @@ export async function approveSubmission(
 export async function rejectSubmission(
   assetId: string,
 ): Promise<{ asset_id: string; marketplace_status: string }> {
-  const assetResult = await query(
-    `SELECT * FROM assets WHERE id = $1 AND marketplace_status = 'MARKETPLACE_PENDING' AND deleted_at IS NULL`,
-    [assetId],
-  );
-
-  if (assetResult.rows.length === 0) {
-    throw Object.assign(new Error('Submission not found or not in pending status'), {
-      statusCode: 404,
-    });
-  }
-
-  const asset = assetResult.rows[0] as AssetRow;
-
-  await query(`UPDATE assets SET marketplace_status = 'MARKETPLACE_REJECTED' WHERE id = $1`, [
-    assetId,
-  ]);
-
-  // Notify the artist
+  const dbClient = await getClient();
   try {
-    await dispatchNotification({
-      type: 'WORKFLOW_FAILED',
-      recipientId: asset.creator_id,
-      title: 'Marketplace Submission Rejected',
-      message: `Your asset "${asset.name ?? asset.asset_type}" was not approved for the marketplace. You can edit and resubmit.`,
-      templateData: { title: asset.name ?? asset.asset_type },
-    });
-  } catch {
-    // Notification failure is non-blocking
-  }
+    await dbClient.query('BEGIN');
 
-  return {
-    asset_id: assetId,
-    marketplace_status: 'MARKETPLACE_REJECTED',
-  };
+    const assetResult = await dbClient.query(
+      `SELECT * FROM assets WHERE id = $1 AND marketplace_status = 'MARKETPLACE_PENDING'  FOR UPDATE`,
+      [assetId],
+    );
+
+    if (assetResult.rows.length === 0) {
+      throw Object.assign(new Error('Submission not found or not in pending status'), {
+        statusCode: 404,
+      });
+    }
+
+    const asset = assetResult.rows[0] as AssetRow;
+
+    await dbClient.query(`UPDATE assets SET marketplace_status = 'MARKETPLACE_REJECTED' WHERE id = $1`, [
+      assetId,
+    ]);
+
+    await dbClient.query('COMMIT');
+
+    // Notify the artist (non-blocking, outside transaction)
+    try {
+      await dispatchNotification({
+        type: 'WORKFLOW_FAILED',
+        recipientId: asset.creator_id,
+        title: 'Marketplace Submission Rejected',
+        message: `Your asset "${asset.name ?? asset.asset_type}" was not approved for the marketplace. You can edit and resubmit.`,
+        templateData: { title: asset.name ?? asset.asset_type },
+      });
+    } catch {
+      // Notification failure is non-blocking
+    }
+
+    return {
+      asset_id: assetId,
+      marketplace_status: 'MARKETPLACE_REJECTED',
+    };
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
+    throw err;
+  } finally {
+    dbClient.release();
+  }
 }
 
 // --- Client Browse ---
@@ -516,7 +564,7 @@ export async function listMarketplaceListings(
   const dataSql = `
     SELECT ${LISTING_LIST_COLS}
     FROM marketplace_listings ml
-    JOIN assets a ON a.id = ml.asset_id AND a.deleted_at IS NULL AND a.is_marketplace_frozen = TRUE
+    JOIN assets a ON a.id = ml.asset_id AND a.is_marketplace_frozen = TRUE
     ${joins}
     ${whereClause}
     ORDER BY ml.${safeSortBy} ${safeSortOrder}
@@ -545,7 +593,7 @@ export async function getMarketplaceListing(
            a.name AS asset_name, a.asset_type,
            s.name AS seller_name
     FROM marketplace_listings ml
-    JOIN assets a ON a.id = ml.asset_id AND a.deleted_at IS NULL
+    JOIN assets a ON a.id = ml.asset_id 
     JOIN accounts s ON s.id = ml.seller_id
     WHERE ml.id = $1 AND ml.is_active = TRUE AND ml.purchased_by IS NULL
   `;
@@ -609,153 +657,178 @@ export async function purchaseListing(
   listingId: string,
   account: AccountRow,
 ): Promise<PurchaseResult> {
-  // 1. Fetch listing with asset info
-  const listingSql = `
-    SELECT ml.id AS listing_id, ml.asset_id, ml.price_credits, ml.is_active,
-           ml.purchased_by, ml.seller_id, a.asset_type
-    FROM marketplace_listings ml
-    JOIN assets a ON a.id = ml.asset_id
-    WHERE ml.id = $1
-  `;
-  const listingResult = await query(listingSql, [listingId]);
+  const dbClient = await getClient();
+  try {
+    await dbClient.query('BEGIN');
 
-  if (listingResult.rows.length === 0) {
-    throw Object.assign(new Error('Listing not found'), { statusCode: 404 });
-  }
+    // 1. Fetch and lock the listing to prevent concurrent purchases
+    const listingSql = `
+      SELECT ml.id AS listing_id, ml.asset_id, ml.price_credits, ml.is_active,
+             ml.purchased_by, ml.seller_id, a.asset_type
+      FROM marketplace_listings ml
+      JOIN assets a ON a.id = ml.asset_id
+      WHERE ml.id = $1
+      FOR UPDATE OF ml
+    `;
+    const listingResult = await dbClient.query(listingSql, [listingId]);
 
-  const listingRec = listingResult.rows[0] as Record<string, unknown>;
+    if (listingResult.rows.length === 0) {
+      throw Object.assign(new Error('Listing not found'), { statusCode: 404 });
+    }
 
-  // 2. Validate listing is active and not purchased
-  if (!listingRec.is_active || listingRec.purchased_by) {
-    throw Object.assign(new Error('This listing has already been purchased.'), {
-      statusCode: 409,
-    });
-  }
+    const listingRec = listingResult.rows[0] as Record<string, unknown>;
 
-  const priceCredits = Number.parseFloat(String(listingRec.price_credits));
-  const sourceAssetId = String(listingRec.asset_id);
-  const assetType = String(listingRec.asset_type);
+    // 2. Validate listing is active and not purchased
+    if (!listingRec.is_active || listingRec.purchased_by) {
+      throw Object.assign(new Error('This listing has already been purchased.'), {
+        statusCode: 409,
+      });
+    }
 
-  // 3. Check wallet balance
-  const walletResult = await query(
-    `SELECT * FROM wallets WHERE workspace_id = $1 AND account_id = $2 LIMIT 1`,
-    [account.workspace_id, account.id],
-  );
+    const priceCredits = Number.parseFloat(String(listingRec.price_credits));
+    const sourceAssetId = String(listingRec.asset_id);
+    const assetType = String(listingRec.asset_type);
 
-  if (walletResult.rows.length === 0) {
-    throw Object.assign(
-      new Error(`Insufficient credits. Your balance: 0. Required: ${priceCredits}.`),
-      { statusCode: 402 },
+    // 3. Check wallet balance (lock wallet row)
+    const walletResult = await dbClient.query(
+      `SELECT * FROM wallets WHERE workspace_id = $1 AND account_id = $2 LIMIT 1 FOR UPDATE`,
+      [account.workspace_id, account.id],
     );
-  }
 
-  const wallet = walletResult.rows[0] as { id: string; balance_credits: number };
-  const currentBalance = Number.parseFloat(String(wallet.balance_credits));
+    if (walletResult.rows.length === 0) {
+      throw Object.assign(
+        new Error(`Insufficient credits. Your balance: 0. Required: ${priceCredits}.`),
+        { statusCode: 402 },
+      );
+    }
 
-  if (currentBalance < priceCredits) {
-    throw Object.assign(
-      new Error(
-        `Insufficient credits. Your balance: ${currentBalance.toFixed(4)}. Required: ${priceCredits}.`,
-      ),
-      { statusCode: 402 },
+    const wallet = walletResult.rows[0] as { id: string; balance_credits: number };
+    const currentBalance = Number.parseFloat(String(wallet.balance_credits));
+
+    if (currentBalance < priceCredits) {
+      throw Object.assign(
+        new Error(
+          `Insufficient credits. Your balance: ${currentBalance.toFixed(4)}. Required: ${priceCredits}.`,
+        ),
+        { statusCode: 402 },
+      );
+    }
+
+    // 4. Deduct wallet balance
+    const newBalance = Number((currentBalance - priceCredits).toFixed(4));
+    await dbClient.query(`UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`, [
+      newBalance,
+      wallet.id,
+    ]);
+
+    // 5. Create ledger entry (CHARGE)
+    await dbClient.query(
+      `INSERT INTO ledger (workspace_id, wallet_id, amount, type) VALUES ($1, $2, $3, $4)`,
+      [account.workspace_id, wallet.id, Number((-priceCredits).toFixed(4)), 'CHARGE'],
     );
-  }
 
-  // 4. Deduct wallet balance
-  const newBalance = Number((currentBalance - priceCredits).toFixed(4));
-  await query(`UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`, [
-    newBalance,
-    wallet.id,
-  ]);
+    // 6. Duplicate the asset into client's workspace
+    const sourceAssetResult = await dbClient.query(
+      `SELECT * FROM assets WHERE id = $1 `,
+      [sourceAssetId],
+    );
+    if (sourceAssetResult.rows.length === 0) {
+      throw Object.assign(new Error('Source asset not found'), { statusCode: 404 });
+    }
+    const sourceAsset = sourceAssetResult.rows[0] as AssetRow;
 
-  // 5. Create ledger entry (CHARGE)
-  await query(
-    `INSERT INTO ledger (workspace_id, wallet_id, amount, type) VALUES ($1, $2, $3, $4)`,
-    [account.workspace_id, wallet.id, Number((-priceCredits).toFixed(4)), 'CHARGE'],
-  );
-
-  // 6. Duplicate the asset into client's workspace
-  const sourceAsset = await findAssetById(sourceAssetId);
-  if (!sourceAsset) {
-    throw Object.assign(new Error('Source asset not found'), { statusCode: 404 });
-  }
-
-  const duplicateResult = await query(
-    `INSERT INTO assets (workspace_id, creator_id, client_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-     RETURNING id`,
-    [
-      account.workspace_id,
-      account.id,
-      account.id,
-      assetType,
-      sourceAsset.name,
-      sourceAsset.seed,
-      JSON.stringify(sourceAsset.prompt_recipe),
-      sourceAssetId,
-      'MARKETPLACE_PURCHASE',
-    ],
-  );
-  const duplicateAssetId = duplicateResult.rows[0].id as string;
-
-  // 7. Duplicate all asset_outputs (same image URLs, new IDs)
-  const sourceOutputs = await getAssetOutputs(sourceAssetId);
-  const purchasedAssets: { layout_type: string; image_url: string | null }[] = [];
-
-  for (const output of sourceOutputs) {
-    await query(
-      `INSERT INTO asset_outputs (asset_id, layout_type, model, image_url, local_backup_url, cost_credits, status, version, generation_params, reference_images, source_asset_outputs)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)`,
+    const duplicateResult = await dbClient.query(
+      `INSERT INTO assets (workspace_id, creator_id, client_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+       RETURNING id`,
       [
-        duplicateAssetId,
-        output.layout_type,
-        output.model,
-        output.image_url,
-        output.local_backup_url,
-        output.cost_credits,
-        output.status,
-        output.version,
-        output.generation_params ? JSON.stringify(output.generation_params) : null,
-        output.reference_images ? JSON.stringify(output.reference_images) : null,
-        output.source_asset_outputs ? JSON.stringify(output.source_asset_outputs) : null,
+        account.workspace_id,
+        account.id,
+        account.id,
+        assetType,
+        sourceAsset.name,
+        sourceAsset.seed,
+        JSON.stringify(sourceAsset.prompt_recipe),
+        sourceAssetId,
+        'MARKETPLACE_PURCHASE',
       ],
     );
+    const duplicateAssetId = duplicateResult.rows[0].id as string;
 
-    purchasedAssets.push({
-      layout_type: output.layout_type,
-      image_url: output.image_url,
-    });
+    // 7. Duplicate all asset_outputs in a single bulk INSERT
+    const sourceOutputsResult = await dbClient.query(
+      `SELECT * FROM asset_outputs WHERE asset_id = $1`,
+      [sourceAssetId],
+    );
+    const sourceOutputs = sourceOutputsResult.rows as AssetOutputRow[];
+    const purchasedAssets: { layout_type: string; image_url: string | null }[] = [];
+
+    if (sourceOutputs.length > 0) {
+      const values: unknown[] = [];
+      const placeholders: string[] = [];
+      let paramIdx = 1;
+      for (const output of sourceOutputs) {
+        placeholders.push(
+          `($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`,
+        );
+        values.push(
+          duplicateAssetId,
+          output.layout_type,
+          output.model,
+          output.image_url,
+          output.local_backup_url,
+          output.cost_credits,
+          output.status,
+          output.version,
+          output.generation_params ? JSON.stringify(output.generation_params) : null,
+          output.reference_images ? JSON.stringify(output.reference_images) : null,
+          output.source_asset_outputs ? JSON.stringify(output.source_asset_outputs) : null,
+        );
+        purchasedAssets.push({ layout_type: output.layout_type, image_url: output.image_url });
+      }
+      await dbClient.query(
+        `INSERT INTO asset_outputs (asset_id, layout_type, model, image_url, local_backup_url, cost_credits, status, version, generation_params, reference_images, source_asset_outputs) VALUES ${placeholders.join(', ')}`,
+        values,
+      );
+    }
+
+    // 8. Mark listing as purchased
+    const purchasedAt = new Date().toISOString();
+    await dbClient.query(
+      `UPDATE marketplace_listings SET purchased_by = $1, purchased_at = $2 WHERE id = $3`,
+      [account.id, purchasedAt, listingId],
+    );
+
+    await dbClient.query('COMMIT');
+
+    // 9. Notify the seller (non-blocking, outside transaction)
+    try {
+      const sellerId = String(listingRec.seller_id);
+      const assetName = sourceAsset.name ?? assetType;
+      await dispatchNotification({
+        type: 'WORKFLOW_COMPLETED',
+        recipientId: sellerId,
+        title: 'Asset Purchased',
+        message: `Your asset "${assetName}" was purchased for ${priceCredits} credits.`,
+        templateData: { title: assetName },
+      });
+    } catch {
+      // Notification failure is non-blocking
+    }
+
+    return {
+      listing_id: listingId,
+      purchased_at: purchasedAt,
+      cost_credits: priceCredits,
+      new_balance: newBalance,
+      assets: purchasedAssets,
+    };
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
+    throw err;
+  } finally {
+    dbClient.release();
   }
-
-  // 8. Mark listing as purchased
-  const purchasedAt = new Date().toISOString();
-  await query(
-    `UPDATE marketplace_listings SET purchased_by = $1, purchased_at = $2 WHERE id = $3`,
-    [account.id, purchasedAt, listingId],
-  );
-
-  // 9. Notify the seller
-  try {
-    const sellerId = String(listingRec.seller_id);
-    const assetName = sourceAsset.name ?? assetType;
-    await dispatchNotification({
-      type: 'WORKFLOW_COMPLETED',
-      recipientId: sellerId,
-      title: 'Asset Purchased',
-      message: `Your asset "${assetName}" was purchased for ${priceCredits} credits.`,
-      templateData: { title: assetName },
-    });
-  } catch {
-    // Notification failure is non-blocking
-  }
-
-  return {
-    listing_id: listingId,
-    purchased_at: purchasedAt,
-    cost_credits: priceCredits,
-    new_balance: newBalance,
-    assets: purchasedAssets,
-  };
 }
 
 // --- Artist/Admin Marketplace Management ---
@@ -823,7 +896,7 @@ export async function listManageableListings(
             ml.purchased_by, ml.purchased_at, ml.created_at,
             a.name AS asset_name, a.asset_type
      FROM marketplace_listings ml
-     JOIN assets a ON a.id = ml.asset_id AND a.deleted_at IS NULL
+     JOIN assets a ON a.id = ml.asset_id 
      ${whereClause}
      ORDER BY ml.created_at DESC
      LIMIT $${idx} OFFSET $${idx + 1}`,

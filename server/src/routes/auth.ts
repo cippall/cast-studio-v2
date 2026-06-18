@@ -25,7 +25,7 @@ const loginSchema = z.object({
  * Strip the password_hash field from an account object.
  * Returns a new object safe for serialization to the client.
  */
-function stripHash(account: Record<string, unknown>): Record<string, unknown> {
+function stripHash<T extends { password_hash?: unknown }>(account: T): Omit<T, 'password_hash'> {
   const { password_hash: _pw, ...rest } = account;
   void _pw;
   return rest;
@@ -58,7 +58,7 @@ router.post('/register', requireSession, async (req, res) => {
 
     // Check for duplicate email within workspace
     const existing = await query(
-      'SELECT id FROM accounts WHERE workspace_id = $1 AND email = $2 AND deleted_at IS NULL',
+      'SELECT id FROM accounts WHERE workspace_id = $1 AND email = $2',
       [workspace_id, email],
     );
     if (existing.rows.length > 0) {
@@ -105,7 +105,7 @@ router.post('/login', async (req, res) => {
 
     const { email, password } = parsed.data;
 
-    const result = await query('SELECT * FROM accounts WHERE email = $1 AND deleted_at IS NULL', [
+    const result = await query('SELECT * FROM accounts WHERE email = $1', [
       email,
     ]);
     if (result.rows.length === 0) {

@@ -1,3 +1,4 @@
+import { getClient, query } from '../db/pool.js';
 import {
   createCommission,
   findCommissionById,
@@ -10,7 +11,7 @@ import {
   getCommissionAssets,
   linkAssetToCommission,
 } from '../db/repositories/commission-asset-repo.js';
-import { setAssetOwnership } from '../db/repositories/asset-repo.js';
+import { setAssetOwnership, setAssetOwnershipBulk } from '../db/repositories/asset-repo.js';
 import type { CommissionAssetRow } from '../db/repositories/commission-asset-repo.js';
 import type { CommissionRow } from '../db/repositories/commission-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -58,9 +59,18 @@ export async function createCommissionRequest(
   input: { title: string; brief: Record<string, unknown> },
   account: AccountRow,
 ): Promise<CommissionRow> {
+  // Look up the studio workspace — commissions cross from client to studio
+  const wsResult = await query(
+    `SELECT id FROM workspaces WHERE workspace_type = 'STUDIO'  LIMIT 1`,
+    [],
+  );
+  const studioWorkspaceId = wsResult.rows.length > 0
+    ? (wsResult.rows[0] as { id: string }).id
+    : account.workspace_id; // fallback if no studio workspace exists yet
+
   return createCommission({
     client_workspace_id: account.workspace_id,
-    studio_workspace_id: account.workspace_id,
+    studio_workspace_id: studioWorkspaceId,
     client_id: account.id,
     title: input.title,
     brief: input.brief,
@@ -288,30 +298,54 @@ async function unlockCommissionPremium(
   const premiumCost = commission.premium_cost ?? 0;
   if (premiumCost <= 0) return;
 
-  const wallet = await walletRepo.findWallet({
-    workspaceId: commission.client_workspace_id,
-    accountId: commission.client_id,
-  });
-  if (!wallet) {
-    throw new InsufficientCreditsError(0, premiumCost);
-  }
+  const dbClient = await getClient();
+  try {
+    await dbClient.query('BEGIN');
 
-  const balance = Number.parseFloat(String(wallet.balance_credits));
-  if (balance < premiumCost) {
-    throw new InsufficientCreditsError(balance, premiumCost);
-  }
+    // Lock the wallet row to prevent concurrent deductions
+    const walletResult = await dbClient.query(
+      `SELECT * FROM wallets WHERE workspace_id = $1 AND account_id = $2 LIMIT 1 FOR UPDATE`,
+      [commission.client_workspace_id, commission.client_id],
+    );
+    if (walletResult.rows.length === 0) {
+      throw new InsufficientCreditsError(0, premiumCost);
+    }
+    const wallet = walletResult.rows[0] as { id: string; balance_credits: number };
 
-  const newBalance = Number((balance - premiumCost).toFixed(4));
-  await walletRepo.updateWalletBalance(wallet.id, newBalance);
-  await walletRepo.createLedgerEntry({
-    workspaceId: commission.client_workspace_id,
-    walletId: wallet.id,
-    amount: Number((-premiumCost).toFixed(4)),
-    type: 'CHARGE',
-  });
+    const balance = Number.parseFloat(String(wallet.balance_credits));
+    if (balance < premiumCost) {
+      throw new InsufficientCreditsError(balance, premiumCost);
+    }
 
-  const linkedAssets = await getCommissionAssets(commissionId);
-  for (const link of linkedAssets) {
-    await setAssetOwnership(link.asset_id, commission.client_id, 'COMMISSION');
+    const newBalance = Number((balance - premiumCost).toFixed(4));
+    await dbClient.query(
+      `UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`,
+      [newBalance, wallet.id],
+    );
+    await dbClient.query(
+      `INSERT INTO ledger (workspace_id, wallet_id, amount, type) VALUES ($1, $2, $3, $4)`,
+      [commission.client_workspace_id, wallet.id, Number((-premiumCost).toFixed(4)), 'CHARGE'],
+    );
+
+    // Fetch linked assets and transfer ownership within the same transaction
+    const linkedAssetsResult = await dbClient.query(
+      `SELECT asset_id FROM commission_assets WHERE commission_id = $1`,
+      [commissionId],
+    );
+    const assetIds = (linkedAssetsResult.rows as { asset_id: string }[]).map((l) => l.asset_id);
+    if (assetIds.length > 0) {
+      const placeholders = assetIds.map((_, i) => `$${i + 3}`).join(', ');
+      await dbClient.query(
+        `UPDATE assets SET client_id = $1, source_type = $2 WHERE id IN (${placeholders}) `,
+        [commission.client_id, 'COMMISSION', ...assetIds],
+      );
+    }
+
+    await dbClient.query('COMMIT');
+  } catch (err) {
+    await dbClient.query('ROLLBACK');
+    throw err;
+  } finally {
+    dbClient.release();
   }
 }

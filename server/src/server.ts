@@ -4,6 +4,8 @@ import cors from 'cors';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import pool from './db/pool.js';
+import { query } from './db/pool.js';
+import { requireSession } from './middleware/requireSession.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
 import apiKeysRouter from './routes/apiKeys.js';
@@ -23,6 +25,7 @@ import { stripeWebhookHandler } from './routes/wallet.js';
 import uploadRouter from './routes/upload.js';
 import marketplaceRouter from './routes/marketplace.js';
 import adminMarketplaceRouter from './routes/admin/marketplace.js';
+import adminRouter from './routes/admin/admin.js';
 import agentMarketplaceRouter from './routes/agent/marketplace.js';
 import { startWorker } from './workers/generation-worker.js';
 
@@ -85,7 +88,35 @@ app.use('/uploads', express.static(uploadsDir));
 app.use('/api/upload', uploadRouter);
 app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/admin/marketplace', adminMarketplaceRouter);
+app.use('/api/admin', adminRouter);
 app.use('/api/agent/marketplace', agentMarketplaceRouter);
+
+// Dashboard stats (admin only)
+app.get('/api/dashboard', requireSession, async (req, res) => {
+  try {
+    if (req.account?.role !== 'ADMIN') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
+      return;
+    }
+    const [actors, looks, items, members, pendingCommissions] = await Promise.all([
+      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'ACTOR'"),
+      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'LOOK'"),
+      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'FASHION_ITEM'"),
+      query("SELECT COUNT(*)::int AS count FROM accounts"),
+      query("SELECT COUNT(*)::int AS count FROM commissions WHERE status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')"),
+    ]);
+    res.json({
+      totalActors: actors.rows[0]?.count ?? 0,
+      totalLooks: looks.rows[0]?.count ?? 0,
+      totalFashionItems: items.rows[0]?.count ?? 0,
+      activeMembers: members.rows[0]?.count ?? 0,
+      pendingCommissions: pendingCommissions.rows[0]?.count ?? 0,
+    });
+  } catch (err) {
+    console.error('Dashboard error:', err);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load dashboard' } });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

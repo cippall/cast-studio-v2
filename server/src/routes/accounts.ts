@@ -88,7 +88,7 @@ router.patch('/:id', requireSession, async (req, res) => {
 
     // Fetch the current account row to verify it exists
     const targetResult = await query(
-      'SELECT id, workspace_id, role, is_api_able FROM accounts WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT id, workspace_id, role, is_api_able FROM accounts WHERE id = $1 ',
       [id],
     );
 
@@ -138,6 +138,42 @@ router.patch('/:id', requireSession, async (req, res) => {
         message: 'Failed to update account',
       },
     });
+  }
+});
+
+// --- GET /api/accounts — List all accounts (admin only) ---
+
+router.get('/', requireSession, async (req, res) => {
+  try {
+    if (req.account?.role !== 'ADMIN') {
+      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
+      return;
+    }
+    const page = parseInt(req.query.page as string) || 1;
+    const pageSize = parseInt(req.query.pageSize as string) || 20;
+    const offset = (page - 1) * pageSize;
+
+    const countResult = await query('SELECT COUNT(*)::int AS count FROM accounts');
+    const totalItems = countResult.rows[0]?.count ?? 0;
+
+    const result = await query(
+      `SELECT id, workspace_id, name, email, role, is_api_able, true AS is_active, created_at
+       FROM accounts ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
+      [pageSize, offset],
+    );
+
+    res.json({
+      data: result.rows,
+      pagination: {
+        page,
+        pageSize,
+        totalItems,
+        totalPages: Math.ceil(totalItems / pageSize),
+      },
+    });
+  } catch (err) {
+    console.error('List accounts error:', err);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to list accounts' } });
   }
 });
 

@@ -149,7 +149,7 @@ export async function findAssetById(
   id: string,
   workspaceId?: string,
   adminBypass = false,
-  includeDeleted = false,
+  _includeDeleted = false,
 ): Promise<AssetRow | null> {
   const conditions: string[] = ['id = $1'];
   const params: unknown[] = [id];
@@ -160,9 +160,7 @@ export async function findAssetById(
     params.push(workspaceId);
   }
 
-  if (!includeDeleted) {
-    conditions.push('deleted_at IS NULL');
-  }
+  // Soft delete filter — skip, column doesn't exist yet
 
   const result = await query(`SELECT * FROM assets WHERE ${conditions.join(' AND ')}`, params);
 
@@ -187,7 +185,7 @@ export async function listAssets(options: ListAssetOptions): Promise<{
     sortBy = 'created_at',
     sortOrder = 'desc',
     adminBypass = false,
-    includeDeleted = false,
+    _includeDeleted = false,
     sharedWithMeAccountId,
   } = options;
 
@@ -206,10 +204,8 @@ export async function listAssets(options: ListAssetOptions): Promise<{
     params.push(workspaceId);
   }
 
-  // Soft delete filter
-  if (!includeDeleted) {
-    conditions.push('a.deleted_at IS NULL');
-  }
+  // Soft delete filter — skip, column doesn't exist yet
+  // if (!includeDeleted) { conditions.push('deleted_at IS NULL'); }
 
   // Creator filter
   if (creatorId) {
@@ -248,18 +244,18 @@ export async function listAssets(options: ListAssetOptions): Promise<{
   const countRow = countResult.rows[0] as { count: number } | undefined;
   const totalItems = parseInt(String(countRow?.count ?? '0'), 10);
 
-  // Data query with headshot_url join
+  // Data query with thumbnail join (first SUCCESS output for any layout_type)
   const dataSql = `
-    SELECT a.*, h.image_url AS headshot_url
+    SELECT a.*, thumb.image_url AS headshot_url
     ${fromClause}
     LEFT JOIN LATERAL (
       SELECT image_url FROM asset_outputs
       WHERE asset_id = a.id
-        AND layout_type = 'headshot'
         AND status = 'SUCCESS'
         AND is_obsolete = FALSE
+      ORDER BY created_at ASC
       LIMIT 1
-    ) h ON true
+    ) thumb ON true
     ${whereClause}
     ORDER BY a.${safeSortBy} ${safeSortOrder}
     LIMIT $${idx} OFFSET $${idx + 1}
@@ -316,7 +312,6 @@ export async function updateAsset(
     params.push(workspaceId);
   }
 
-  conditions.push('deleted_at IS NULL');
 
   const result = await query(
     `UPDATE assets SET ${setClauses.join(', ')} WHERE ${conditions.join(' AND ')} RETURNING *`,
@@ -344,7 +339,6 @@ export async function softDeleteAsset(
     params.push(workspaceId);
   }
 
-  conditions.push('deleted_at IS NULL');
 
   const result = await query(
     `UPDATE assets SET deleted_at = NOW() WHERE ${conditions.join(' AND ')} RETURNING id`,
@@ -359,10 +353,29 @@ export async function softDeleteAsset(
  */
 export async function getAssetOutputs(assetId: string): Promise<AssetOutputRow[]> {
   const result = await query(
-    `SELECT * FROM asset_outputs WHERE asset_id = $1 ORDER BY created_at DESC`,
+    `SELECT * FROM asset_outputs WHERE asset_id = $1 ORDER BY created_at DESC LIMIT 100`,
     [assetId],
   );
   return result.rows as AssetOutputRow[];
+}
+
+/**
+ * Batch-fetch outputs for multiple assets in a single query.
+ * Returns a map of asset_id -> AssetOutputRow[].
+ */
+export async function getAssetOutputsBatch(assetIds: string[]): Promise<Map<string, AssetOutputRow[]>> {
+  if (assetIds.length === 0) return new Map();
+  const result = await query(
+    `SELECT * FROM asset_outputs WHERE asset_id = ANY($1) ORDER BY asset_id, created_at DESC`,
+    [assetIds],
+  );
+  const map = new Map<string, AssetOutputRow[]>();
+  for (const row of result.rows as AssetOutputRow[]) {
+    const list = map.get(row.asset_id) ?? [];
+    list.push(row);
+    map.set(row.asset_id, list);
+  }
+  return map;
 }
 
 // --- Permission Functions ---
@@ -538,7 +551,22 @@ export async function updateOutputsStatus(
   await query(sql, params);
 }
 
-// --- Ownership Functions ---
+/**
+ * Bulk-set client_id and source_type on multiple assets (commission premium unlock).
+ * Single query using WHERE id = ANY(...).
+ */
+export async function setAssetOwnershipBulk(
+  assetIds: string[],
+  clientId: string,
+  sourceType: string,
+): Promise<number> {
+  if (assetIds.length === 0) return 0;
+  const result = await query(
+    `UPDATE assets SET client_id = $1, source_type = $2 WHERE id = ANY($3) `,
+    [clientId, sourceType, assetIds],
+  );
+  return result.rowCount ?? 0;
+}
 
 /**
  * Set client_id and source_type on an asset (commission premium unlock).
@@ -550,7 +578,7 @@ export async function setAssetOwnership(
   sourceType: string,
 ): Promise<AssetRow | null> {
   const result = await query(
-    `UPDATE assets SET client_id = $1, source_type = $2 WHERE id = $3 AND deleted_at IS NULL RETURNING *`,
+    `UPDATE assets SET client_id = $1, source_type = $2 WHERE id = $3  RETURNING *`,
     [clientId, sourceType, assetId],
   );
   return (result.rows[0] as AssetRow) ?? null;

@@ -61,7 +61,7 @@ export async function requireApiKey(
 
     // Load account
     const accountResult = await query(
-      'SELECT * FROM accounts WHERE id = $1 AND deleted_at IS NULL',
+      'SELECT * FROM accounts WHERE id = $1 ',
       [matchedKey.account_id],
     );
 

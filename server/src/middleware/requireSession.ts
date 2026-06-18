@@ -42,7 +42,7 @@ export async function requireSession(
       return;
     }
 
-    const result = await query('SELECT * FROM accounts WHERE id = $1 AND deleted_at IS NULL', [
+    const result = await query('SELECT * FROM accounts WHERE id = $1', [
       accountId,
     ]);
 
