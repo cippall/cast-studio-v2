@@ -47,7 +47,7 @@ export default function NotificationDropdown() {
           <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
             <Bell className="size-5" />
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground">
                 {unread > 9 ? '9+' : unread}
               </span>
             )}
@@ -85,7 +85,7 @@ export default function NotificationDropdown() {
                   key={notif.id}
                   className={cn(
                     'flex w-full flex-col gap-1 px-4 py-3 text-left transition-colors hover:bg-muted/50',
-                    !notif.is_read && 'bg-blue-50/50 dark:bg-blue-950/20',
+                    !notif.is_read && 'bg-primary/5 dark:bg-primary/10',
                   )}
                   onClick={() => {
                     if (!notif.is_read) {
@@ -100,9 +100,7 @@ export default function NotificationDropdown() {
                   }}
                 >
                   <div className="flex items-start gap-2">
-                    {!notif.is_read && (
-                      <span className="mt-1.5 size-2 shrink-0 rounded-full bg-blue-500" />
-                    )}
+                    {!notif.is_read && <span className="mt-1.5 size-2 shrink-0 bg-primary" />}
                     <div className={cn('flex-1', notif.is_read && 'pl-4')}>
                       <p className="text-sm font-medium">{notif.title}</p>
                       <p className="line-clamp-2 text-xs text-muted-foreground">{notif.message}</p>

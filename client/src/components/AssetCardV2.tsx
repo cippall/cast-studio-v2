@@ -149,7 +149,7 @@ export default function AssetCardV2({
           {status && (
             <span
               className={cn(
-                'inline-flex h-5 items-center rounded-full px-2 text-[10px] font-semibold uppercase',
+                'inline-flex h-5 items-center px-2 text-[10px] font-semibold uppercase',
                 statusVariant(status),
               )}
             >

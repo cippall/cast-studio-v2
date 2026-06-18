@@ -136,7 +136,7 @@ export default function MarketplaceDetail() {
                 )}
               </>
             ) : (
-              <div className="flex aspect-square items-center justify-center rounded border bg-muted">
+              <div className="flex aspect-square items-center justify-center border bg-muted">
                 <ImageIcon className="size-16 text-muted-foreground" />
               </div>
             )}
@@ -194,7 +194,7 @@ export default function MarketplaceDetail() {
                 <ul className="space-y-1 text-sm text-muted-foreground">
                   {validImages.map((img) => (
                     <li key={img.label} className="flex items-center gap-2">
-                      <span className="size-1.5 rounded-full bg-primary" />
+                      <span className="size-1.5 bg-primary" />
                       {img.label}
                     </li>
                   ))}

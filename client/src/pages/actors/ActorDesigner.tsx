@@ -117,7 +117,7 @@ function Stage1({
             key={method.value}
             htmlFor={`method-${method.value}`}
             className={cn(
-              'flex cursor-pointer flex-col gap-3 rounded-lg border p-6 transition-colors',
+              'flex cursor-pointer flex-col gap-3 border p-6 transition-colors',
               entryMethod === method.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
             )}
           >
@@ -521,7 +521,7 @@ export default function ActorDesigner() {
                       isActive && 'bg-primary text-primary-foreground',
                       isComplete &&
                         !isActive &&
-                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400',
+                        'bg-success/10 text-success border border-success/20',
                       !isActive && !isComplete && 'bg-muted text-muted-foreground',
                     )}
                   >

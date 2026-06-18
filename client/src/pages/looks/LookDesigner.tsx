@@ -154,7 +154,7 @@ function Step1({
             key={method.value}
             htmlFor={`method-${method.value}`}
             className={cn(
-              'flex cursor-pointer flex-col gap-3 rounded-lg border p-6 transition-colors',
+              'flex cursor-pointer flex-col gap-3 border p-6 transition-colors',
               entryMethod === method.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
             )}
           >

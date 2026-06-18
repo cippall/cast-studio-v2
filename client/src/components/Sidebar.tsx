@@ -29,7 +29,7 @@ function NavLinkItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
               to={child.path}
               className={({ isActive }) =>
                 cn(
-                  'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+                  'flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors',
                   isActive
                     ? 'bg-primary/10 text-primary'
                     : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',
@@ -51,7 +51,7 @@ function NavLinkItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
       to={item.path}
       className={({ isActive }) =>
         cn(
-          'flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors',
+          'flex items-center gap-3 px-3 py-2 text-sm font-medium transition-colors',
           isActive
             ? 'bg-primary/10 text-primary'
             : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground',

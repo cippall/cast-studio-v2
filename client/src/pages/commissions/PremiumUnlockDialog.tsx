@@ -59,7 +59,7 @@ export default function PremiumUnlockDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Full-screen on mobile, centered modal on desktop */}
-      <DialogContent className="max-h-full max-w-full gap-0 rounded-none border-0 p-0 sm:max-h-[90vh] sm:max-w-lg sm:rounded-md sm:border sm:p-6">
+      <DialogContent className="max-h-full max-w-full gap-0 border-0 p-0 sm:max-h-[90vh] sm:max-w-lg sm:border sm:p-6">
         {/* Header */}
         <div className="flex-shrink-0 px-4 pt-4 sm:px-0 sm:pt-0">
           <DialogHeader>
@@ -75,7 +75,7 @@ export default function PremiumUnlockDialog({
         <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-0">
           <div className="flex flex-col gap-4">
             {/* Cost breakdown */}
-            <div className="rounded-lg border p-4">
+            <div className="border p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Premium Cost</span>
                 <span className="text-lg font-semibold">{premiumCost.toFixed(2)} credits</span>
@@ -104,7 +104,7 @@ export default function PremiumUnlockDialog({
 
             {/* Insufficient balance warning */}
             {!hasSufficientBalance && (
-              <div className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+              <div className="flex items-start gap-2 border border-destructive/50 bg-destructive/10 p-3">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                 <div className="text-sm text-destructive">
                   <p className="font-medium">Insufficient balance</p>
@@ -118,7 +118,7 @@ export default function PremiumUnlockDialog({
 
             {/* Error */}
             {error && (
-              <div className="flex items-start gap-2 rounded-lg border border-destructive/50 bg-destructive/10 p-3">
+              <div className="flex items-start gap-2 border border-destructive/50 bg-destructive/10 p-3">
                 <AlertTriangle className="mt-0.5 size-4 shrink-0 text-destructive" />
                 <p className="text-sm text-destructive">{error}</p>
               </div>

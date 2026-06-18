@@ -110,7 +110,7 @@ function Step1({
             key={method.value}
             htmlFor={`method-${method.value}`}
             className={cn(
-              'flex cursor-pointer flex-col gap-3 rounded-lg border p-6 transition-colors',
+              'flex cursor-pointer flex-col gap-3 border p-6 transition-colors',
               entryMethod === method.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
             )}
           >
@@ -149,13 +149,13 @@ function Step1({
             type="file"
             accept="image/*"
             onChange={handleFileChange}
-            className="block w-full text-sm text-muted-foreground file:mr-4 file:rounded-md file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
+            className="block w-full text-sm text-muted-foreground file:mr-4 file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
           />
           {referenceImage && (
             <img
               src={referenceImage}
               alt="Reference"
-              className="mt-4 h-32 w-32 rounded-lg object-cover"
+              className="mt-4 h-32 w-32 object-cover"
               width={128}
               height={128}
             />

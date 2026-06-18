@@ -147,7 +147,7 @@ export default function LibraryLayout({
           <SlidersHorizontal className="mr-2 size-4" />
           Filters
           {activeFilterCount > 0 && (
-            <span className="ml-1.5 flex size-5 items-center justify-center rounded-full bg-primary text-[10px] text-primary-foreground">
+            <span className="ml-1.5 flex size-5 items-center justify-center bg-primary text-[10px] text-primary-foreground">
               {activeFilterCount}
             </span>
           )}

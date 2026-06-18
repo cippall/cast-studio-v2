@@ -48,21 +48,21 @@ const STATUS_TABS_ADMIN: { value: string; label: string }[] = [
 function statusColor(status: string): string {
   switch (status) {
     case 'REQUESTED':
-      return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400';
+      return 'bg-warning/10 text-warning border border-warning/20';
     case 'ASSIGNED':
-      return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400';
+      return 'bg-secondary text-secondary-foreground border border-border';
     case 'IN_PROGRESS':
-      return 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-400';
+      return 'bg-primary/10 text-primary border border-primary/20';
     case 'SUBMITTED':
-      return 'bg-cyan-100 text-cyan-800 dark:bg-cyan-900/30 dark:text-cyan-400';
+      return 'bg-primary/5 text-foreground border border-border';
     case 'CHANGES_REQUESTED':
-      return 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400';
+      return 'bg-warning/10 text-warning border border-warning/20';
     case 'APPROVED':
-      return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400';
+      return 'bg-success/10 text-success border border-success/20';
     case 'CANCELLED':
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+      return 'bg-muted text-muted-foreground border border-border';
     default:
-      return 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-400';
+      return 'bg-muted text-muted-foreground border border-border';
   }
 }
 

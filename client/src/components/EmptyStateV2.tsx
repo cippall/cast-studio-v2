@@ -36,9 +36,7 @@ export default function EmptyStateV2({
       )}
     >
       {icon && (
-        <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-surface">
-          {icon}
-        </div>
+        <div className="mb-4 flex size-16 items-center justify-center bg-surface">{icon}</div>
       )}
       <h2 className="mb-1 text-xl font-semibold text-foreground">{title}</h2>
       <p className="mb-6 max-w-sm text-sm text-muted-foreground">{description}</p>

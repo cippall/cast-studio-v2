@@ -13,8 +13,8 @@ export default function AssetCardSkeleton() {
       <CardContent className="p-3">
         <Skeleton className="h-4 w-3/4" />
         <div className="mt-1.5 flex gap-1">
-          <Skeleton className="h-4 w-12 rounded-full" />
-          <Skeleton className="h-4 w-16 rounded-full" />
+          <Skeleton className="h-4 w-12" />
+          <Skeleton className="h-4 w-16" />
         </div>
         <Skeleton className="mt-1.5 h-3 w-16" />
       </CardContent>

@@ -43,7 +43,9 @@ export default function AssetCard({ id, name, type, imageUrl, tags, createdAt }:
 
   return (
     <Card
-      className={cn('group cursor-pointer overflow-hidden transition-shadow hover:shadow-md')}
+      className={cn(
+        'group cursor-pointer overflow-hidden transition-colors hover:border-border-medium',
+      )}
       onClick={() => navigate(detailPath(type, id))}
     >
       <div className="relative aspect-square overflow-hidden bg-muted">

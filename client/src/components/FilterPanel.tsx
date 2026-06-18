@@ -163,7 +163,7 @@ export default function FilterPanel({
                         current.filter((v) => v !== val),
                       );
                     }}
-                    className="ml-0.5 rounded-full hover:bg-muted"
+                    className="ml-0.5 hover:bg-muted"
                     aria-label={`Remove ${option?.label ?? val} filter`}
                   >
                     <X className="size-3" />

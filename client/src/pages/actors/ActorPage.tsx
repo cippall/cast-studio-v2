@@ -121,7 +121,7 @@ function OutputSectionContent({
   return (
     <>
       {isObsolete && output && (
-        <div className="mb-4 flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+        <div className="mb-4 flex items-center gap-2 border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
           <AlertCircle className="size-4 shrink-0" />
           <span>
             {output.obsolete_reason ??
@@ -567,7 +567,7 @@ export default function ActorPage() {
   /* -- Banner -- */
 
   const banner = isFrozen ? (
-    <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+    <div className="flex items-center gap-2 border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
       <Lock className="size-4" />
       This actor is marketplace-listed and frozen. Editing and regeneration are disabled.
     </div>

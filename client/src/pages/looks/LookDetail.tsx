@@ -284,7 +284,7 @@ export default function LookDetail() {
   /* -- Banner -- */
 
   const banner = isFrozen ? (
-    <div className="flex items-center gap-2 rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900 dark:bg-amber-950/50 dark:text-amber-300">
+    <div className="flex items-center gap-2 border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
       <Lock className="size-4" />
       This look is marketplace-listed and frozen.
     </div>

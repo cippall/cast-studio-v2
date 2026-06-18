@@ -22,7 +22,7 @@ export default function EmptyState({
 
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-muted">
+      <div className="mb-4 flex size-16 items-center justify-center bg-muted">
         <Inbox className="size-8 text-muted-foreground" />
       </div>
       <h2 className="mb-1 text-xl font-semibold">{title}</h2>
