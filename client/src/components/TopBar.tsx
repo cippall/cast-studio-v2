@@ -1,5 +1,7 @@
 /**
- * TopBar — logo, workspace badge, notifications, user avatar menu.
+ * TopBar — workspace badge, notifications, user avatar menu.
+ * Mobile: hamburger button + Cast Studio branding.
+ * Desktop: workspace name, theme toggle, notifications, user menu.
  */
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser, useLogout } from '@/hooks/useAuth';
@@ -15,15 +17,22 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, Sun, Moon, User } from 'lucide-react';
+import { LogOut, Settings, Sun, Moon, User, Menu } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import NotificationDropdown from '@/components/NotificationDropdown';
+
+function workspaceDisplayName(workspaceId: string): string {
+  if (!workspaceId) return 'Studio';
+  // Use first segment before any dash/underscore, or first 8 chars
+  const segment = workspaceId.split(/[-_]/)[0];
+  return segment.slice(0, 12);
+}
 
 export default function TopBar() {
   const { data: user } = useCurrentUser();
   const logout = useLogout();
   const navigate = useNavigate();
-  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const openSidebar = useUIStore((s) => s.openSidebar);
   const { theme, toggleTheme } = useTheme();
 
   const initials = user?.name
@@ -42,11 +51,22 @@ export default function TopBar() {
 
   return (
     <header className="flex h-14 items-center justify-between border-b bg-background px-4">
-      {/* Left: workspace info */}
-      <div className="flex items-center gap-2">
-        {sidebarCollapsed && <span className="text-sm font-semibold">Cast Studio</span>}
-        <span className="hidden text-sm text-muted-foreground sm:inline">
-          {user?.workspace_id ? `Workspace: ${user.workspace_id.slice(0, 8)}...` : ''}
+      {/* Left: hamburger (mobile) + workspace info */}
+      <div className="flex items-center gap-3">
+        {/* Hamburger — mobile only */}
+        <Button
+          variant="ghost"
+          size="sm"
+          className="lg:hidden"
+          onClick={openSidebar}
+          aria-label="Open navigation menu"
+        >
+          <Menu className="size-5" />
+        </Button>
+
+        {/* Workspace name */}
+        <span className="text-sm font-medium text-foreground">
+          {user?.workspace_id ? workspaceDisplayName(user.workspace_id) : 'Cast Studio'}
         </span>
       </div>
 

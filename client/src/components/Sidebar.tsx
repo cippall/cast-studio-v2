@@ -1,5 +1,7 @@
 /**
  * Sidebar navigation — renders nav items based on user role.
+ * Desktop: persistent sidebar (collapsible).
+ * Mobile: Sheet drawer triggered by hamburger in TopBar.
  */
 import { NavLink } from 'react-router-dom';
 import { cn } from '@/lib/utils';
@@ -63,8 +65,9 @@ function NavLinkItem({ item, collapsed }: { item: NavItem; collapsed: boolean })
   );
 }
 
-export default function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+export function SidebarNavContent({ onNavigate }: { onNavigate?: () => void }) {
+  const sidebarCollapsed = useUIStore((s) => s.sidebarCollapsed);
+  const toggleSidebar = useUIStore((s) => s.toggleSidebar);
   const { data: user } = useCurrentUser();
 
   if (!user) return null;
@@ -72,12 +75,7 @@ export default function Sidebar() {
   const navItems = getNavItems(user.role);
 
   return (
-    <aside
-      className={cn(
-        'flex flex-col border-r bg-background transition-all duration-200',
-        sidebarCollapsed ? 'w-16' : 'w-60',
-      )}
-    >
+    <div className="flex h-full flex-col">
       {/* Logo area */}
       <div
         className={cn(
@@ -101,8 +99,8 @@ export default function Sidebar() {
         </nav>
       </ScrollArea>
 
-      {/* Collapse toggle */}
-      <div className="border-t p-2">
+      {/* Collapse toggle — desktop only */}
+      <div className="hidden border-t p-2 lg:block">
         <Button
           variant="ghost"
           size="sm"
@@ -115,6 +113,34 @@ export default function Sidebar() {
           />
         </Button>
       </div>
+
+      {/* Close button for mobile drawer */}
+      {onNavigate && (
+        <div className="border-t p-2 lg:hidden">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-center"
+            onClick={onNavigate}
+            aria-label="Close menu"
+          >
+            <ChevronLeft className="size-4" />
+          </Button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Sidebar() {
+  return (
+    <aside
+      className={cn(
+        'hidden lg:flex flex-col border-r bg-background transition-all duration-200',
+        useUIStore.getState().sidebarCollapsed ? 'lg:w-16' : 'lg:w-60',
+      )}
+    >
+      <SidebarNavContent />
     </aside>
   );
 }

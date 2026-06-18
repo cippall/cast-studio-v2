@@ -13,6 +13,7 @@ export type Toast = {
 
 interface UIState {
   sidebarCollapsed: boolean;
+  sidebarOpen: boolean;
   activeModal: string | null;
   toastQueue: Toast[];
   theme: 'light' | 'dark';
@@ -20,6 +21,8 @@ interface UIState {
   // Actions
   toggleSidebar: () => void;
   setSidebarCollapsed: (collapsed: boolean) => void;
+  openSidebar: () => void;
+  closeSidebar: () => void;
   openModal: (id: string) => void;
   closeModal: () => void;
   addToast: (toast: Omit<Toast, 'id'>) => void;
@@ -31,12 +34,15 @@ let toastCounter = 0;
 
 export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
+  sidebarOpen: false,
   activeModal: null,
   toastQueue: [],
   theme: 'light',
 
   toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   setSidebarCollapsed: (collapsed) => set({ sidebarCollapsed: collapsed }),
+  openSidebar: () => set({ sidebarOpen: true }),
+  closeSidebar: () => set({ sidebarOpen: false }),
 
   openModal: (id) => set({ activeModal: id }),
   closeModal: () => set({ activeModal: null }),
