@@ -99,6 +99,8 @@ export default function MarketplaceDetail() {
                   src={validImages[0].url}
                   alt={validImages[0].label}
                   className="w-full rounded-lg object-cover"
+                  width={600}
+                  height={600}
                 />
               )}
               {/* Thumbnails */}
@@ -113,6 +115,8 @@ export default function MarketplaceDetail() {
                           src={img.url}
                           alt={img.label}
                           className="aspect-square w-full rounded object-cover"
+                          width={150}
+                          height={150}
                         />
                       ) : null,
                     )}

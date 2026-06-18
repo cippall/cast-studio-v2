@@ -204,6 +204,8 @@ function Step1({
                 src={referenceImage}
                 alt="Reference"
                 className="h-32 w-32 rounded-lg object-cover"
+                width={128}
+                height={128}
               />
               <div className="flex-1 space-y-2">
                 <Label>Extracted Pieces</Label>
@@ -252,6 +254,8 @@ function Step1({
                         src={item.image_url}
                         alt={item.name}
                         className="size-full object-cover"
+                        width={200}
+                        height={200}
                       />
                     ) : (
                       <div className="flex size-full items-center justify-center">
@@ -324,6 +328,8 @@ function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
                 src={option.imageUrl}
                 alt="Generated option"
                 className="size-full object-cover"
+                width={300}
+                height={300}
               />
             ) : option.status === 'PENDING' ? (
               <div className="flex size-full items-center justify-center">

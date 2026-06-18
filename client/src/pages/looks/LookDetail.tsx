@@ -143,12 +143,20 @@ export default function LookDetail() {
       <div className="flex items-start gap-6">
         <div className="shrink-0">
           {look.image_url ? (
-            <img src={look.image_url} alt={look.name} className="size-40 rounded-lg object-cover" />
+            <img
+              src={look.image_url}
+              alt={look.name}
+              className="size-40 rounded-lg object-cover"
+              width={160}
+              height={160}
+            />
           ) : output?.image_url ? (
             <img
               src={output.image_url}
               alt={look.name}
               className="size-40 rounded-lg object-cover"
+              width={160}
+              height={160}
             />
           ) : (
             <div className="flex size-40 items-center justify-center rounded-lg bg-muted">
@@ -224,7 +232,13 @@ export default function LookDetail() {
       <div className="space-y-4">
         {output?.image_url ? (
           <div className="space-y-4">
-            <img src={output.image_url} alt={look.name} className="max-w-2xl rounded-lg" />
+            <img
+              src={output.image_url}
+              alt={look.name}
+              className="max-w-2xl rounded-lg"
+              width={800}
+              height={600}
+            />
             {isArtist && !isFrozen && (
               <Button
                 variant="outline"

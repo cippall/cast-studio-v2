@@ -50,6 +50,8 @@ function ListingCard({
             alt={listing.asset.name}
             className="size-full object-cover transition-transform duration-200 group-hover:scale-105"
             loading="lazy"
+            width={300}
+            height={300}
           />
         ) : (
           <div className="flex size-full items-center justify-center bg-muted">

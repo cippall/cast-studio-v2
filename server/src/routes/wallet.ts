@@ -4,7 +4,7 @@ import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import { z } from 'zod';
 import type { Request, Response } from 'express';
 import * as walletService from '../services/wallet-service.js';
-import * as walletRepo from '../db/repositories/wallet-repo.js';
+import { StripeWebhookNotFoundError } from '../errors/stripe-error.js';
 
 const router = Router();
 
@@ -73,13 +73,14 @@ router.get('/transactions', requireSession, requireWorkspace, listTransactions);
 
 export async function handleStripeWebhook(req: Request, res: Response) {
   try {
-    const payload = (req as any).rawBody ?? JSON.stringify(req.body);
+    const payload =
+      (req as Request & { rawBody?: Buffer }).rawBody?.toString() ?? JSON.stringify(req.body);
     const signature = String(req.headers['stripe-signature'] ?? '');
     await walletService.handleStripeWebhook(payload, signature, req.workspace?.id ?? 'global');
     res.json({ received: true });
   } catch (err) {
     console.error('Stripe webhook error:', err);
-    if (err instanceof walletRepo.StripeWebhookNotFoundError) {
+    if (err instanceof StripeWebhookNotFoundError) {
       res.status(500).json({ error: { code: 'STRIPE_ERROR', message: err.message } });
       return;
     }

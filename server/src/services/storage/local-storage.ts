@@ -20,13 +20,11 @@ export class LocalStorageProvider implements StorageProvider {
 
   /**
    * Save a buffer to disk under the given key.
-   * Creates the base directory if it does not exist.
+   * Creates the base directory if it does not exist (async, non-blocking).
    */
   async save(key: string, data: Buffer): Promise<string> {
-    // Ensure the upload directory exists
-    if (!fs.existsSync(this.basePath)) {
-      fs.mkdirSync(this.basePath, { recursive: true });
-    }
+    // Ensure the upload directory exists — mkdir -p is idempotent and async
+    await fs.promises.mkdir(this.basePath, { recursive: true });
 
     const filePath = path.join(this.basePath, key);
     await fs.promises.writeFile(filePath, data);

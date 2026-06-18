@@ -31,7 +31,7 @@ router.get('/models', async (req, res) => {
     if (!requireAdmin(req, res)) return;
     const result = await query('SELECT * FROM models ORDER BY created_at DESC');
     res.json(result.rows);
-  } catch {
+  } catch (err) {
     console.error('List models error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load models' } });
   }
@@ -51,7 +51,7 @@ router.post('/models', async (req, res) => {
       [id, model_id, name, model_type, task, JSON.stringify(parameters ?? {})],
     );
     res.status(201).json(result.rows[0]);
-  } catch {
+  } catch (err) {
     console.error('Create model error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create model' } });
   }
@@ -75,7 +75,7 @@ router.patch('/models/:id', async (req, res) => {
       return;
     }
     res.json(result.rows[0]);
-  } catch {
+  } catch (err) {
     console.error('Update model error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to update model' } });
   }
@@ -89,7 +89,7 @@ router.delete('/models/:id', async (req, res) => {
     if (!requireAdmin(req, res)) return;
     await query('DELETE FROM models WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-  } catch {
+  } catch (err) {
     console.error('Delete model error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to delete model' } });
   }
@@ -105,7 +105,7 @@ router.get('/prompts', async (req, res) => {
     if (!requireAdmin(req, res)) return;
     // No system_prompts table exists yet — return empty array
     res.json([]);
-  } catch {
+  } catch (err) {
     console.error('List prompts error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load prompts' } });
   }
@@ -117,7 +117,9 @@ router.get('/prompts', async (req, res) => {
 router.post('/prompts', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
+    res
+      .status(501)
+      .json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }
@@ -129,7 +131,9 @@ router.post('/prompts', async (req, res) => {
 router.patch('/prompts/:id', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
+    res
+      .status(501)
+      .json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }
@@ -141,7 +145,9 @@ router.patch('/prompts/:id', async (req, res) => {
 router.delete('/prompts/:id', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
+    res
+      .status(501)
+      .json({ error: { code: 'NOT_IMPLEMENTED', message: 'System prompts not yet implemented' } });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }
@@ -163,7 +169,7 @@ router.get('/taxonomy', async (req, res) => {
     sql += ' ORDER BY category, sort_order';
     const result = await query(sql, params);
     res.json(result.rows);
-  } catch {
+  } catch (err) {
     console.error('List taxonomy error:', err);
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load taxonomy' } });
   }
@@ -175,17 +181,30 @@ router.get('/taxonomy', async (req, res) => {
 router.post('/taxonomy', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    const { workspace_id, category, key, label, input_type, options, is_required, sort_order } = req.body;
+    const { workspace_id, category, key, label, input_type, options, is_required, sort_order } =
+      req.body;
     const id = randomUUID();
     const result = await query(
       `INSERT INTO taxonomy (id, workspace_id, category, key, label, input_type, options, is_required, sort_order, is_active, created_at)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,true,NOW()) RETURNING *`,
-      [id, workspace_id, category, key, label, input_type, JSON.stringify(options), is_required, sort_order],
+      [
+        id,
+        workspace_id,
+        category,
+        key,
+        label,
+        input_type,
+        JSON.stringify(options),
+        is_required,
+        sort_order,
+      ],
     );
     res.status(201).json(result.rows[0]);
-  } catch {
+  } catch (err) {
     console.error('Create taxonomy error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create taxonomy entry' } });
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to create taxonomy entry' } });
   }
 });
 
@@ -196,21 +215,34 @@ router.patch('/taxonomy/:id', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
     const { id } = req.params;
-    const { category, key, label, input_type, options, is_required, sort_order, is_active } = req.body;
+    const { category, key, label, input_type, options, is_required, sort_order, is_active } =
+      req.body;
     const result = await query(
       `UPDATE taxonomy SET category=$1, key=$2, label=$3, input_type=$4, options=$5,
         is_required=$6, sort_order=$7, is_active=$8
        WHERE id=$9 RETURNING *`,
-      [category, key, label, input_type, JSON.stringify(options), is_required, sort_order, is_active, id],
+      [
+        category,
+        key,
+        label,
+        input_type,
+        JSON.stringify(options),
+        is_required,
+        sort_order,
+        is_active,
+        id,
+      ],
     );
     if (result.rows.length === 0) {
       res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Taxonomy entry not found' } });
       return;
     }
     res.json(result.rows[0]);
-  } catch {
+  } catch (err) {
     console.error('Update taxonomy error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to update taxonomy entry' } });
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to update taxonomy entry' } });
   }
 });
 
@@ -222,9 +254,11 @@ router.delete('/taxonomy/:id', async (req, res) => {
     if (!requireAdmin(req, res)) return;
     await query('DELETE FROM taxonomy WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-  } catch {
+  } catch (err) {
     console.error('Delete taxonomy error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to delete taxonomy entry' } });
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to delete taxonomy entry' } });
   }
 });
 
@@ -237,9 +271,11 @@ router.get('/commission-forms', async (req, res) => {
     if (!requireAdmin(req, res)) return;
     // No commission_forms table exists yet — return empty array
     res.json([]);
-  } catch {
+  } catch (err) {
     console.error('List commission forms error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load commission forms' } });
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load commission forms' } });
   }
 });
 
@@ -249,7 +285,11 @@ router.get('/commission-forms', async (req, res) => {
 router.post('/commission-forms', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' } });
+    res
+      .status(501)
+      .json({
+        error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' },
+      });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }
@@ -261,7 +301,11 @@ router.post('/commission-forms', async (req, res) => {
 router.patch('/commission-forms/:id', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' } });
+    res
+      .status(501)
+      .json({
+        error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' },
+      });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }
@@ -273,7 +317,11 @@ router.patch('/commission-forms/:id', async (req, res) => {
 router.delete('/commission-forms/:id', async (req, res) => {
   try {
     if (!requireAdmin(req, res)) return;
-    res.status(501).json({ error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' } });
+    res
+      .status(501)
+      .json({
+        error: { code: 'NOT_IMPLEMENTED', message: 'Commission forms not yet implemented' },
+      });
   } catch {
     res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed' } });
   }

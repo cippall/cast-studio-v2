@@ -140,7 +140,13 @@ function OutputSectionContent({
 
       {!isOptional && output?.image_url && (
         <div className="space-y-4">
-          <img src={output.image_url} alt={sectionLabel} className="max-w-md rounded-lg" />
+          <img
+            src={output.image_url}
+            alt={sectionLabel}
+            className="max-w-md rounded-lg"
+            width={512}
+            height={512}
+          />
           {canRegenerate && (
             <Button
               variant="outline"
@@ -200,7 +206,13 @@ function OutputSectionContent({
             </Button>
           </div>
           {output?.image_url && (
-            <img src={output.image_url} alt="Character Sheet" className="max-w-md rounded-lg" />
+            <img
+              src={output.image_url}
+              alt="Character Sheet"
+              className="max-w-md rounded-lg"
+              width={512}
+              height={512}
+            />
           )}
         </div>
       )}
@@ -209,7 +221,13 @@ function OutputSectionContent({
         <div className="space-y-4">
           {output?.image_url ? (
             <>
-              <img src={output.image_url} alt="Editorial" className="max-w-md rounded-lg" />
+              <img
+                src={output.image_url}
+                alt="Editorial"
+                className="max-w-md rounded-lg"
+                width={512}
+                height={512}
+              />
               {isArtist && !isFrozen && (
                 <Button
                   variant="outline"
@@ -374,6 +392,8 @@ export default function ActorPage() {
               src={headshotOutput.image_url}
               alt={actor.name}
               className="size-40 rounded-lg object-cover"
+              width={160}
+              height={160}
             />
           ) : (
             <div className="flex size-40 items-center justify-center rounded-lg bg-muted">

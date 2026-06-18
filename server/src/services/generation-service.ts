@@ -5,7 +5,6 @@ import {
   getAssetOutputById,
   archiveAssetOutput,
   markDownstreamObsolete,
-  getDownstreamLayouts,
 } from '../db/repositories/asset-repo.js';
 import type { AssetOutputRow, CreateAssetOutputInput } from '../db/repositories/asset-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';

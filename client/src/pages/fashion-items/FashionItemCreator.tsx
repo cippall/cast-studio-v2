@@ -154,6 +154,8 @@ function Step1({
               src={referenceImage}
               alt="Reference"
               className="mt-4 h-32 w-32 rounded-lg object-cover"
+              width={128}
+              height={128}
             />
           )}
         </div>
@@ -209,6 +211,8 @@ function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
                 src={option.imageUrl}
                 alt="Generated option"
                 className="size-full object-cover"
+                width={300}
+                height={300}
               />
             ) : option.status === 'PENDING' ? (
               <div className="flex size-full items-center justify-center">

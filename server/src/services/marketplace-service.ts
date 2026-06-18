@@ -1,4 +1,4 @@
-import { findAssetById, getAssetOutputs, getAssetOutputsBatch } from '../db/repositories/asset-repo.js';
+import { getAssetOutputs, getAssetOutputsBatch } from '../db/repositories/asset-repo.js';
 import type { AssetRow, AssetOutputRow } from '../db/repositories/asset-repo.js';
 import { query, getClient } from '../db/pool.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -87,10 +87,9 @@ export async function submitAssetForMarketplace(
     await dbClient.query('BEGIN');
 
     // Lock the asset row to prevent concurrent submissions
-    const assetResult = await dbClient.query(
-      `SELECT * FROM assets WHERE id = $1  FOR UPDATE`,
-      [assetId],
-    );
+    const assetResult = await dbClient.query(`SELECT * FROM assets WHERE id = $1  FOR UPDATE`, [
+      assetId,
+    ]);
     const asset = assetResult.rows[0] as AssetRow | undefined;
 
     if (!asset) {
@@ -396,9 +395,10 @@ export async function rejectSubmission(
 
     const asset = assetResult.rows[0] as AssetRow;
 
-    await dbClient.query(`UPDATE assets SET marketplace_status = 'MARKETPLACE_REJECTED' WHERE id = $1`, [
-      assetId,
-    ]);
+    await dbClient.query(
+      `UPDATE assets SET marketplace_status = 'MARKETPLACE_REJECTED' WHERE id = $1`,
+      [assetId],
+    );
 
     await dbClient.query('COMMIT');
 
@@ -716,10 +716,10 @@ export async function purchaseListing(
 
     // 4. Deduct wallet balance
     const newBalance = Number((currentBalance - priceCredits).toFixed(4));
-    await dbClient.query(`UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`, [
-      newBalance,
-      wallet.id,
-    ]);
+    await dbClient.query(
+      `UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`,
+      [newBalance, wallet.id],
+    );
 
     // 5. Create ledger entry (CHARGE)
     await dbClient.query(
@@ -728,10 +728,9 @@ export async function purchaseListing(
     );
 
     // 6. Duplicate the asset into client's workspace
-    const sourceAssetResult = await dbClient.query(
-      `SELECT * FROM assets WHERE id = $1 `,
-      [sourceAssetId],
-    );
+    const sourceAssetResult = await dbClient.query(`SELECT * FROM assets WHERE id = $1 `, [
+      sourceAssetId,
+    ]);
     if (sourceAssetResult.rows.length === 0) {
       throw Object.assign(new Error('Source asset not found'), { statusCode: 404 });
     }

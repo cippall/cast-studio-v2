@@ -11,7 +11,6 @@ import {
   getCommissionAssets,
   linkAssetToCommission,
 } from '../db/repositories/commission-asset-repo.js';
-import { setAssetOwnership, setAssetOwnershipBulk } from '../db/repositories/asset-repo.js';
 import type { CommissionAssetRow } from '../db/repositories/commission-asset-repo.js';
 import type { CommissionRow } from '../db/repositories/commission-repo.js';
 import type { AccountRow } from '../middleware/requireSession.js';
@@ -21,13 +20,13 @@ import {
   findTransition,
   validateTransition,
 } from './commission-state-machine.js';
-import * as walletRepo from '../db/repositories/wallet-repo.js';
 import {
   notifyCommissionAssigned,
   notifyCommissionSubmitted,
   notifyCommissionApproved,
   notifyCommissionChangesRequested,
 } from './notification-service.js';
+import type { ListCommissionsOptions } from '../db/repositories/commission-repo.js';
 
 // --- Types ---
 
@@ -64,9 +63,8 @@ export async function createCommissionRequest(
     `SELECT id FROM workspaces WHERE workspace_type = 'STUDIO'  LIMIT 1`,
     [],
   );
-  const studioWorkspaceId = wsResult.rows.length > 0
-    ? (wsResult.rows[0] as { id: string }).id
-    : account.workspace_id; // fallback if no studio workspace exists yet
+  const studioWorkspaceId =
+    wsResult.rows.length > 0 ? (wsResult.rows[0] as { id: string }).id : account.workspace_id; // fallback if no studio workspace exists yet
 
   return createCommission({
     client_workspace_id: account.workspace_id,
@@ -94,7 +92,7 @@ export async function listCommissionRequests(
   data: CommissionRow[];
   pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
 }> {
-  const listOptions: Record<string, unknown> = { ...options, adminBypass };
+  const listOptions: ListCommissionsOptions = { ...options, adminBypass };
 
   if (!adminBypass) {
     if (account.role === 'CLIENT') {
@@ -104,7 +102,7 @@ export async function listCommissionRequests(
     }
   }
 
-  return listCommissions(listOptions as any);
+  return listCommissions(listOptions);
 }
 
 /**
@@ -234,7 +232,7 @@ export async function transitionCommissionStatus(
     await unlockCommissionPremium(commission, id);
   }
 
-  const updated = await updateCommissionStatus(id, toStatus, updateFields as any);
+  const updated = await updateCommissionStatus(id, toStatus, updateFields);
   if (!updated) {
     throw new Error('Failed to update commission status');
   }

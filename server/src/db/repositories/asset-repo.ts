@@ -149,7 +149,7 @@ export async function findAssetById(
   id: string,
   workspaceId?: string,
   adminBypass = false,
-  _includeDeleted = false,
+  includeDeleted = false,
 ): Promise<AssetRow | null> {
   const conditions: string[] = ['id = $1'];
   const params: unknown[] = [id];
@@ -160,7 +160,9 @@ export async function findAssetById(
     params.push(workspaceId);
   }
 
-  // Soft delete filter — skip, column doesn't exist yet
+  if (!includeDeleted) {
+    conditions.push('deleted_at IS NULL');
+  }
 
   const result = await query(`SELECT * FROM assets WHERE ${conditions.join(' AND ')}`, params);
 
@@ -185,7 +187,7 @@ export async function listAssets(options: ListAssetOptions): Promise<{
     sortBy = 'created_at',
     sortOrder = 'desc',
     adminBypass = false,
-    _includeDeleted = false,
+    includeDeleted = false,
     sharedWithMeAccountId,
   } = options;
 
@@ -204,8 +206,10 @@ export async function listAssets(options: ListAssetOptions): Promise<{
     params.push(workspaceId);
   }
 
-  // Soft delete filter — skip, column doesn't exist yet
-  // if (!includeDeleted) { conditions.push('deleted_at IS NULL'); }
+  // Soft delete filter
+  if (!includeDeleted) {
+    conditions.push('a.deleted_at IS NULL');
+  }
 
   // Creator filter
   if (creatorId) {
@@ -312,7 +316,6 @@ export async function updateAsset(
     params.push(workspaceId);
   }
 
-
   const result = await query(
     `UPDATE assets SET ${setClauses.join(', ')} WHERE ${conditions.join(' AND ')} RETURNING *`,
     params,
@@ -339,7 +342,6 @@ export async function softDeleteAsset(
     params.push(workspaceId);
   }
 
-
   const result = await query(
     `UPDATE assets SET deleted_at = NOW() WHERE ${conditions.join(' AND ')} RETURNING id`,
     params,
@@ -363,7 +365,9 @@ export async function getAssetOutputs(assetId: string): Promise<AssetOutputRow[]
  * Batch-fetch outputs for multiple assets in a single query.
  * Returns a map of asset_id -> AssetOutputRow[].
  */
-export async function getAssetOutputsBatch(assetIds: string[]): Promise<Map<string, AssetOutputRow[]>> {
+export async function getAssetOutputsBatch(
+  assetIds: string[],
+): Promise<Map<string, AssetOutputRow[]>> {
   if (assetIds.length === 0) return new Map();
   const result = await query(
     `SELECT * FROM asset_outputs WHERE asset_id = ANY($1) ORDER BY asset_id, created_at DESC`,

@@ -158,7 +158,13 @@ export default function AdminSubmissions() {
                 <div key={key} className="space-y-1">
                   <p className="text-sm font-medium capitalize">{key.replace('_', ' ')}</p>
                   {output.image_url ? (
-                    <img src={output.image_url} alt={key} className="w-full rounded object-cover" />
+                    <img
+                      src={output.image_url}
+                      alt={key}
+                      className="w-full rounded object-cover"
+                      width={200}
+                      height={200}
+                    />
                   ) : (
                     <div className="flex aspect-square items-center justify-center rounded bg-muted">
                       <span className="text-xs text-muted-foreground">No image</span>

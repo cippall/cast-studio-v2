@@ -32,7 +32,7 @@ const FAL_API_BASE = 'https://queue.fal.run/fal-ai';
 
 // --- Model Endpoint Mapping ---
 
-function getModelEndpoint(model: string, params: FalGenerateParams): string {
+function getModelEndpoint(model: string, _params: FalGenerateParams): string {
   switch (model) {
     case 'flux-pro':
       return `${FAL_API_BASE}/flux-pro`;

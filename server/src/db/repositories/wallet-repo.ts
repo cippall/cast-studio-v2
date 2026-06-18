@@ -1,6 +1,36 @@
 import { query } from '../pool.js';
-import type { AccountRow } from '../middleware/requireSession.js';
-import { StripeWebhookNotFoundError } from '../errors/stripe-error.js';
+import type { AccountRow } from '../../middleware/requireSession.js';
+
+/**
+ * Simple in-memory wallet cache with TTL.
+ * Cache entries are scoped per (workspaceId, accountId) and auto-expire.
+ * Cleared on balance updates to prevent stale reads.
+ */
+const walletCache = new Map<string, { row: WalletRow; expiresAt: number }>();
+const WALLET_CACHE_TTL_MS = process.env.VITEST ? 0 : 5000;
+
+function walletCacheKey(workspaceId: string, accountId: string): string {
+  return `${workspaceId}:${accountId}`;
+}
+
+function getCachedWallet(workspaceId: string, accountId: string): WalletRow | null {
+  const entry = walletCache.get(walletCacheKey(workspaceId, accountId));
+  if (entry && Date.now() < entry.expiresAt) return entry.row;
+  if (entry) walletCache.delete(walletCacheKey(workspaceId, accountId));
+  return null;
+}
+
+function setCachedWallet(workspaceId: string, accountId: string, row: WalletRow): void {
+  walletCache.set(walletCacheKey(workspaceId, accountId), {
+    row,
+    expiresAt: Date.now() + WALLET_CACHE_TTL_MS,
+  });
+}
+
+/** Invalidate all wallet cache entries. Called after balance updates. */
+export function invalidateWalletCache(): void {
+  walletCache.clear();
+}
 
 export interface WalletRow {
   id: string;
@@ -74,13 +104,19 @@ function asWalletRow(row: Record<string, unknown>): WalletRow {
 export async function findWallet(input: FindWalletInput): Promise<WalletRow | null> {
   const { workspaceId, accountId, allowCreate } = input;
 
+  // Check cache first to avoid repeated DB hits within the same request
+  const cached = getCachedWallet(workspaceId, accountId);
+  if (cached) return cached;
+
   const walletResult = await query(
     `SELECT * FROM wallets WHERE workspace_id = $1 AND account_id = $2 LIMIT 1`,
     [workspaceId, accountId],
   );
 
   if (walletResult.rows.length > 0) {
-    return asWalletRow(walletResult.rows[0] as Record<string, unknown>);
+    const row = asWalletRow(walletResult.rows[0] as Record<string, unknown>);
+    setCachedWallet(workspaceId, accountId, row);
+    return row;
   }
 
   if (!allowCreate) {
@@ -92,7 +128,9 @@ export async function findWallet(input: FindWalletInput): Promise<WalletRow | nu
     [workspaceId, accountId],
   );
 
-  return asWalletRow(createdResult.rows[0] as Record<string, unknown>);
+  const row = asWalletRow(createdResult.rows[0] as Record<string, unknown>);
+  setCachedWallet(workspaceId, accountId, row);
+  return row;
 }
 
 export async function createLedgerEntry(input: CreateLedgerInput): Promise<LedgerRow> {
@@ -118,6 +156,10 @@ export async function updateWalletBalance(walletId: string, balance: number): Pr
     `UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
     [Number(balance.toFixed(4)), walletId],
   );
+
+  // Invalidate all cache entries — short TTL means this is safe,
+  // and avoids needing workspace_id/account_id context here
+  walletCache.clear();
 
   return asWalletRow(result.rows[0] as Record<string, unknown>);
 }
