@@ -1,21 +1,13 @@
 /**
  * MarketplaceManage — Artist/Admin marketplace listing management.
- * Table of listings with price editing, active toggle, and delete.
+ * Uses DataTable (sortable, paginated, card list on mobile) instead of raw Table.
+ * PageContainer + PageHeader for consistent layout.
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMarketplaceManage, useUpdateListing, useDeleteListing } from '@/hooks/useMarketplace';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import {
   Dialog,
   DialogContent,
@@ -31,9 +23,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import EmptyState from '@/components/EmptyState';
+import { DataTable } from '@/components/DataTable';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
 import { Loader2, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+
+interface ListingRow {
+  id: string;
+  asset_name: string;
+  listing_type: string;
+  price_credits: number;
+  is_active: boolean;
+}
 
 export default function MarketplaceManage() {
   const navigate = useNavigate();
@@ -50,7 +52,13 @@ export default function MarketplaceManage() {
   const updateListing = useUpdateListing();
   const deleteListing = useDeleteListing();
 
-  const listings = data?.data ?? [];
+  const listings: ListingRow[] = (data?.data ?? []).map((l) => ({
+    id: l.id,
+    asset_name: l.asset.name,
+    listing_type: l.listing_type,
+    price_credits: l.price_credits,
+    is_active: l.is_active,
+  }));
 
   const handleToggleActive = async (id: string, currentActive: boolean) => {
     try {
@@ -74,112 +82,115 @@ export default function MarketplaceManage() {
     }
   };
 
+  const columns = [
+    {
+      key: 'asset_name',
+      header: 'Asset',
+      sortable: false,
+      render: (row: ListingRow) => <span className="font-medium">{row.asset_name}</span>,
+    },
+    {
+      key: 'listing_type',
+      header: 'Type',
+      sortable: false,
+      render: (row: ListingRow) => (
+        <Badge variant="secondary">{row.listing_type === 'ACTOR_PACKAGE' ? 'Actor' : 'Look'}</Badge>
+      ),
+    },
+    {
+      key: 'price_credits',
+      header: 'Price',
+      sortable: false,
+      render: (row: ListingRow) => `${row.price_credits.toFixed(2)} cr`,
+    },
+    {
+      key: 'is_active',
+      header: 'Status',
+      sortable: false,
+      render: (row: ListingRow) => (
+        <Badge variant={row.is_active ? 'default' : 'outline'}>
+          {row.is_active ? 'Active' : 'Inactive'}
+        </Badge>
+      ),
+    },
+  ];
+
+  const rowActions = (row: ListingRow) => [
+    <Button
+      key="toggle"
+      variant="ghost"
+      size="sm"
+      onClick={() => handleToggleActive(row.id, row.is_active)}
+    >
+      {row.is_active ? 'Deactivate' : 'Activate'}
+    </Button>,
+    <Button key="delete" variant="ghost" size="sm" onClick={() => setDeleteId(row.id)}>
+      <Trash2 className="size-4 text-destructive" />
+    </Button>,
+  ];
+
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold tracking-tight">Marketplace Management</h1>
-        <Button onClick={() => navigate('/marketplace/manage/new')}>
-          <Plus className="mr-2 size-4" />
-          New Listing
-        </Button>
-      </div>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader title="Marketplace Management">
+          <Button onClick={() => navigate('/marketplace/manage/new')}>
+            <Plus className="mr-2 size-4" />
+            New Listing
+          </Button>
+        </PageHeader>
 
-      {/* Filter */}
-      <div className="flex gap-2">
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-40">
-            <SelectValue placeholder="All statuses" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="">All</SelectItem>
-            <SelectItem value="active">Active</SelectItem>
-            <SelectItem value="inactive">Inactive</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
+        {/* Filter */}
+        <div className="flex flex-wrap gap-2">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="All statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              <SelectItem value="active">Active</SelectItem>
+              <SelectItem value="inactive">Inactive</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-      ) : listings.length === 0 ? (
-        <EmptyState
-          title="No listings yet"
-          description="Create your first marketplace listing to start selling assets."
-          actionLabel="New Listing"
-          actionPath="/marketplace/manage/new"
-        />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Asset</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Price</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead className="w-32">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {listings.map((listing) => (
-              <TableRow key={listing.id}>
-                <TableCell className="font-medium">{listing.asset.name}</TableCell>
-                <TableCell>
-                  <Badge variant="secondary">
-                    {listing.listing_type === 'ACTOR_PACKAGE' ? 'Actor' : 'Look'}
-                  </Badge>
-                </TableCell>
-                <TableCell>{listing.price_credits.toFixed(2)} cr</TableCell>
-                <TableCell>
-                  <Badge variant={listing.is_active ? 'default' : 'outline'}>
-                    {listing.is_active ? 'Active' : 'Inactive'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => handleToggleActive(listing.id, listing.is_active)}
-                    >
-                      {listing.is_active ? 'Deactivate' : 'Activate'}
-                    </Button>
-                    <Button variant="ghost" size="sm" onClick={() => setDeleteId(listing.id)}>
-                      <Trash2 className="size-4 text-destructive" />
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
 
-      {/* Delete confirmation */}
-      <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Delete Listing</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this listing? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteId(null)}>
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete} disabled={deleteListing.isPending}>
-              {deleteListing.isPending ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                'Delete'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        <DataTable<ListingRow>
+          columns={columns}
+          data={listings}
+          isLoading={isLoading}
+          emptyTitle="No listings yet"
+          emptyDescription="Create your first marketplace listing to start selling assets."
+          rowActions={rowActions}
+          cardTitleKey="asset_name"
+        />
+
+        {/* Delete confirmation */}
+        <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete Listing</DialogTitle>
+              <DialogDescription>
+                Are you sure you want to delete this listing? This action cannot be undone.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setDeleteId(null)}>
+                Cancel
+              </Button>
+              <Button
+                variant="destructive"
+                onClick={handleDelete}
+                disabled={deleteListing.isPending}
+              >
+                {deleteListing.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }

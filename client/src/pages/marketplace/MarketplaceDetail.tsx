@@ -1,6 +1,7 @@
 /**
  * MarketplaceDetail — single listing view with all output images,
  * seller info, price, purchase confirmation dialog.
+ * Responsive: stacked mobile, side-by-side desktop (md+).
  */
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -16,6 +17,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import PageContainer from '@/components/layout/PageContainer';
 import { ImageIcon, Loader2, ShoppingBag, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -47,20 +49,24 @@ export default function MarketplaceDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <div className="flex items-center justify-center py-24">
+          <Loader2 className="size-8 animate-spin text-muted-foreground" />
+        </div>
+      </PageContainer>
     );
   }
 
   if (!listing) {
     return (
-      <div className="flex flex-col items-center py-24 text-center">
-        <p className="text-muted-foreground">Listing not found.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/marketplace')}>
-          Back to Marketplace
-        </Button>
-      </div>
+      <PageContainer>
+        <div className="flex flex-col items-center py-24 text-center">
+          <p className="text-muted-foreground">Listing not found.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/marketplace')}>
+            Back to Marketplace
+          </Button>
+        </div>
+      </PageContainer>
     );
   }
 
@@ -83,147 +89,154 @@ export default function MarketplaceDetail() {
   const validImages = outputImages.filter((img) => img.url);
 
   return (
-    <div className="space-y-6">
-      <Button variant="ghost" size="sm" onClick={() => navigate('/marketplace')} className="pl-0">
-        ← Back to Marketplace
-      </Button>
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => navigate('/marketplace')}
+          className="w-fit pl-0"
+        >
+          {'← Back to Marketplace'}
+        </Button>
 
-      <div className="flex flex-col gap-8 md:flex-row">
-        {/* Image gallery */}
-        <div className="flex-1 space-y-4">
-          {validImages.length > 0 ? (
-            <>
-              {/* Main image */}
-              {validImages[0]?.url && (
-                <img
-                  src={validImages[0].url}
-                  alt={validImages[0].label}
-                  className="w-full rounded-lg object-cover"
-                  width={600}
-                  height={600}
-                />
-              )}
-              {/* Thumbnails */}
-              {validImages.length > 1 && (
-                <div className="grid grid-cols-4 gap-2">
-                  {validImages
-                    .slice(1)
-                    .map((img, i) =>
-                      img.url ? (
-                        <img
-                          key={i}
-                          src={img.url}
-                          alt={img.label}
-                          className="aspect-square w-full rounded object-cover"
-                          width={150}
-                          height={150}
-                        />
-                      ) : null,
-                    )}
+        <div className="flex flex-col gap-8 md:flex-row">
+          {/* Image gallery */}
+          <div className="flex flex-1 flex-col gap-4">
+            {validImages.length > 0 ? (
+              <>
+                {/* Main image */}
+                {validImages[0]?.url && (
+                  <img
+                    src={validImages[0].url}
+                    alt={validImages[0].label}
+                    className="w-full object-cover"
+                    width={600}
+                    height={600}
+                  />
+                )}
+                {/* Thumbnails */}
+                {validImages.length > 1 && (
+                  <div className="grid grid-cols-4 gap-2">
+                    {validImages
+                      .slice(1)
+                      .map((img, i) =>
+                        img.url ? (
+                          <img
+                            key={i}
+                            src={img.url}
+                            alt={img.label}
+                            className="aspect-square w-full object-cover"
+                            width={150}
+                            height={150}
+                          />
+                        ) : null,
+                      )}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="flex aspect-square items-center justify-center rounded border bg-muted">
+                <ImageIcon className="size-16 text-muted-foreground" />
+              </div>
+            )}
+          </div>
+
+          {/* Purchase panel */}
+          <div className="flex flex-col gap-6 md:w-80">
+            <div>
+              <h1 className="font-heading text-2xl font-bold tracking-tight">{asset.name}</h1>
+              <p className="text-sm text-muted-foreground">by {listing.seller.name}</p>
+              {isActorPackage && (
+                <div className="mt-2">
+                  <Badge variant="secondary">Actor Package</Badge>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="flex aspect-square items-center justify-center rounded-lg bg-muted">
-              <ImageIcon className="size-16 text-muted-foreground" />
             </div>
-          )}
-        </div>
 
-        {/* Purchase panel */}
-        <div className="space-y-6 md:w-80">
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight">{asset.name}</h1>
-            <p className="text-sm text-muted-foreground">by {listing.seller.name}</p>
-            {isActorPackage && (
-              <div className="mt-2">
-                <Badge variant="secondary">Actor Package</Badge>
+            <div className="border border-border p-4 space-y-4">
+              <div className="flex items-baseline justify-between">
+                <span className="text-3xl font-bold">{price.toFixed(2)}</span>
+                <span className="text-muted-foreground">credits</span>
               </div>
-            )}
-          </div>
 
-          <div className="rounded-lg border p-4 space-y-4">
-            <div className="flex items-baseline justify-between">
-              <span className="text-3xl font-bold">{price.toFixed(2)}</span>
-              <span className="text-muted-foreground">credits</span>
-            </div>
-
-            <div className="text-sm text-muted-foreground">
-              Your balance: {balance.toFixed(2)} cr
-            </div>
-
-            {canAfford ? (
-              <Button className="w-full" size="lg" onClick={() => setShowPurchase(true)}>
-                <ShoppingBag className="mr-2 size-4" />
-                Buy for {price.toFixed(2)} cr
-              </Button>
-            ) : (
-              <div className="space-y-2">
-                <Button className="w-full" size="lg" disabled variant="outline">
-                  <Wallet className="mr-2 size-4" />
-                  Insufficient credits (need {(price - balance).toFixed(2)} more)
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="w-full"
-                  onClick={() => navigate('/settings/wallet')}
-                >
-                  Top Up Wallet
-                </Button>
+              <div className="text-sm text-muted-foreground">
+                Your balance: {balance.toFixed(2)} cr
               </div>
-            )}
-          </div>
 
-          {/* Package contents */}
-          {isActorPackage && (
-            <div className="rounded-lg border p-4">
-              <h3 className="mb-2 text-sm font-semibold">Package includes:</h3>
-              <ul className="space-y-1 text-sm text-muted-foreground">
-                {validImages.map((img) => (
-                  <li key={img.label} className="flex items-center gap-2">
-                    <span className="size-1.5 rounded-full bg-primary" />
-                    {img.label}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Purchase confirmation dialog */}
-      <Dialog open={showPurchase} onOpenChange={setShowPurchase}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Purchase</DialogTitle>
-            <DialogDescription>
-              Purchase "{asset.name}" for {price.toFixed(2)} credits?
-              <br />
-              Your balance after: {(balance - price).toFixed(2)} cr
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setShowPurchase(false)}
-              disabled={purchase.isPending}
-            >
-              Cancel
-            </Button>
-            <Button onClick={handlePurchase} disabled={purchase.isPending}>
-              {purchase.isPending ? (
-                <>
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                  Processing...
-                </>
+              {canAfford ? (
+                <Button className="w-full" size="lg" onClick={() => setShowPurchase(true)}>
+                  <ShoppingBag className="mr-2 size-4" />
+                  Buy for {price.toFixed(2)} cr
+                </Button>
               ) : (
-                'Confirm Purchase'
+                <div className="space-y-2">
+                  <Button className="w-full" size="lg" disabled variant="outline">
+                    <Wallet className="mr-2 size-4" />
+                    Insufficient credits (need {(price - balance).toFixed(2)} more)
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate('/settings/wallet')}
+                  >
+                    Top Up Wallet
+                  </Button>
+                </div>
               )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </div>
+
+            {/* Package contents */}
+            {isActorPackage && (
+              <div className="border border-border p-4">
+                <h3 className="mb-2 text-sm font-semibold">Package includes:</h3>
+                <ul className="space-y-1 text-sm text-muted-foreground">
+                  {validImages.map((img) => (
+                    <li key={img.label} className="flex items-center gap-2">
+                      <span className="size-1.5 rounded-full bg-primary" />
+                      {img.label}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Purchase confirmation dialog */}
+        <Dialog open={showPurchase} onOpenChange={setShowPurchase}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Confirm Purchase</DialogTitle>
+              <DialogDescription>
+                Purchase "{asset.name}" for {price.toFixed(2)} credits?
+                <br />
+                Your balance after: {(balance - price).toFixed(2)} cr
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowPurchase(false)}
+                disabled={purchase.isPending}
+              >
+                Cancel
+              </Button>
+              <Button onClick={handlePurchase} disabled={purchase.isPending}>
+                {purchase.isPending ? (
+                  <>
+                    <Loader2 className="mr-2 size-4 animate-spin" />
+                    Processing...
+                  </>
+                ) : (
+                  'Confirm Purchase'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    </PageContainer>
   );
 }
