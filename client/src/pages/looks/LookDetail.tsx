@@ -12,6 +12,7 @@ import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
+import PageContainer from '@/components/layout/PageContainer';
 
 interface LookOutput {
   id: string;
@@ -216,7 +217,7 @@ export default function LookDetail() {
   );
 
   const propertiesContent = (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Object.entries(look.taxonomy_values ?? {}).map(
         ([key, value]) =>
           value && (
@@ -229,7 +230,9 @@ export default function LookDetail() {
           ),
       )}
       {Object.keys(look.taxonomy_values ?? {}).length === 0 && (
-        <p className="text-sm text-muted-foreground sm:col-span-2">No taxonomy properties set.</p>
+        <p className="text-sm text-muted-foreground sm:col-span-full">
+          No taxonomy properties set.
+        </p>
       )}
     </div>
   );
@@ -288,18 +291,20 @@ export default function LookDetail() {
   ) : undefined;
 
   return (
-    <AssetDetailLayout
-      libraryLabel="Looks"
-      libraryPath="/looks"
-      name={look.name}
-      typeLabel="Look"
-      statusBadge={statusBadge}
-      actions={actions}
-      image={imageSlot}
-      overviewContent={overviewContent}
-      outputsContent={outputsContent}
-      propertiesContent={propertiesContent}
-      banner={banner}
-    />
+    <PageContainer>
+      <AssetDetailLayout
+        libraryLabel="Looks"
+        libraryPath="/looks"
+        name={look.name}
+        typeLabel="Look"
+        statusBadge={statusBadge}
+        actions={actions}
+        image={imageSlot}
+        overviewContent={overviewContent}
+        outputsContent={outputsContent}
+        propertiesContent={propertiesContent}
+        banner={banner}
+      />
+    </PageContainer>
   );
 }

@@ -37,6 +37,7 @@ import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
+import PageContainer from '@/components/layout/PageContainer';
 
 interface ActorOutput {
   id: string;
@@ -412,7 +413,7 @@ export default function ActorPage() {
         />
       )}
       {Object.keys(actor.taxonomy_values ?? {}).length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {Object.entries(actor.taxonomy_values ?? {}).map(
             ([key, value]) =>
               value && (
@@ -489,7 +490,7 @@ export default function ActorPage() {
   );
 
   const propertiesContent = (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Object.entries(actor.taxonomy_values ?? {}).map(
         ([key, value]) =>
           value && (
@@ -502,7 +503,9 @@ export default function ActorPage() {
           ),
       )}
       {Object.keys(actor.taxonomy_values ?? {}).length === 0 && (
-        <p className="text-sm text-muted-foreground sm:col-span-2">No taxonomy properties set.</p>
+        <p className="text-sm text-muted-foreground sm:col-span-full">
+          No taxonomy properties set.
+        </p>
       )}
     </div>
   );
@@ -571,18 +574,20 @@ export default function ActorPage() {
   ) : undefined;
 
   return (
-    <AssetDetailLayout
-      libraryLabel="Actors"
-      libraryPath="/actors"
-      name={actor.name}
-      typeLabel="Actor"
-      statusBadge={statusBadge}
-      actions={actions}
-      image={imageSlot}
-      overviewContent={overviewContent}
-      outputsContent={outputsContent}
-      propertiesContent={propertiesContent}
-      banner={banner}
-    />
+    <PageContainer>
+      <AssetDetailLayout
+        libraryLabel="Actors"
+        libraryPath="/actors"
+        name={actor.name}
+        typeLabel="Actor"
+        statusBadge={statusBadge}
+        actions={actions}
+        image={imageSlot}
+        overviewContent={overviewContent}
+        outputsContent={outputsContent}
+        propertiesContent={propertiesContent}
+        banner={banner}
+      />
+    </PageContainer>
   );
 }
