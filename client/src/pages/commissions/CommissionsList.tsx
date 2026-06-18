@@ -114,8 +114,8 @@ function CommissionCard({ commission, role, onAssign }: CommissionCardProps) {
                 Assigned
               </span>
             )}
-            {commission.premium_cost != null && commission.premium_cost > 0 && (
-              <span>{commission.premium_cost.toFixed(2)} cr</span>
+            {commission.premium_cost != null && Number(commission.premium_cost) > 0 && (
+              <span>{Number(commission.premium_cost).toFixed(2)} cr</span>
             )}
           </div>
         </div>

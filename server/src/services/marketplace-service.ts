@@ -230,7 +230,7 @@ export async function listAllSubmissions(
 }> {
   const { status, page = 1, pageSize = 20 } = options;
   const params: unknown[] = [];
-  const conditions: string[] = [''];
+  const conditions: string[] = [];
   let idx = 1;
 
   conditions.push('a.marketplace_status IS NOT NULL');

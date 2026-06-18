@@ -27,7 +27,7 @@ export interface NavItem {
 export function getNavItems(role: Account['role']): NavItem[] {
   const tools: NavItem = {
     label: 'Tools',
-    path: '#',
+    path: '#tools',
     icon: Wrench,
     children: [
       { label: 'Actor Designer', path: '/actors/new', icon: User },
@@ -38,7 +38,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
 
   const library: NavItem = {
     label: 'Library',
-    path: '#',
+    path: '#library',
     icon: User,
     children: [
       { label: 'Actors', path: '/actors', icon: User },
@@ -56,7 +56,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
   if (role === 'ADMIN') {
     const marketplace: NavItem = {
       label: 'Marketplace',
-      path: '#',
+      path: '#marketplace',
       icon: ShoppingBag,
       children: [
         { label: 'Store', path: '/marketplace', icon: ShoppingBag },
@@ -67,7 +67,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
 
     const settings: NavItem = {
       label: 'Settings',
-      path: '#',
+      path: '#settings',
       icon: Settings,
       children: [
         { label: 'Users & Roles', path: '/settings/users', icon: Users },
@@ -95,7 +95,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
       { label: 'Commissions', path: '/commissions', icon: MessageSquare },
       {
         label: 'Settings',
-        path: '#',
+        path: '#settings',
         icon: Settings,
         children: [
           { label: 'Profile', path: '/settings', icon: Settings },
@@ -112,7 +112,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
     { label: 'Commissions', path: '/commissions', icon: MessageSquare },
     {
       label: 'Settings',
-      path: '#',
+      path: '#settings',
       icon: Settings,
       children: [
         { label: 'Profile', path: '/settings', icon: Settings },
