@@ -68,6 +68,13 @@ export default {
       boxShadow: {
         none: 'none',
       },
+      fontFamily: {
+        sans: 'var(--font-body)',
+        serif: 'var(--font-heading)',
+        mono: 'var(--font-mono)',
+        heading: 'var(--font-heading)',
+        body: 'var(--font-body)',
+      },
     },
   },
   plugins: [],
