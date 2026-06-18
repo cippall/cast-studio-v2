@@ -1,19 +1,10 @@
 /**
- * UsersPage — admin user management table.
+ * UsersPage — admin user management table using DataTable.
  */
 import { useState } from 'react';
-import { useAdminUsers, useUpdateUser } from '@/hooks/useAdmin';
-import { Button } from '@/components/ui/button';
+import { useAdminUsers, useUpdateUser, type AdminUser } from '@/hooks/useAdmin';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
+import { DataTable, type Column } from '@/components/DataTable';
 import {
   Dialog,
   DialogContent,
@@ -28,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import EmptyState from '@/components/EmptyState';
+import { Button } from '@/components/ui/button';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -50,10 +41,10 @@ export default function UsersPage() {
   const updateUser = useUpdateUser();
 
   const users = data?.data ?? [];
-  const editUser = users.find((u) => u.id === editId);
+  const editUser = users.find((u: AdminUser) => u.id === editId);
 
   const handleOpenEdit = (userId: string) => {
-    const user = users.find((u) => u.id === userId);
+    const user = users.find((u: AdminUser) => u.id === userId);
     if (!user) return;
     setEditId(userId);
     setEditRole(user.role);
@@ -76,12 +67,46 @@ export default function UsersPage() {
     }
   };
 
+  // DataTable columns
+  const columns: Column<AdminUser>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      sortable: true,
+      render: (row) => row.name,
+    },
+    {
+      key: 'email',
+      header: 'Email',
+      sortable: true,
+      render: (row) => row.email,
+    },
+    {
+      key: 'role',
+      header: 'Role',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.role === 'ADMIN' ? 'default' : 'secondary'}>{row.role}</Badge>
+      ),
+    },
+    {
+      key: 'is_api_able',
+      header: 'API Enabled',
+      sortable: true,
+      render: (row) => (
+        <Badge variant={row.is_api_able ? 'default' : 'outline'}>
+          {row.is_api_able ? 'Yes' : 'No'}
+        </Badge>
+      ),
+    },
+  ];
+
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-bold tracking-tight">Users & Roles</h1>
+      <h1 className="text-2xl font-bold tracking-tight font-heading">Users & Roles</h1>
 
       <div className="flex gap-2">
-        <Select value={roleFilter} onValueChange={setRoleFilter}>
+        <Select value={roleFilter ?? ''} onValueChange={(v) => setRoleFilter(v || null)}>
           <SelectTrigger className="w-32">
             <SelectValue placeholder="All roles" />
           </SelectTrigger>
@@ -96,50 +121,23 @@ export default function UsersPage() {
         </Select>
       </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <Skeleton key={i} className="h-12 w-full" />
-          ))}
-        </div>
-      ) : users.length === 0 ? (
-        <EmptyState title="No users" description="No users found." />
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Email</TableHead>
-              <TableHead>Role</TableHead>
-              <TableHead>API Enabled</TableHead>
-              <TableHead className="w-24">Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {users.map((user) => (
-              <TableRow key={user.id}>
-                <TableCell className="font-medium">{user.name}</TableCell>
-                <TableCell>{user.email}</TableCell>
-                <TableCell>
-                  <Badge variant={user.role === 'ADMIN' ? 'default' : 'secondary'}>
-                    {user.role}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Badge variant={user.is_api_able ? 'default' : 'outline'}>
-                    {user.is_api_able ? 'Yes' : 'No'}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <Button variant="ghost" size="sm" onClick={() => handleOpenEdit(user.id)}>
-                    Edit
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
+      <DataTable<AdminUser>
+        columns={columns}
+        data={users}
+        isLoading={isLoading}
+        emptyTitle="No users"
+        emptyDescription="No users found."
+        cardTitleKey="name"
+        rowActions={(row) => [
+          <button
+            key="edit"
+            className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
+            onClick={() => handleOpenEdit(row.id)}
+          >
+            Edit
+          </button>,
+        ]}
+      />
 
       {/* Edit dialog */}
       <Dialog open={!!editId} onOpenChange={() => setEditId(null)}>
