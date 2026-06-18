@@ -8,7 +8,6 @@ import { useApiKeys, useCreateApiKey, useRevokeApiKey } from '@/hooks/useApiKeys
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Skeleton } from '@/components/ui/skeleton';
 import {
   Dialog,
   DialogContent,
@@ -16,20 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import EmptyStateV2 from '@/components/EmptyStateV2';
+import { Trash2, Loader2, Plus, Copy, Check } from 'lucide-react';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
-import { Loader2, Plus, Key, Copy, Check, Trash2 } from 'lucide-react';
+import { DataTable, Column } from '@/components/DataTable';
 import { toast } from 'sonner';
+import type { ApiKey } from '@/hooks/useApiKeys';
 
 export default function ApiKeysPage() {
   const { data, isLoading } = useApiKeys();
@@ -66,7 +58,6 @@ export default function ApiKeysPage() {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     } catch {
-      // Fallback: select text in input
       const input = document.getElementById('created-key-input') as HTMLInputElement;
       if (input) {
         input.select();
@@ -95,6 +86,50 @@ export default function ApiKeysPage() {
     setNewKeyName('');
   };
 
+  const columns: Column<ApiKey>[] = [
+    {
+      key: 'name',
+      header: 'Name',
+      render: (row) => <span className="font-medium">{row.name}</span>,
+    },
+    {
+      key: 'key',
+      header: 'Key',
+      render: (row) => <span className="font-mono text-sm text-muted-foreground">{row.key}</span>,
+    },
+    {
+      key: 'status',
+      header: 'Status',
+      render: (row) => (
+        <Badge variant={row.is_active ? 'default' : 'outline'}>
+          {row.is_active ? 'Active' : 'Revoked'}
+        </Badge>
+      ),
+    },
+    {
+      key: 'created_at',
+      header: 'Created',
+      render: (row) => (
+        <span className="text-sm text-muted-foreground">
+          {new Date(row.created_at).toLocaleDateString()}
+        </span>
+      ),
+    },
+  ];
+
+  const rowActions = (row: ApiKey): React.ReactNode[] => [
+    <button
+      key="revoke"
+      type="button"
+      className="flex w-full items-center gap-2 px-2 py-1.5 text-sm text-destructive"
+      onClick={() => setRevokeId(row.id)}
+      disabled={!row.is_active}
+    >
+      <Trash2 className="size-4" />
+      Revoke
+    </button>,
+  ];
+
   return (
     <PageContainer>
       <div className="flex flex-col gap-6">
@@ -105,156 +140,16 @@ export default function ApiKeysPage() {
           </Button>
         </PageHeader>
 
-        {/* Desktop table */}
-        <div className="hidden md:block">
-          {isLoading ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <TableRow key={i}>
-                    <TableCell>
-                      <Skeleton className="h-5 w-32" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-48" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-16" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-5 w-24" />
-                    </TableCell>
-                    <TableCell>
-                      <Skeleton className="h-8 w-8" />
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : keys.length === 0 ? (
-            <EmptyStateV2
-              icon={<Key className="size-8 text-muted-foreground" />}
-              title="No API keys"
-              description="Create an API key to enable programmatic access."
-              actionLabel="New Key"
-              actionPath="#"
-            />
-          ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Name</TableHead>
-                  <TableHead>Key</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Created</TableHead>
-                  <TableHead className="w-12" />
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {keys.map((key) => (
-                  <TableRow key={key.id}>
-                    <TableCell className="font-medium">{key.name}</TableCell>
-                    <TableCell className="font-mono text-sm text-muted-foreground">
-                      {key.key}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={key.is_active ? 'default' : 'outline'}>
-                        {key.is_active ? 'Active' : 'Revoked'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">
-                      {new Date(key.created_at).toLocaleDateString()}
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setRevokeId(key.id)}
-                        className="size-8 p-0"
-                        disabled={!key.is_active}
-                      >
-                        <Trash2 className="size-4 text-destructive" />
-                        <span className="sr-only">Revoke</span>
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          )}
-        </div>
-
-        {/* Mobile card list */}
-        <div className="flex flex-col gap-3 md:hidden">
-          {isLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <div key={i} className="border border-border p-4">
-                <Skeleton className="mb-3 h-5 w-32" />
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-4 w-24" />
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Skeleton className="h-4 w-12" />
-                    <Skeleton className="h-4 w-20" />
-                  </div>
-                </div>
-              </div>
-            ))
-          ) : keys.length === 0 ? (
-            <EmptyStateV2
-              icon={<Key className="size-8 text-muted-foreground" />}
-              title="No API keys"
-              description="Create an API key to enable programmatic access."
-              actionLabel="New Key"
-              actionPath="#"
-            />
-          ) : (
-            keys.map((key) => (
-              <div key={key.id} className="border border-border p-4">
-                <div className="mb-3 flex items-center justify-between">
-                  <span className="font-medium">{key.name}</span>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setRevokeId(key.id)}
-                    className="size-8 p-0"
-                    disabled={!key.is_active}
-                  >
-                    <Trash2 className="size-4 text-destructive" />
-                    <span className="sr-only">Revoke</span>
-                  </Button>
-                </div>
-                <div className="flex flex-col gap-2">
-                  <div className="flex items-baseline justify-between gap-2">
-                    <span className="shrink-0 text-sm text-muted-foreground">Key</span>
-                    <span className="truncate text-right font-mono text-sm">{key.key}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Status</span>
-                    <Badge variant={key.is_active ? 'default' : 'outline'}>
-                      {key.is_active ? 'Active' : 'Revoked'}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Created</span>
-                    <span className="text-sm">{new Date(key.created_at).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
+        <DataTable<ApiKey>
+          columns={columns}
+          data={keys}
+          isLoading={isLoading}
+          emptyTitle="No API keys"
+          emptyDescription="Create an API key to enable programmatic access."
+          loadingRowCount={3}
+          rowActions={rowActions}
+          cardTitleKey="name"
+        />
       </div>
 
       {/* Create key dialog */}
