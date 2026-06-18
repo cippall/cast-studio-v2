@@ -3,6 +3,8 @@
  * Client: "My Commissions" with status tabs (All/Requested/In Review/Approved).
  * Artist: "Assigned Commissions" with status tabs (All/Assigned/In Progress/Submitted).
  * Admin: "All Commissions" with full status tabs + Assign action.
+ * Uses PageContainer + PageHeader.
+ * Responsive: 1 col mobile, 2 col tablet, 3 col desktop card grid.
  */
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -14,8 +16,10 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
-import EmptyState from '@/components/EmptyState';
-import { MessageSquare, Plus, ArrowLeft, User, Eye, Send, ChevronRight } from 'lucide-react';
+import EmptyStateV2 from '@/components/EmptyStateV2';
+import PageContainer from '@/components/layout/PageContainer';
+import PageHeader from '@/components/layout/PageHeader';
+import { MessageSquare, Plus, Eye, Send, ChevronRight } from 'lucide-react';
 
 const STATUS_TABS_CLIENT: { value: string; label: string }[] = [
   { value: '', label: 'All' },
@@ -108,12 +112,7 @@ function CommissionCard({ commission, role, onAssign }: CommissionCardProps) {
           </div>
           <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
             <span>{formatRelativeTime(commission.created_at)}</span>
-            {commission.assignee_id && (
-              <span className="flex items-center gap-1">
-                <User className="size-3" />
-                Assigned
-              </span>
-            )}
+            {commission.assignee_id && <span className="flex items-center gap-1">Assigned</span>}
             {commission.premium_cost != null && Number(commission.premium_cost) > 0 && (
               <span>{Number(commission.premium_cost).toFixed(2)} cr</span>
             )}
@@ -172,94 +171,104 @@ export default function CommissionsList() {
 
   if (error) {
     return (
-      <div className="flex flex-col gap-4">
-        <h1 className="text-2xl font-bold tracking-tight">Commissions</h1>
+      <PageContainer>
+        <PageHeader
+          title={
+            role === 'CLIENT'
+              ? 'My Commissions'
+              : role === 'ADMIN'
+                ? 'All Commissions'
+                : 'My Commissions'
+          }
+        />
         <Card>
           <CardContent className="py-8 text-center text-sm text-destructive">
             Failed to load commissions. Please try again.
           </CardContent>
         </Card>
-      </div>
+      </PageContainer>
     );
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">
-            {role === 'CLIENT'
+    <PageContainer>
+      <div className="flex flex-col gap-6">
+        <PageHeader
+          title={
+            role === 'CLIENT'
               ? 'My Commissions'
               : role === 'ADMIN'
                 ? 'All Commissions'
-                : 'My Commissions'}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {role === 'CLIENT'
+                : 'My Commissions'
+          }
+          description={
+            role === 'CLIENT'
               ? 'Track your commission requests'
               : role === 'ADMIN'
                 ? 'Manage all commission requests'
-                : 'Commissions assigned to you'}
-          </p>
-        </div>
-        {role === 'CLIENT' && (
-          <Button onClick={() => navigate('/commissions/new')}>
-            <Plus className="mr-1 size-4" />
-            New Commission
-          </Button>
-        )}
-      </div>
+                : 'Commissions assigned to you'
+          }
+        >
+          {role === 'CLIENT' && (
+            <Button onClick={() => navigate('/commissions/new')}>
+              <Plus className="mr-1 size-4" />
+              New Commission
+            </Button>
+          )}
+        </PageHeader>
 
-      <Tabs value={statusFilter} onValueChange={setStatusFilter}>
-        <TabsList>
+        <Tabs value={statusFilter} onValueChange={setStatusFilter}>
+          <TabsList>
+            {tabs.map((tab) => (
+              <TabsTrigger key={tab.value} value={tab.value}>
+                {tab.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
           {tabs.map((tab) => (
-            <TabsTrigger key={tab.value} value={tab.value}>
-              {tab.label}
-            </TabsTrigger>
+            <TabsContent key={tab.value} value={tab.value}>
+              {isLoading ? (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {[1, 2, 3].map((i) => (
+                    <Card key={i}>
+                      <CardContent className="p-4">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="mt-2 h-3 w-32" />
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              ) : commissions.length === 0 ? (
+                <EmptyStateV2
+                  icon={<MessageSquare className="size-8 text-muted-foreground" />}
+                  title="No commissions"
+                  description={
+                    role === 'CLIENT'
+                      ? "You haven't submitted any commissions yet."
+                      : role === 'ADMIN'
+                        ? 'No commissions found matching the selected filter.'
+                        : 'No commissions assigned to you yet.'
+                  }
+                  actionLabel={role === 'CLIENT' ? 'New Commission' : undefined}
+                  actionPath={role === 'CLIENT' ? '/commissions/new' : undefined}
+                />
+              ) : (
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {commissions.map((commission) => (
+                    <CommissionCard
+                      key={commission.id}
+                      commission={commission}
+                      role={role as 'CLIENT' | 'ARTIST' | 'ADMIN'}
+                      onAssign={(id) => navigate(`/commissions/${id}`)}
+                    />
+                  ))}
+                </div>
+              )}
+            </TabsContent>
           ))}
-        </TabsList>
-
-        {tabs.map((tab) => (
-          <TabsContent key={tab.value} value={tab.value}>
-            {isLoading ? (
-              <div className="flex flex-col gap-3">
-                {[1, 2, 3].map((i) => (
-                  <Card key={i}>
-                    <CardContent className="p-4">
-                      <Skeleton className="h-4 w-48" />
-                      <Skeleton className="mt-2 h-3 w-32" />
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            ) : commissions.length === 0 ? (
-              <EmptyState
-                title="No commissions"
-                description={
-                  role === 'CLIENT'
-                    ? "You haven't submitted any commissions yet."
-                    : role === 'ADMIN'
-                      ? 'No commissions found matching the selected filter.'
-                      : 'No commissions assigned to you yet.'
-                }
-                actionLabel={role === 'CLIENT' ? 'New Commission' : undefined}
-                actionPath={role === 'CLIENT' ? '/commissions/new' : undefined}
-              />
-            ) : (
-              <div className="flex flex-col gap-3">
-                {commissions.map((commission) => (
-                  <CommissionCard
-                    key={commission.id}
-                    commission={commission}
-                    role={role as 'CLIENT' | 'ARTIST' | 'ADMIN'}
-                    onAssign={(id) => navigate(`/commissions/${id}`)}
-                  />
-                ))}
-              </div>
-            )}
-          </TabsContent>
-        ))}
-      </Tabs>
-    </div>
+        </Tabs>
+      </div>
+    </PageContainer>
   );
 }
