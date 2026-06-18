@@ -15,6 +15,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
+  AlertCircle,
   FileText,
   ImageIcon,
   Shuffle,
@@ -355,6 +356,11 @@ export default function ActorDesigner() {
     onSuccess: (data) => {
       setActorId(data.id);
       setStage(2);
+      setCreateError(null);
+    },
+    onError: (err: unknown) => {
+      const error = err as { message?: string };
+      setCreateError(error.message ?? 'Failed to create actor');
     },
   });
 
@@ -467,7 +473,11 @@ export default function ActorDesigner() {
     regenerateMutation.mutate(currentStep.key);
   }, [actorId, currentStep.key, regenerateMutation]);
 
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
+  const generateError = generateMutation.error as Error | null;
+  const regenerateError = regenerateMutation.error as Error | null;
   const currentOptions = stepOptions[currentStep.key];
   const selectedOptionId = selectedOptions[currentStep.key];
   const isStepConfirmed = confirmedSteps.has(currentStep.key);
@@ -488,6 +498,13 @@ export default function ActorDesigner() {
               : 'Name your actor and set properties.'
         }
       />
+
+      {stage === 1 && createError && (
+        <div className="flex items-center gap-2 border border-error/20 bg-error/5 px-3 py-2 text-sm text-error">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{createError}</span>
+        </div>
+      )}
 
       {stage === 1 && (
         <Stage1

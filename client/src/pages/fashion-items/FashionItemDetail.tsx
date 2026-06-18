@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, ImageIcon, Loader2, Lock, RotateCcw, Send, Sparkles, Trash2 } from 'lucide-react';
 import GenerationStatus from '@/components/GenerationStatus';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
@@ -49,7 +51,12 @@ export default function FashionItemDetail() {
   const isAdmin = user?.role === 'ADMIN';
   const isArtist = user?.role === 'ARTIST' || isAdmin;
 
-  const { data: item, isLoading } = useQuery<FashionItemDetail>({
+  const {
+    data: item,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<FashionItemDetail>({
     queryKey: ['fashion-items', id],
     queryFn: async () => {
       if (!id) throw new Error('No item ID');
@@ -108,20 +115,33 @@ export default function FashionItemDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <LoadingState variant="detail" />
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer>
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['fashion-items', id] })}
+        />
+      </PageContainer>
     );
   }
 
   if (!item) {
     return (
-      <div className="flex flex-col items-center py-24 text-center">
-        <p className="text-muted-foreground">Fashion item not found.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/fashion-items')}>
-          Back to Items
-        </Button>
-      </div>
+      <PageContainer>
+        <div className="flex flex-col items-center py-24 text-center">
+          <p className="text-muted-foreground">Fashion item not found.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/fashion-items')}>
+            Back to Items
+          </Button>
+        </div>
+      </PageContainer>
     );
   }
 

@@ -48,7 +48,7 @@ export default function MarketplaceManage() {
     ...(statusFilter ? { isActive: statusFilter === 'active' } : {}),
   };
 
-  const { data, isLoading } = useMarketplaceManage(filters);
+  const { data, isLoading, isError, error } = useMarketplaceManage(filters);
   const updateListing = useUpdateListing();
   const deleteListing = useDeleteListing();
 
@@ -157,6 +157,8 @@ export default function MarketplaceManage() {
           columns={columns}
           data={listings}
           isLoading={isLoading}
+          isError={isError}
+          error={error instanceof Error ? error : null}
           emptyTitle="No listings yet"
           emptyDescription="Create your first marketplace listing to start selling assets."
           rowActions={rowActions}

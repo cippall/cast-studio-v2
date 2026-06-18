@@ -20,6 +20,8 @@ import {
 } from '@/components/ui/select';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -32,7 +34,7 @@ const ACTOR_OUTPUT_OPTIONS = [
 ];
 
 export default function AdminListingsSettings() {
-  const { data: settings, isLoading } = useMarketplaceSettings();
+  const { data: settings, isLoading, isError, error } = useMarketplaceSettings();
   const updateSettings = useUpdateMarketplaceSettings();
   const { data: looksData } = useLooks({ pageSize: 100 });
 
@@ -79,9 +81,14 @@ export default function AdminListingsSettings() {
   if (isLoading || !settings) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-        </div>
+        {isError ? (
+          <ErrorState
+            message={error instanceof Error ? error.message : undefined}
+            onRetry={() => window.location.reload()}
+          />
+        ) : (
+          <LoadingState variant="detail" />
+        )}
       </PageContainer>
     );
   }

@@ -14,6 +14,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
+  AlertCircle,
   FileText,
   ImageIcon,
   ChevronRight,
@@ -326,6 +327,8 @@ export default function FashionItemCreator() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
+  const [createError, setCreateError] = useState<string | null>(null);
+
   const [step, setStep] = useState<WizardStep>(1);
   const [entryMethod, setEntryMethod] = useState<EntryMethod>('PROMPT');
   const [prompt, setPrompt] = useState('');
@@ -369,6 +372,11 @@ export default function FashionItemCreator() {
         })),
       );
       setStep(2);
+      setCreateError(null);
+    },
+    onError: (err: unknown) => {
+      const error = err as { message?: string };
+      setCreateError(error.message ?? 'Failed to create fashion item');
     },
   });
 
@@ -435,6 +443,13 @@ export default function FashionItemCreator() {
             : 'Select the best option and name your item.'
         }
       />
+
+      {step === 1 && createError && (
+        <div className="flex items-center gap-2 border border-error/20 bg-error/5 px-3 py-2 text-sm text-error">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{createError}</span>
+        </div>
+      )}
 
       {step === 1 && (
         <Step1

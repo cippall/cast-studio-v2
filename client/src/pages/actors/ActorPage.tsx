@@ -26,7 +26,6 @@ import {
   Copy,
   Edit3,
   ImageIcon,
-  Loader2,
   Lock,
   RotateCcw,
   Send,
@@ -34,6 +33,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
@@ -275,7 +276,12 @@ export default function ActorPage() {
     () => new Set(OUTPUT_SECTIONS.map((s) => s.key)),
   );
 
-  const { data: actor, isLoading } = useQuery<ActorDetail>({
+  const {
+    data: actor,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<ActorDetail>({
     queryKey: ['actors', id],
     queryFn: async () => {
       if (!id) throw new Error('No actor ID');
@@ -364,20 +370,33 @@ export default function ActorPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <LoadingState variant="detail" />
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer>
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['actors', id] })}
+        />
+      </PageContainer>
     );
   }
 
   if (!actor) {
     return (
-      <div className="flex flex-col items-center py-24 text-center">
-        <p className="text-muted-foreground">Actor not found.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/actors')}>
-          Back to Actors
-        </Button>
-      </div>
+      <PageContainer>
+        <div className="flex flex-col items-center py-24 text-center">
+          <p className="text-muted-foreground">Actor not found.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/actors')}>
+            Back to Actors
+          </Button>
+        </div>
+      </PageContainer>
     );
   }
 

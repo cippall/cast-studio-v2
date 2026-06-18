@@ -18,6 +18,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import PageContainer from '@/components/layout/PageContainer';
+import LoadingState from '@/components/LoadingState';
 import { ImageIcon, Loader2, ShoppingBag, Wallet } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -50,9 +51,7 @@ export default function MarketplaceDetail() {
   if (isLoading) {
     return (
       <PageContainer>
-        <div className="flex items-center justify-center py-24">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-        </div>
+        <LoadingState variant="detail" />
       </PageContainer>
     );
   }

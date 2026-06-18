@@ -32,8 +32,8 @@ export default function Dashboard() {
   const isClient = user?.role === 'CLIENT';
   const isAdmin = user?.role === 'ADMIN';
 
-  const { data: wallet, isLoading: walletLoading } = useWalletBalance();
-  const { data: stats, isLoading: statsLoading } = useDashboardStats();
+  const { data: wallet, isLoading: walletLoading, isError: walletError } = useWalletBalance();
+  const { data: stats, isLoading: statsLoading, isError: statsError } = useDashboardStats();
 
   const quickActions = [
     { label: 'New Actor', icon: User, path: '/actors/new' },
@@ -91,6 +91,8 @@ export default function Dashboard() {
               <CardContent>
                 {walletLoading ? (
                   <LoadingState variant="list" count={1} />
+                ) : walletError ? (
+                  <div className="text-sm text-error">Failed to load balance</div>
                 ) : (
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold">

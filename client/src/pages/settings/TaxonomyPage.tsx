@@ -53,7 +53,7 @@ export default function TaxonomyPage() {
   const { cat } = useParams<{ cat: string }>();
   const category = cat ?? 'ACTOR_PROPERTY';
 
-  const { data: entries, isLoading } = useAdminTaxonomy(category);
+  const { data: entries, isLoading, isError, error } = useAdminTaxonomy(category);
   const createEntry = useCreateTaxonomyEntry();
   const updateEntry = useUpdateTaxonomyEntry();
   const deleteEntry = useDeleteTaxonomyEntry();
@@ -195,6 +195,8 @@ export default function TaxonomyPage() {
           columns={columns}
           data={entries ?? []}
           isLoading={isLoading}
+          isError={isError}
+          error={error instanceof Error ? error : null}
           emptyTitle="No entries"
           emptyDescription="No taxonomy entries for this category yet."
           cardTitleKey="label"

@@ -32,6 +32,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
 import EmptyStateV2 from '@/components/EmptyStateV2';
+import ErrorState from '@/components/ErrorState';
 import { cn } from '@/lib/utils';
 
 export interface Column<T> {
@@ -45,6 +46,8 @@ export interface DataTableProps<T extends { id: string }> {
   columns: Column<T>[];
   data: T[];
   isLoading?: boolean;
+  isError?: boolean;
+  error?: Error | null;
   emptyTitle?: string;
   emptyDescription?: string;
   loadingRowCount?: number;
@@ -63,6 +66,8 @@ export function DataTable<T extends { id: string }>({
   columns,
   data,
   isLoading = false,
+  isError = false,
+  error = null,
   emptyTitle = 'No data',
   emptyDescription = 'No items to display.',
   loadingRowCount = 5,
@@ -123,7 +128,12 @@ export function DataTable<T extends { id: string }>({
 
   // Loading state
   if (isLoading) {
-    return <LoadingState<T> columns={columns} rowCount={loadingRowCount} />;
+    return <LoadingStateTable columns={columns} rowCount={loadingRowCount} />;
+  }
+
+  // Error state
+  if (isError) {
+    return <ErrorState message={error?.message} />;
   }
 
   // Empty state
@@ -278,7 +288,7 @@ interface LoadingStateProps<T extends { id: string }> {
   rowCount: number;
 }
 
-function LoadingState<T extends { id: string }>({ columns, rowCount }: LoadingStateProps<T>) {
+function LoadingStateTable<T extends { id: string }>({ columns, rowCount }: LoadingStateProps<T>) {
   return (
     <div>
       <div className="hidden md:block">

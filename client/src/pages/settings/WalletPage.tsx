@@ -34,8 +34,13 @@ function formatCredits(amount: number): string {
 }
 
 export default function WalletPage() {
-  const { data: wallet, isLoading: loadingBalance } = useWalletBalance();
-  const { data: txData, isLoading: loadingTx } = useWalletTransactions({ pageSize: 20 });
+  const { data: wallet, isLoading: loadingBalance, isError: balanceError } = useWalletBalance();
+  const {
+    data: txData,
+    isLoading: loadingTx,
+    isError: txError,
+    error: txErrorObj,
+  } = useWalletTransactions({ pageSize: 20 });
   const topUp = useTopUpWallet();
 
   const [showTopUp, setShowTopUp] = useState(false);
@@ -109,6 +114,8 @@ export default function WalletPage() {
           <CardContent>
             {loadingBalance ? (
               <Skeleton className="h-10 w-32" />
+            ) : balanceError ? (
+              <div className="text-sm text-error">Failed to load balance</div>
             ) : (
               <div className="flex items-baseline gap-2">
                 <span className="text-4xl font-bold">
@@ -130,6 +137,8 @@ export default function WalletPage() {
               columns={columns}
               data={transactions}
               isLoading={loadingTx}
+              isError={txError}
+              error={txErrorObj instanceof Error ? txErrorObj : null}
               emptyTitle="No transactions"
               emptyDescription="No transactions yet."
               cardTitleKey="type"

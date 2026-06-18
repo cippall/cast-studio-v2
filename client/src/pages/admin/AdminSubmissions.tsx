@@ -40,7 +40,11 @@ export default function AdminSubmissions() {
   const [approveId, setApproveId] = useState<string | null>(null);
   const [approvePrice, setApprovePrice] = useState('');
 
-  const { data, isLoading } = useAdminSubmissions({ status, page: 1, pageSize: 20 });
+  const { data, isLoading, isError, error } = useAdminSubmissions({
+    status,
+    page: 1,
+    pageSize: 20,
+  });
   const approve = useApproveSubmission();
   const reject = useRejectSubmission();
 
@@ -134,6 +138,8 @@ export default function AdminSubmissions() {
                 columns={columns}
                 data={status === tab.value ? tableData : []}
                 isLoading={isLoading && status === tab.value}
+                isError={isError && status === tab.value}
+                error={error instanceof Error ? error : null}
                 emptyTitle="No submissions"
                 emptyDescription={`No ${tab.label.toLowerCase()} submissions.`}
                 cardTitleKey="asset_name"

@@ -38,7 +38,7 @@ export default function UsersPage() {
   const [editRole, setEditRole] = useState<string | null>(null);
   const [editApi, setEditApi] = useState(false);
 
-  const { data, isLoading } = useAdminUsers(
+  const { data, isLoading, isError, error } = useAdminUsers(
     roleFilter ? { role: roleFilter, pageSize: 50 } : { pageSize: 50 },
   );
   const updateUser = useUpdateUser();
@@ -126,6 +126,8 @@ export default function UsersPage() {
           columns={columns}
           data={users}
           isLoading={isLoading}
+          isError={isError}
+          error={error instanceof Error ? error : null}
           emptyTitle="No users"
           emptyDescription="No users found."
           cardTitleKey="name"

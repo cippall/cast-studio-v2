@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Copy, ImageIcon, Loader2, Lock, RotateCcw, Send, Sparkles, Trash2 } from 'lucide-react';
 import GenerationStatus from '@/components/GenerationStatus';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
@@ -49,7 +51,12 @@ export default function LookDetail() {
   const isAdmin = user?.role === 'ADMIN';
   const isArtist = user?.role === 'ARTIST' || isAdmin;
 
-  const { data: look, isLoading } = useQuery<LookDetail>({
+  const {
+    data: look,
+    isLoading,
+    isError,
+    error,
+  } = useQuery<LookDetail>({
     queryKey: ['looks', id],
     queryFn: async () => {
       if (!id) throw new Error('No look ID');
@@ -108,20 +115,33 @@ export default function LookDetail() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-24">
-        <Loader2 className="size-8 animate-spin text-muted-foreground" />
-      </div>
+      <PageContainer>
+        <LoadingState variant="detail" />
+      </PageContainer>
+    );
+  }
+
+  if (isError) {
+    return (
+      <PageContainer>
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => queryClient.invalidateQueries({ queryKey: ['looks', id] })}
+        />
+      </PageContainer>
     );
   }
 
   if (!look) {
     return (
-      <div className="flex flex-col items-center py-24 text-center">
-        <p className="text-muted-foreground">Look not found.</p>
-        <Button variant="outline" className="mt-4" onClick={() => navigate('/looks')}>
-          Back to Looks
-        </Button>
-      </div>
+      <PageContainer>
+        <div className="flex flex-col items-center py-24 text-center">
+          <p className="text-muted-foreground">Look not found.</p>
+          <Button variant="outline" className="mt-4" onClick={() => navigate('/looks')}>
+            Back to Looks
+          </Button>
+        </div>
+      </PageContainer>
     );
   }
 

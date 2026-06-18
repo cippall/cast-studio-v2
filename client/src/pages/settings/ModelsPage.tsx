@@ -20,7 +20,7 @@ import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function ModelsPage() {
-  const { data: models, isLoading } = useAdminModels();
+  const { data: models, isLoading, isError, error } = useAdminModels();
   const updateModel = useUpdateModel();
   const deleteModel = useDeleteModel();
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -94,6 +94,8 @@ export default function ModelsPage() {
           columns={columns}
           data={modelList}
           isLoading={isLoading}
+          isError={isError}
+          error={error instanceof Error ? error : null}
           emptyTitle="No models"
           emptyDescription="No AI models configured yet."
           cardTitleKey="name"
