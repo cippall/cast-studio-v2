@@ -96,8 +96,8 @@ cast-studio-v2/
 
 ## Architecture
 
-See `specs/spec.md` for the full system specification.
-See `specs/implementation-plan.md` for the phased build plan.
+See `specs/system.md` for the full system specification.
+See `specs/plans/` for build plans (01-build.md, 02-fix-build.md, 03-ui-redesign.md, 04-fix-review.md).
 See `docs/decisions/` for Architecture Decision Records.
 See `docs/CHANGELOG.md` for version history.
 

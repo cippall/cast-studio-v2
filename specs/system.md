@@ -28,12 +28,12 @@ Cast Studio uses a **two-workspace model** for tenant isolation:
 
 ## Roles and Permissions
 
-| Role | Workspace | Capabilities |
-| :---- | :---- | :---- |
-| **Admin** | All | Manages everything: users, models, system prompts, taxonomy, commissions, sees all workspaces |
-| **Artist** | Studio | Creates assets via all tools, shares assets (private/studio-public/client-shared), executes commissions, studio compute. Can be API-enabled. |
-| **Client** | Client | Creates assets via all tools, pays per wallet credit, limited settings, cannot share. Submits commissions, premium-unlocks. |
-| **Agent** | Studio | Automated via API. Pre-flight escrow workflows, auto-refund on failure. API-enabled Artist role. |
+| Role       | Workspace | Capabilities                                                                                                                                 |
+| :--------- | :-------- | :------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Admin**  | All       | Manages everything: users, models, system prompts, taxonomy, commissions, sees all workspaces                                                |
+| **Artist** | Studio    | Creates assets via all tools, shares assets (private/studio-public/client-shared), executes commissions, studio compute. Can be API-enabled. |
+| **Client** | Client    | Creates assets via all tools, pays per wallet credit, limited settings, cannot share. Submits commissions, premium-unlocks.                  |
+| **Agent**  | Studio    | Automated via API. Pre-flight escrow workflows, auto-refund on failure. API-enabled Artist role.                                             |
 
 ## Asset Types
 
@@ -45,6 +45,7 @@ Three independent asset types, plus one composition:
 4. **Character Sheet** (composition) = Actor + Look
 
 **How Clients Acquire Assets:**
+
 1. **Create their own** — use Designer tools, pay per generation from wallet
 2. **Commission** — request custom work from Artist, pay premium on approval
 3. **Purchase from marketplace** — buy Actor Packages or Looks (Studio-only listings)
@@ -65,19 +66,21 @@ Three independent asset types, plus one composition:
 7. **Actor page opens** — shows all features, all asset types with generate/regenerate buttons
 
 **Dependency chain:** Headshot > Fullshot > Expressions > Character Sheet / Looks / Editorial
+
 - Editing/regenerating an upstream asset invalidates all downstream assets
 - Obsolete assets show an explanatory banner with inline regenerate button
 - Only headshot, fullshot, expressions are **editable**. Others are regenerate-only or create-new.
 
 **Versioning:** Each asset_output tracks its version. When regenerated, the old version is archived in `asset_output_versions` and the current row is updated with new values and `version + 1`. This keeps the main table lean with only current versions.
 
-**Reproducibility:** Each asset_output stores `generation_params` (the complete JSON body sent to fal.ai — model, seed, resolution, steps, guidance_scale, sampler, num_outputs, prompt, and all API parameters), `reference_images` (uploaded input images stored as `ref_{asset_id}_{version}_{short_uuid}.png`), and `source_asset_outputs` (links to existing assets used as input). This makes every image exactly reproducible.
+**Reproducibility:** Each asset*output stores `generation_params` (the complete JSON body sent to fal.ai — model, seed, resolution, steps, guidance_scale, sampler, num_outputs, prompt, and all API parameters), `reference_images` (uploaded input images stored as `ref*{asset*id}*{version}\_{short_uuid}.png`), and `source_asset_outputs` (links to existing assets used as input). This makes every image exactly reproducible.
 
 **Soft delete:** Assets are never hard-deleted. A `deleted_at` timestamp marks deletion. All queries filter `deleted_at IS NULL`. Only Admin can permanently remove.
 
 ### Look Designer Flow
 
 Three input options:
+
 1. **Generate from prompt** — type a description
 2. **Extract from reference image** — vision model identifies clothing pieces, user selects which to include
 3. **Compose from Fashion Item library** — select existing Fashion Items, system renders them together
@@ -114,16 +117,17 @@ The Studio operates an e-commerce storefront where Clients purchase assets. Only
 
 ### Marketplace Submission Statuses
 
-| Status | Meaning |
-|---|---|
-| `MARKETPLACE_PENDING` | Submitted by Artist, awaiting Admin review |
-| `MARKETPLACE_APPROVED` | Approved by Admin, listed on store |
-| `MARKETPLACE_REJECTED` | Rejected by Admin |
-| `MARKETPLACE_DELISTED` | Removed from store by Admin |
+| Status                 | Meaning                                    |
+| ---------------------- | ------------------------------------------ |
+| `MARKETPLACE_PENDING`  | Submitted by Artist, awaiting Admin review |
+| `MARKETPLACE_APPROVED` | Approved by Admin, listed on store         |
+| `MARKETPLACE_REJECTED` | Rejected by Admin                          |
+| `MARKETPLACE_DELISTED` | Removed from store by Admin                |
 
 ### Listing Types
 
 **Actor Package (fixed bundle, defined in Admin Listings Settings):**
+
 - Headshot
 - Fullshot
 - Expression Sheet
@@ -143,6 +147,7 @@ Agents can submit assets to the marketplace via API only (no UI). Agent receives
 ### Duplication & Source Tracking
 
 **Artist duplication:** Artist can duplicate any asset they own (or marketplace-frozen asset). The duplicate:
+
 - Inherits all fields (prompt recipe, seed, taxonomy values, outputs)
 - Gets a new name
 - Has `source_asset_id` pointing to the original
@@ -150,6 +155,7 @@ Agents can submit assets to the marketplace via API only (no UI). Agent receives
 - Is fully editable (not marketplace-frozen)
 
 **Client purchase:** When a Client purchases from the marketplace, a duplicate is created in their workspace:
+
 - Same prompt recipe, seed, outputs (same image URLs)
 - `client_id` set to the purchasing Client
 - `source_asset_id` pointing to the original marketplace asset
@@ -157,21 +163,23 @@ Agents can submit assets to the marketplace via API only (no UI). Agent receives
 - Original stays in Studio workspace, frozen
 
 **Commission unlock:** When a Client premium-unlocks a commission, the asset gets:
+
 - `client_id` set to the Client
 - `source_type = 'COMMISSION'`
 
 **Source types:**
 
-| source_type | Meaning |
-|---|---|
-| `ORIGINAL` | Created from scratch, no source |
-| `MARKETPLACE_PURCHASE` | Bought from marketplace |
-| `COMMISSION` | Created via commission and premium unlocked |
-| `DUPLICATE` | Duplicated from another asset |
+| source_type            | Meaning                                     |
+| ---------------------- | ------------------------------------------- |
+| `ORIGINAL`             | Created from scratch, no source             |
+| `MARKETPLACE_PURCHASE` | Bought from marketplace                     |
+| `COMMISSION`           | Created via commission and premium unlocked |
+| `DUPLICATE`            | Duplicated from another asset               |
 
 ### Marketplace Freeze
 
 When `marketplace_status = 'MARKETPLACE_APPROVED'`, the asset becomes frozen:
+
 - `is_marketplace_frozen = TRUE`
 - No editing (headshot/fullshot/expressions locked)
 - No regenerating
@@ -189,10 +197,10 @@ When `marketplace_status = 'MARKETPLACE_APPROVED'`, the asset becomes frozen:
 
 **`client_id` is the single source of truth. No exceptions.**
 
-| `client_id` | Owner | Artist can do | Client can do |
-|---|---|---|---|
-| **NULL** | Studio | Full control — edit, regenerate, share, use | Nothing (unless shared via permissions) |
-| **Set** (after purchase or premium unlock) | Client | View only — cannot edit, regenerate, or share | Full control — owns it, can use freely |
+| `client_id`                                | Owner  | Artist can do                                 | Client can do                           |
+| ------------------------------------------ | ------ | --------------------------------------------- | --------------------------------------- |
+| **NULL**                                   | Studio | Full control — edit, regenerate, share, use   | Nothing (unless shared via permissions) |
+| **Set** (after purchase or premium unlock) | Client | View only — cannot edit, regenerate, or share | Full control — owns it, can use freely  |
 
 **The only way `client_id` gets set:** Client pays for marketplace purchase or premium unlocks a commission.
 
@@ -205,16 +213,19 @@ During commission review (before approval/purchase), shared assets are view-only
 All libraries follow an e-commerce pattern: grid of cards (image + name + tags) + rich sidebar filters.
 
 ### Actor Library
+
 - Cards: headshot thumbnail + name + tags
 - Filters: admin-defined actor properties (age, gender, ethnicity, etc.), creator, date, tags
 - "Shared with Me" filter tag (for Client workspace)
 
 ### Look Library
+
 - Cards: look image + name + tags
 - Filters: gender/age (men/women/boys/girls), style, season, color palette, occasion, creator, date
 - "Shared with Me" filter tag
 
 ### Fashion Item Library
+
 - Cards: item image + name + tags
 - Filters: gender/age, item type (clothing/shoes/accessories), sub-type (jackets/shirts/pants/etc.), style, color, season, creator, date
 - "Shared with Me" filter tag
@@ -263,11 +274,11 @@ Requested → Assigned → In Progress → Submitted → Changes Requested → A
 
 ### Model Permissions
 
-| Role | Model Access |
-| :---- | :---- |
-| **Admin** | Picks models + configures all parameters |
+| Role       | Model Access                                                                      |
+| :--------- | :-------------------------------------------------------------------------------- |
+| **Admin**  | Picks models + configures all parameters                                          |
 | **Artist** | Chooses from admin-approved models + adjusts settings within admin-defined ranges |
-| **Client** | Adjusts settings only — no model choice |
+| **Client** | Adjusts settings only — no model choice                                           |
 
 ## API Key Management
 
@@ -281,6 +292,7 @@ Requested → Assigned → In Progress → Submitted → Changes Requested → A
 ## System Prompts
 
 Admin manages system prompt templates for every generation step:
+
 - Actor generation (headshot, fullshot, expressions, character sheet, editorial)
 - Look generation
 - Fashion Item generation
@@ -299,11 +311,11 @@ Each prompt template defines: shot type, background, pose, lighting, style. Arti
 
 Both **in-app** and **email** for all key events:
 
-| Role | Notification Events |
-| :---- | :---- |
+| Role       | Notification Events                                         |
+| :--------- | :---------------------------------------------------------- |
 | **Artist** | Commission assigned, commission approved, changes requested |
-| **Client** | Work submitted for review, commission status change |
-| **Admin** | New commission request, assignment needed |
+| **Client** | Work submitted for review, commission status change         |
+| **Admin**  | New commission request, assignment needed                   |
 
 ## Generation UX
 
@@ -321,15 +333,16 @@ Both **in-app** and **email** for all key events:
 
 ## Dashboards
 
-| Role | Content |
-| :---- | :---- |
+| Role       | Content                                                                          |
+| :--------- | :------------------------------------------------------------------------------- |
 | **Artist** | Quick actions (New Actor, New Look, New Fashion Item) + recent activity (capped) |
-| **Client** | Quick actions + recent activity (capped) + wallet balance |
-| **Admin** | Overview + recent activity across workspace + workspace stats |
+| **Client** | Quick actions + recent activity (capped) + wallet balance                        |
+| **Admin**  | Overview + recent activity across workspace + workspace stats                    |
 
 ## Sidebar Navigation
 
 ### Artist
+
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items)
@@ -338,6 +351,7 @@ Both **in-app** and **email** for all key events:
 - Settings (profile, API keys if API-enabled)
 
 ### Client
+
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items — each with "Shared with Me" filter)
@@ -346,6 +360,7 @@ Both **in-app** and **email** for all key events:
 - Settings (profile, wallet/top-up)
 
 ### Admin
+
 - Dashboard
 - Tools (Actor Designer | Look Designer | Fashion Item Creator)
 - Library (Actors | Looks | Fashion Items)
@@ -367,23 +382,23 @@ Both **in-app** and **email** for all key events:
 
 For Artist-created assets (before purchase):
 
-| Visibility | Who Can See |
-| :---- | :---- |
-| **Private** | Creating Artist + Admins |
-| **Studio Public** | All Artists in the same Studio Workspace + Admins |
-| **Client Shared** (via commission, before approval) | Specific Client + Admins — view only |
+| Visibility                                          | Who Can See                                       |
+| :-------------------------------------------------- | :------------------------------------------------ |
+| **Private**                                         | Creating Artist + Admins                          |
+| **Studio Public**                                   | All Artists in the same Studio Workspace + Admins |
+| **Client Shared** (via commission, before approval) | Specific Client + Admins — view only              |
 
 After marketplace purchase or commission premium unlock, `client_id` is set and the asset is fully owned by the Client. See Ownership Rule above.
 
 ## Billing
 
-| API Key Type | Billing Source |
-| :---- | :---- |
-| **Studio Key** | Studio compute (Artist) |
-| **Client Key** | Client wallet (Client) |
-| **Agent** | Pre-flight escrow — max estimated cost locked before execution, auto-refund on failure |
-| **Marketplace Purchase** | Client wallet — one-time credit deduction, `client_id` set on purchase |
-| **Premium Unlock** | Client wallet — deducted on commission approval, `client_id` set |
+| API Key Type             | Billing Source                                                                         |
+| :----------------------- | :------------------------------------------------------------------------------------- |
+| **Studio Key**           | Studio compute (Artist)                                                                |
+| **Client Key**           | Client wallet (Client)                                                                 |
+| **Agent**                | Pre-flight escrow — max estimated cost locked before execution, auto-refund on failure |
+| **Marketplace Purchase** | Client wallet — one-time credit deduction, `client_id` set on purchase                 |
+| **Premium Unlock**       | Client wallet — deducted on commission approval, `client_id` set                       |
 
 ## Database Schema
 

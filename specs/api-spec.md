@@ -7,16 +7,19 @@ REST API built with Express + TypeScript. All endpoints are workspace-scoped. Au
 ## Auth
 
 ### Web (Session)
+
 - Login returns a session cookie (httpOnly, secure)
 - Every request resolves the session to an account + workspace
 - Middleware: `requireSession` attaches `req.account` and `req.workspace`
 
 ### API Key
+
 - Header: `Authorization: Bearer cs_live_...`
 - Middleware: `requireApiKey` resolves the key to an account + workspace
 - API keys can only be used from API-enabled accounts (Artists only, not Clients)
 
 ### Common Auth Rules
+
 - Admin accounts bypass workspace filtering — they see all workspaces
 - All other accounts are scoped to their workspace
 - Every query filters by `workspace_id`
@@ -37,15 +40,15 @@ Every error response follows the same shape:
 
 ### Status Code Mapping
 
-| Code | Meaning |
-|------|---------|
-| 400 | Bad request (malformed JSON, missing body) |
-| 401 | Not authenticated |
-| 403 | Authenticated but not authorized |
-| 404 | Resource not found |
-| 409 | Conflict (duplicate, state mismatch) |
-| 422 | Validation failed (semantically invalid) |
-| 500 | Server error (never expose internal details) |
+| Code | Meaning                                      |
+| ---- | -------------------------------------------- |
+| 400  | Bad request (malformed JSON, missing body)   |
+| 401  | Not authenticated                            |
+| 403  | Authenticated but not authorized             |
+| 404  | Resource not found                           |
+| 409  | Conflict (duplicate, state mismatch)         |
+| 422  | Validation failed (semantically invalid)     |
+| 500  | Server error (never expose internal details) |
 
 ## Pagination
 
@@ -80,6 +83,7 @@ Default: `page=1`, `pageSize=20`, `sortBy=createdAt`, `sortOrder=desc`.
 Create a new account (Admin only for Artist/Client accounts).
 
 **Request:**
+
 ```json
 {
   "email": "artist@studio.com",
@@ -91,6 +95,7 @@ Create a new account (Admin only for Artist/Client accounts).
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -105,6 +110,7 @@ Create a new account (Admin only for Artist/Client accounts).
 ### POST /api/auth/login
 
 **Request:**
+
 ```json
 {
   "email": "artist@studio.com",
@@ -123,6 +129,7 @@ Create a new account (Admin only for Artist/Client accounts).
 Returns the current authenticated account.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
@@ -143,6 +150,7 @@ Returns the current authenticated account.
 List all workspaces.
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -163,6 +171,7 @@ List all workspaces.
 Create a new workspace.
 
 **Request:**
+
 ```json
 {
   "name": "New Studio",
@@ -200,6 +209,7 @@ List accounts (filterable by workspace_id, role).
 Create an account and add to a workspace.
 
 **Request:**
+
 ```json
 {
   "email": "client@brand.com",
@@ -217,6 +227,7 @@ Get account details.
 ### PATCH /api/accounts/:id
 
 Update account. Body can include:
+
 ```json
 {
   "name": "Updated Name",
@@ -239,6 +250,7 @@ Soft-delete account.
 List API keys for the authenticated account.
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -261,6 +273,7 @@ Note: `key_hash` is only shown in full on creation. Subsequent lists show a mask
 Create a new API key.
 
 **Request:**
+
 ```json
 {
   "name": "Dev Script"
@@ -268,6 +281,7 @@ Create a new API key.
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -295,12 +309,14 @@ Revoke (deactivate) an API key.
 List actors in the workspace.
 
 **Query params:**
+
 - `page`, `pageSize`, `sortBy`, `sortOrder`
 - `creator_id` — filter by creator
 - `shared_with_me` — boolean, filters to actors shared with the current account
 - Any taxonomy key as filter: `?age=young&gender=female`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -324,6 +340,7 @@ List actors in the workspace.
 Create a new actor (step 1: identity only, no generation yet).
 
 **Request:**
+
 ```json
 {
   "entry_method": "FORM",
@@ -332,6 +349,7 @@ Create a new actor (step 1: identity only, no generation yet).
 ```
 
 Or for reference photo:
+
 ```json
 {
   "entry_method": "REFERENCE",
@@ -340,6 +358,7 @@ Or for reference photo:
 ```
 
 Or for raw text:
+
 ```json
 {
   "entry_method": "TEXT",
@@ -348,6 +367,7 @@ Or for raw text:
 ```
 
 Or for randomize:
+
 ```json
 {
   "entry_method": "RANDOMIZE"
@@ -355,6 +375,7 @@ Or for randomize:
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -371,6 +392,7 @@ Or for randomize:
 Get actor with all outputs and dependency status.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
@@ -423,6 +445,7 @@ Get actor with all outputs and dependency status.
 Edit actor name and taxonomy fields.
 
 **Request:**
+
 ```json
 {
   "name": "Updated Name",
@@ -439,6 +462,7 @@ Delete an actor and all its outputs.
 Generate a specific layout for an actor.
 
 **Request:**
+
 ```json
 {
   "layout_type": "headshot",
@@ -452,6 +476,7 @@ Generate a specific layout for an actor.
 - For Clients: model is ignored (admin-configured only), options are limited to allowed ranges
 
 **Response (202):**
+
 ```json
 {
   "outputs": [
@@ -473,6 +498,7 @@ Generation is async. The client polls or waits for notification.
 Regenerate a specific layout (replaces old output, increments version).
 
 **Request:**
+
 ```json
 {
   "layout_type": "headshot",
@@ -482,6 +508,7 @@ Regenerate a specific layout (replaces old output, increments version).
 ```
 
 This:
+
 1. Moves current asset_output row(s) for this layout_type to `asset_output_versions` (archive)
 2. Marks all downstream outputs as obsolete with reason
 3. Creates new PENDING asset_output row(s) with `version = old_version + 1`
@@ -494,6 +521,7 @@ This:
 Generate a character sheet by composing actor + look.
 
 **Request:**
+
 ```json
 {
   "look_id": "uuid",
@@ -502,13 +530,14 @@ Generate a character sheet by composing actor + look.
 ```
 
 **Response (202):**
+
 ```json
 {
   "id": "uuid",
   "layout_type": "character_sheet",
   "status": "PENDING",
   "model": "flux-pro",
-  "cost_credits": 0.10
+  "cost_credits": 0.1
 }
 ```
 
@@ -521,11 +550,13 @@ Generate a character sheet by composing actor + look.
 List looks in the workspace.
 
 **Query params:**
+
 - `page`, `pageSize`, `sortBy`, `sortOrder`
 - `creator_id`, `shared_with_me`
 - Taxonomy filters: `?gender=women&style=formal&season=summer`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -548,6 +579,7 @@ List looks in the workspace.
 Create a new look.
 
 **Request (from prompt):**
+
 ```json
 {
   "entry_method": "PROMPT",
@@ -556,6 +588,7 @@ Create a new look.
 ```
 
 **Request (from reference):**
+
 ```json
 {
   "entry_method": "REFERENCE",
@@ -564,6 +597,7 @@ Create a new look.
 ```
 
 **Request (from fashion items):**
+
 ```json
 {
   "entry_method": "COMPOSITE",
@@ -572,6 +606,7 @@ Create a new look.
 ```
 
 **Response (202):**
+
 ```json
 {
   "id": "uuid",
@@ -617,6 +652,7 @@ Multiple options are generated. The user selects one via PATCH.
 Select an option and optionally rename the look.
 
 **Request:**
+
 ```json
 {
   "selected_output_id": "uuid",
@@ -645,11 +681,13 @@ Delete a look.
 List fashion items in the workspace.
 
 **Query params:**
+
 - `page`, `pageSize`, `sortBy`, `sortOrder`
 - `creator_id`, `shared_with_me`
 - Taxonomy filters: `?gender=women&item_type=clothing&sub_type=jacket&color=black`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -659,7 +697,12 @@ List fashion items in the workspace.
       "creator_id": "uuid",
       "asset_type": "FASHION_ITEM",
       "image_url": "https://fal.ai/...",
-      "taxonomy_values": { "gender": "men", "item_type": "clothing", "sub_type": "jacket", "color": "black" },
+      "taxonomy_values": {
+        "gender": "men",
+        "item_type": "clothing",
+        "sub_type": "jacket",
+        "color": "black"
+      },
       "created_at": "2026-06-16T10:00:00Z"
     }
   ],
@@ -672,6 +715,7 @@ List fashion items in the workspace.
 Create a new fashion item.
 
 **Request (from prompt):**
+
 ```json
 {
   "entry_method": "PROMPT",
@@ -680,6 +724,7 @@ Create a new fashion item.
 ```
 
 **Request (from reference):**
+
 ```json
 {
   "entry_method": "REFERENCE",
@@ -688,6 +733,7 @@ Create a new fashion item.
 ```
 
 **Response (202):**
+
 ```json
 {
   "id": "uuid",
@@ -707,6 +753,7 @@ Create a new fashion item.
 Select an option and optionally rename.
 
 **Request:**
+
 ```json
 {
   "selected_output_id": "uuid",
@@ -731,6 +778,7 @@ Delete a fashion item.
 Poll generation job status.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
@@ -757,6 +805,7 @@ Statuses: `PENDING`, `SUCCESS`, `FAILED`.
 Share an asset with a client.
 
 **Request:**
+
 ```json
 {
   "grantee_id": "uuid",
@@ -767,6 +816,7 @@ Share an asset with a client.
 Creates an `asset_permissions` record.
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -796,6 +846,7 @@ List all permissions for an asset.
 Client submits a commission request.
 
 **Request:**
+
 ```json
 {
   "title": "Need cyberpunk actor for editorial",
@@ -809,6 +860,7 @@ Client submits a commission request.
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -825,6 +877,7 @@ Client submits a commission request.
 ### GET /api/commissions
 
 List commissions (filtered by role):
+
 - Client: sees their own commissions
 - Artist: sees commissions assigned to them
 - Admin: sees all commissions
@@ -836,6 +889,7 @@ List commissions (filtered by role):
 Get commission details with linked assets.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
@@ -860,6 +914,7 @@ Get commission details with linked assets.
 Admin assigns commission to an Artist.
 
 **Request:**
+
 ```json
 {
   "assignee_id": "uuid"
@@ -871,15 +926,17 @@ Admin assigns commission to an Artist.
 Update commission status.
 
 **Request (Artist submits work):**
+
 ```json
 {
   "status": "SUBMITTED",
-  "premium_cost": 5.00,
+  "premium_cost": 5.0,
   "asset_ids": ["uuid1", "uuid2"]
 }
 ```
 
 **Request (Client requests changes):**
+
 ```json
 {
   "status": "CHANGES_REQUESTED"
@@ -887,6 +944,7 @@ Update commission status.
 ```
 
 **Request (Client approves):**
+
 ```json
 {
   "status": "APPROVED"
@@ -894,11 +952,13 @@ Update commission status.
 ```
 
 This triggers:
+
 1. Premium unlock: deduct `premium_cost` from client wallet
 2. Set `client_id` on linked assets
 3. Notify Artist
 
 **Request (Cancel):**
+
 ```json
 {
   "status": "CANCELLED"
@@ -918,10 +978,11 @@ Cancel/delete a commission.
 Get wallet balance.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
-  "balance_credits": 150.50,
+  "balance_credits": 150.5,
   "updated_at": "2026-06-16T12:00:00Z"
 }
 ```
@@ -931,17 +992,19 @@ Get wallet balance.
 Top up wallet.
 
 **Request:**
+
 ```json
 {
-  "amount": 100.00
+  "amount": 100.0
 }
 ```
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
-  "balance_credits": 250.50,
+  "balance_credits": 250.5,
   "updated_at": "2026-06-16T10:00:00Z"
 }
 ```
@@ -953,6 +1016,7 @@ List wallet transactions (ledger entries).
 **Query params:** `?type=CHARGE&page=1&pageSize=20`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -964,7 +1028,7 @@ List wallet transactions (ledger entries).
     },
     {
       "id": "uuid",
-      "amount": 100.00,
+      "amount": 100.0,
       "type": "TOP_UP",
       "created_at": "2026-06-15T10:00:00Z"
     }
@@ -982,6 +1046,7 @@ List wallet transactions (ledger entries).
 Agent starts a workflow with pre-flight escrow.
 
 **Request:**
+
 ```json
 {
   "steps": [
@@ -1002,12 +1067,13 @@ Agent starts a workflow with pre-flight escrow.
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
   "status": "RUNNING",
-  "total_escrow": 0.30,
-  "consumed_credits": 0.00,
+  "total_escrow": 0.3,
+  "consumed_credits": 0.0,
   "created_at": "2026-06-16T10:00:00Z"
 }
 ```
@@ -1019,14 +1085,19 @@ The system calculates max estimated cost and locks it in escrow.
 Get workflow status and progress.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
   "status": "RUNNING",
-  "total_escrow": 0.30,
+  "total_escrow": 0.3,
   "consumed_credits": 0.15,
   "steps": [
-    { "task": "actor_headshot", "status": "SUCCESS", "outputs": ["uuid1", "uuid2", "uuid3", "uuid4"] },
+    {
+      "task": "actor_headshot",
+      "status": "SUCCESS",
+      "outputs": ["uuid1", "uuid2", "uuid3", "uuid4"]
+    },
     { "task": "actor_fullshot", "status": "PENDING", "outputs": [] }
   ],
   "error_code": null,
@@ -1049,6 +1120,7 @@ List notifications for the authenticated account.
 **Query params:** `?is_read=false&page=1&pageSize=20`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -1088,6 +1160,7 @@ List all configured models.
 Add a model from fal.ai.
 
 **Request:**
+
 ```json
 {
   "model_id": "fal-ai/flux-pro",
@@ -1112,6 +1185,7 @@ Remove a model.
 Fetch available models from fal.ai API (requires admin to have configured fal.ai key).
 
 **Response (200):**
+
 ```json
 {
   "models": [
@@ -1119,7 +1193,10 @@ Fetch available models from fal.ai API (requires admin to have configured fal.ai
       "model_id": "fal-ai/flux-pro",
       "name": "Flux Pro",
       "model_type": "TEXT_TO_IMAGE",
-      "schema": { "image_size": { "type": "enum", "options": ["square", "landscape_4_3"] }, "num_outputs": { "type": "integer", "min": 1, "max": 4 } }
+      "schema": {
+        "image_size": { "type": "enum", "options": ["square", "landscape_4_3"] },
+        "num_outputs": { "type": "integer", "min": 1, "max": 4 }
+      }
     }
   ]
 }
@@ -1136,6 +1213,7 @@ List all system prompt templates.
 Create a prompt template.
 
 **Request:**
+
 ```json
 {
   "task": "actor_headshot",
@@ -1164,13 +1242,18 @@ List taxonomy entries. Filterable by category.
 Create a taxonomy entry.
 
 **Request:**
+
 ```json
 {
   "category": "ACTOR_PROPERTY",
   "key": "body_type",
   "label": "Body Type",
   "input_type": "DROPDOWN",
-  "options": [{ "value": "slim", "label": "Slim" }, { "value": "athletic", "label": "Athletic" }, { "value": "average", "label": "Average" }],
+  "options": [
+    { "value": "slim", "label": "Slim" },
+    { "value": "athletic", "label": "Athletic" },
+    { "value": "average", "label": "Average" }
+  ],
   "is_required": false,
   "sort_order": 5
 }
@@ -1195,12 +1278,27 @@ List commission form templates.
 Create a commission form template.
 
 **Request:**
+
 ```json
 {
   "name": "Actor Commission",
   "fields": [
-    { "key": "project_type", "label": "Project Type", "input_type": "DROPDOWN", "options": [{ "value": "editorial", "label": "Editorial" }, { "value": "commercial", "label": "Commercial" }], "is_required": true },
-    { "key": "reference_images", "label": "Reference Images", "input_type": "FILE_UPLOAD", "is_required": false },
+    {
+      "key": "project_type",
+      "label": "Project Type",
+      "input_type": "DROPDOWN",
+      "options": [
+        { "value": "editorial", "label": "Editorial" },
+        { "value": "commercial", "label": "Commercial" }
+      ],
+      "is_required": true
+    },
+    {
+      "key": "reference_images",
+      "label": "Reference Images",
+      "input_type": "FILE_UPLOAD",
+      "is_required": false
+    },
     { "key": "notes", "label": "Notes", "input_type": "TEXT", "is_required": false }
   ]
 }
@@ -1223,12 +1321,14 @@ Delete form template.
 List marketplace listings available to the authenticated Client.
 
 **Query params:**
+
 - `page`, `pageSize`, `sortBy`, `sortOrder`
 - `listing_type` — 'ACTOR_PACKAGE', 'LOOK'
 - `max_price` — filter by maximum price
 - `creator_id` — filter by artist
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -1244,7 +1344,7 @@ List marketplace listings available to the authenticated Client.
       },
       "seller_id": "uuid",
       "seller_name": "Jane Artist",
-      "price_credits": 10.00,
+      "price_credits": 10.0,
       "is_active": true,
       "created_at": "2026-06-16T10:00:00Z"
     }
@@ -1258,6 +1358,7 @@ List marketplace listings available to the authenticated Client.
 Get a single listing detail.
 
 **Response (200):**
+
 ```json
 {
   "id": "uuid",
@@ -1272,7 +1373,7 @@ Get a single listing detail.
     "editorial_urls": ["https://fal.ai/...", "https://fal.ai/..."]
   },
   "seller": { "id": "uuid", "name": "Jane Artist" },
-  "price_credits": 10.00,
+  "price_credits": 10.0,
   "is_active": true,
   "created_at": "2026-06-16T10:00:00Z"
 }
@@ -1283,12 +1384,13 @@ Get a single listing detail.
 Client purchases a listing.
 
 **Response (200):**
+
 ```json
 {
   "listing_id": "uuid",
   "purchased_at": "2026-06-16T10:00:00Z",
-  "cost_credits": 10.00,
-  "new_balance": 140.50,
+  "cost_credits": 10.0,
+  "new_balance": 140.5,
   "assets": [
     { "layout_type": "headshot", "image_url": "https://fal.ai/..." },
     { "layout_type": "fullshot", "image_url": "https://fal.ai/..." },
@@ -1301,6 +1403,7 @@ Client purchases a listing.
 ```
 
 This triggers:
+
 1. Deduct `price_credits` from client wallet (ledger entry: CHARGE)
 2. Create a duplicate asset in Client's workspace with `client_id` set, `source_asset_id` pointing to original, `source_type = 'MARKETPLACE_PURCHASE'`
 3. Duplicate all asset_outputs (new rows, same image URLs)
@@ -1319,6 +1422,7 @@ This triggers:
 Duplicate an asset (Artist only, for assets they own or marketplace-frozen assets).
 
 **Request:**
+
 ```json
 {
   "name": "Cyberpunk Woman v2"
@@ -1326,6 +1430,7 @@ Duplicate an asset (Artist only, for assets they own or marketplace-frozen asset
 ```
 
 **Response (201):**
+
 ```json
 {
   "id": "uuid",
@@ -1360,22 +1465,24 @@ List all listings (Artist sees own, Admin sees all).
 Create a new listing (Artist/Admin only).
 
 **Request (Actor Package):**
+
 ```json
 {
   "asset_id": "uuid",
   "listing_type": "ACTOR_PACKAGE",
-  "price_credits": 10.00
+  "price_credits": 10.0
 }
 ```
 
 The system automatically generates the package outputs using the generic standard look for character sheet and editorial shots.
 
 **Request (Look):**
+
 ```json
 {
   "asset_id": "uuid",
   "listing_type": "LOOK",
-  "price_credits": 5.00
+  "price_credits": 5.0
 }
 ```
 
@@ -1386,9 +1493,10 @@ The system automatically generates the package outputs using the generic standar
 Update listing price or toggle active.
 
 **Request:**
+
 ```json
 {
-  "price_credits": 12.00,
+  "price_credits": 12.0,
   "is_active": true
 }
 ```
@@ -1406,6 +1514,7 @@ Remove a listing.
 Artist submits an asset for marketplace review.
 
 **Request:**
+
 ```json
 {
   "asset_id": "uuid"
@@ -1413,11 +1522,13 @@ Artist submits an asset for marketplace review.
 ```
 
 **Validation:**
+
 - Asset must belong to the Artist's workspace
 - Asset must have all required outputs (as defined in Admin Listings Settings) with status SUCCESS
 - Asset must not already have a pending or approved marketplace status
 
 **Response (201):**
+
 ```json
 {
   "asset_id": "uuid",
@@ -1436,6 +1547,7 @@ List Artist's own submissions with status.
 **Query params:** `?status=MARKETPLACE_PENDING&page=1&pageSize=20`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -1462,6 +1574,7 @@ List all submissions for Admin review.
 **Query params:** `?status=MARKETPLACE_PENDING&page=1&pageSize=20`
 
 **Response (200):**
+
 ```json
 {
   "data": [
@@ -1490,24 +1603,27 @@ List all submissions for Admin review.
 Admin approves a submission and creates a listing.
 
 **Request:**
+
 ```json
 {
-  "price_credits": 10.00
+  "price_credits": 10.0
 }
 ```
 
 This:
+
 1. Sets `assets.marketplace_status = 'MARKETPLACE_APPROVED'`
 2. Creates a `marketplace_listings` record with the price
 3. Notifies the Artist
 
 **Response (200):**
+
 ```json
 {
   "asset_id": "uuid",
   "marketplace_status": "MARKETPLACE_APPROVED",
   "listing_id": "uuid",
-  "price_credits": 10.00,
+  "price_credits": 10.0,
   "approved_at": "2026-06-16T10:00:00Z"
 }
 ```
@@ -1519,6 +1635,7 @@ Admin rejects a submission.
 This sets `assets.marketplace_status = 'MARKETPLACE_REJECTED'`. Notifies the Artist.
 
 **Response (200):**
+
 ```json
 {
   "asset_id": "uuid",
@@ -1537,6 +1654,7 @@ Agent submits assets to the marketplace via API. No UI for this.
 **Headers:** `Authorization: Bearer <api_key>`
 
 **Request:**
+
 ```json
 {
   "asset_id": "uuid"
@@ -1556,6 +1674,7 @@ Same validation as Artist submission. Agent must have API key access and the ass
 Get current marketplace package configuration.
 
 **Response (200):**
+
 ```json
 {
   "actor_package": {
@@ -1577,6 +1696,7 @@ Get current marketplace package configuration.
 Update marketplace package configuration.
 
 **Request:**
+
 ```json
 {
   "actor_package": {
@@ -1588,6 +1708,7 @@ Update marketplace package configuration.
 ```
 
 This defines:
+
 - What outputs are required for each listing type
 - Which Look to use as the generic standard look for Actor Packages
 - How many editorial shots to include
@@ -1601,22 +1722,37 @@ This defines:
 Returns dashboard data for the authenticated role.
 
 **Artist response (200):**
+
 ```json
 {
   "recent_activity": [
-    { "type": "asset_created", "actor_name": "Cyberpunk Woman", "created_at": "2026-06-16T10:00:00Z" },
-    { "type": "generation_completed", "actor_name": "Cyberpunk Woman", "layout_type": "headshot", "completed_at": "2026-06-16T10:00:15Z" }
+    {
+      "type": "asset_created",
+      "actor_name": "Cyberpunk Woman",
+      "created_at": "2026-06-16T10:00:00Z"
+    },
+    {
+      "type": "generation_completed",
+      "actor_name": "Cyberpunk Woman",
+      "layout_type": "headshot",
+      "completed_at": "2026-06-16T10:00:15Z"
+    }
   ],
-  "commissions": [
-    { "id": "uuid", "title": "Need cyberpunk actor", "status": "IN_PROGRESS" }
-  ],
+  "commissions": [{ "id": "uuid", "title": "Need cyberpunk actor", "status": "IN_PROGRESS" }],
   "marketplace_sales": [
-    { "listing_id": "uuid", "asset_name": "Cyberpunk Woman", "buyer_name": "Brand Client", "price_credits": 10.00, "purchased_at": "2026-06-15T10:00:00Z" }
+    {
+      "listing_id": "uuid",
+      "asset_name": "Cyberpunk Woman",
+      "buyer_name": "Brand Client",
+      "price_credits": 10.0,
+      "purchased_at": "2026-06-15T10:00:00Z"
+    }
   ]
 }
 ```
 
 **Client response (200):**
+
 ```json
 {
   "wallet_balance": 140.50,
@@ -1631,6 +1767,7 @@ Returns dashboard data for the authenticated role.
 ```
 
 **Admin response (200):**
+
 ```json
 {
   "stats": {
@@ -1658,6 +1795,7 @@ Returns dashboard data for the authenticated role.
 Get version history for a specific asset output.
 
 **Response (200):**
+
 ```json
 {
   "current": {
@@ -1696,16 +1834,16 @@ Get version history for a specific asset output.
 
 ## API Conventions Summary
 
-| Convention | Rule |
-|---|---|
-| Base URL | `/api` |
-| Auth (web) | Session cookie |
-| Auth (api) | `Authorization: Bearer cs_live_...` |
-| Naming | Plural nouns, camelCase fields |
-| Pagination | `page`, `pageSize`, `sortBy`, `sortOrder` |
-| Errors | `{ error: { code, message, details? } }` |
-| Timestamps | ISO 8601 UTC |
-| IDs | UUID v4 |
-| Workspace | All queries filtered by workspace_id |
-| Validation | At API boundary only (Zod schemas) |
+| Convention | Rule                                            |
+| ---------- | ----------------------------------------------- |
+| Base URL   | `/api`                                          |
+| Auth (web) | Session cookie                                  |
+| Auth (api) | `Authorization: Bearer cs_live_...`             |
+| Naming     | Plural nouns, camelCase fields                  |
+| Pagination | `page`, `pageSize`, `sortBy`, `sortOrder`       |
+| Errors     | `{ error: { code, message, details? } }`        |
+| Timestamps | ISO 8601 UTC                                    |
+| IDs        | UUID v4                                         |
+| Workspace  | All queries filtered by workspace_id            |
+| Validation | At API boundary only (Zod schemas)              |
 | Async jobs | Return 202 with PENDING status, poll for result |

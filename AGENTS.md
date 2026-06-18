@@ -3,8 +3,8 @@
 ## Project
 
 Cast Studio v2: Multi-tenant digital casting and wardrobe library. Node.js/Express + React + PostgreSQL.
-Specs: `specs/` (spec.md, database-schema.md, api.md, ui.md)
-Plan: `specs/implementation-plan.md`
+Specs: `specs/` (system.md, database-spec.md, api-spec.md, ui-spec.md)
+Plans: `specs/plans/` (01-build.md, 02-fix-build.md, 03-ui-redesign.md, 04-fix-review.md)
 
 ## Required Skills
 
@@ -36,6 +36,7 @@ This skill provides anti-slop frontend design rules for landing pages, portfolio
 Load with: `skill_view(name="agent-skills-documentation-and-adrs")`
 
 **When to document (mandatory):**
+
 - After every architectural decision (framework choice, data model change, API design, auth strategy)
 - After every public API addition or change
 - After shipping any feature that changes user-facing behavior
@@ -43,8 +44,9 @@ Load with: `skill_view(name="agent-skills-documentation-and-adrs")`
 - After every implementation plan task (Task 1 through Task 28)
 
 **What to produce:**
+
 - ADRs stored in `docs/decisions/` with sequential numbering (ADR-001, ADR-002, ...)
-- Inline comments for non-obvious *why* (never restate *what*)
+- Inline comments for non-obvious _why_ (never restate _what_)
 - Updated README if project setup/commands change
 - Changelog entries for shipped features
 
@@ -57,6 +59,7 @@ Load with: `skill_view(name="agent-skills-documentation-and-adrs")`
 Load with: `skill_view(name="agent-skills-code-simplification")`
 
 **When to simplify (mandatory):**
+
 - After every implementation task — review what was written and simplify if needed
 - When a function exceeds 50 lines or nests 3+ levels deep
 - When the same logic is duplicated in 2+ places
@@ -64,6 +67,7 @@ Load with: `skill_view(name="agent-skills-code-simplification")`
 - When tests pass but the code is harder to read than it should be
 
 **Simplification principles (from the skill):**
+
 1. **Preserve behavior exactly** — all tests must still pass without modification
 2. **Follow project conventions** — match existing patterns, don't impose external style
 3. **Prefer clarity over cleverness** — explicit > compact when compact requires mental parsing
@@ -71,6 +75,7 @@ Load with: `skill_view(name="agent-skills-code-simplification")`
 5. **Scope to what changed** — simplify recently written code, not unrelated modules
 
 **What NOT to do:**
+
 - Don't simplify code you don't fully understand yet
 - Don't batch multiple simplifications into one untested change
 - Don't remove error handling to make code "cleaner"
@@ -86,12 +91,14 @@ Load with: `skill_view(name="agent-skills-code-simplification")`
 Load with: `skill_view(name="agent-skills-code-review-and-quality")`
 
 **When to review (mandatory):**
+
 - After every implementation task — review what was written before committing
 - Before merging any change — no exceptions
 - After any bug fix — review both the fix and the regression test
 - When code exceeds ~300 lines changed — split it instead of reviewing one massive change
 
 **Five review axes:**
+
 1. **Correctness** — Does it match the spec? Edge cases handled? Error paths? Tests actually test the right things?
 2. **Readability** — Can another engineer understand this without help? Names descriptive? No unnecessary complexity?
 3. **Architecture** — Follows existing patterns? Clean module boundaries? No circular dependencies?
@@ -99,13 +106,15 @@ Load with: `skill_view(name="agent-skills-code-review-and-quality")`
 5. **Performance** — No N+1 queries? No unbounded loops? Pagination on list endpoints?
 
 **Severity labels for findings:**
+
 - `Critical:` — Blocks merge (security, data loss, broken functionality)
-- *(no prefix)* — Required change before merge
+- _(no prefix)_ — Required change before merge
 - `Nit:` — Minor, optional (formatting, style preferences)
 - `Optional:` / `Consider:` — Suggestion, not required
 - `FYI` — Informational only, no action needed
 
 **Change sizing:**
+
 - ~100 lines → Good, reviewable in one sitting
 - ~300 lines → Acceptable if single logical change
 - ~1000+ lines → Too large, split it
@@ -128,11 +137,13 @@ Load with: `skill_view(name="agent-skills-code-review-and-quality")`
 Follow these conventions consistently. Load `agent-skills-code-simplification` and `agent-skills-code-review-and-quality` for detailed guidance.
 
 ### General
+
 - **No generic names:** `data`, `result`, `temp`, `val`, `item` — always describe the content (`userProfile`, `validationErrors`, `pendingJobs`)
 - **No abbreviations:** `usr`, `cfg`, `btn`, `evt` — use full words unless the abbreviation is universal (`id`, `url`, `api`)
 - **Names must match behavior:** A function named `get` that also mutates state must be renamed to reflect what it actually does
 
 ### TypeScript / JavaScript
+
 - **Variables, functions, parameters:** `camelCase`
 - **Types, interfaces, classes, enums:** `PascalCase`
 - **Constants:** `UPPER_SNAKE_CASE` for true constants; `camelCase` for module-level `const` values
@@ -143,6 +154,7 @@ Follow these conventions consistently. Load `agent-skills-code-simplification` a
 - **Enum values:** `UPPER_SNAKE_CASE` (per database schema convention: `MARKETPLACE_PENDING`, `ASSET_TYPE_ACTOR`)
 
 ### Database
+
 - **Tables:** plural, `snake_case` (`asset_outputs`, `marketplace_listings`)
 - **Columns:** `snake_case` (`workspace_id`, `deleted_at`, `client_id`)
 - **Enum types:** `UPPER_SNAKE_CASE` values (`PENDING`, `SUCCESS`, `FAILED`)
@@ -150,6 +162,7 @@ Follow these conventions consistently. Load `agent-skills-code-simplification` a
 - **Indexes:** `idx_<table>_<column>` or let PostgreSQL auto-name
 
 ### API
+
 - **Endpoints:** plural nouns (`/api/actors`, `/api/looks`)
 - **Route params:** `:id` (UUID)
 - **Query params:** `camelCase` (`page`, `pageSize`, `sortBy`, `sortOrder`, `sharedWithMe`)
@@ -157,6 +170,7 @@ Follow these conventions consistently. Load `agent-skills-code-simplification` a
 - **Error codes:** `UPPER_SNAKE_CASE` (`VALIDATION_ERROR`, `NOT_FOUND`)
 
 ### CSS / Tailwind
+
 - **Custom class names:** `kebab-case` (if not using utility-only approach)
 - **CSS custom properties:** `--kebab-case` (`--color-primary`, `--spacing-unit`)
 
@@ -292,11 +306,15 @@ packages/types/                  # Shared TypeScript types (both domains)
     api.ts                       # API request/response types
 
 specs/
-  spec.md                        # System spec
-  database-schema.md             # 16 tables schema
-  api.md                         # ~65 REST endpoints
-  ui.md                          # Pages + components
-  implementation-plan.md         # 28 tasks, 5 phases
+  system.md                        # System spec
+  database-spec.md             # 16 tables schema
+  api-spec.md                         # ~65 REST endpoints
+  ui-spec.md                          # Pages + components
+  plans/
+    01-build.md                    # 28 tasks, 5 phases (DONE)
+    02-fix-build.md                # Post-build bug fixes (DONE)
+    03-ui-redesign.md              # 26 UI tasks (DONE)
+    04-fix-review.md               # Code review + spec audit (current)
 
 docs/
   decisions/                     # Architecture Decision Records (ADRs)
@@ -349,59 +367,71 @@ docs/
 ## Agent Rules
 
 ### Rule 1 — Think Before Coding
+
 State assumptions explicitly. If uncertain, ask rather than guess.
 Present multiple interpretations when ambiguity exists.
 Push back when a simpler approach exists.
 Stop when confused. Name what's unclear.
 
 ### Rule 2 — Simplicity First
+
 Minimum code that solves the problem. Nothing speculative.
 No features beyond what was asked. No abstractions for single-use code.
 Test: would a senior engineer say this is overcomplicated? If yes, simplify.
 
 ### Rule 3 — Surgical Changes
+
 Touch only what you must. Clean up only your own mess.
 Don't "improve" adjacent code, comments, or formatting.
 Don't refactor what isn't broken. Match existing style.
 
 ### Rule 4 — Goal-Driven Execution
+
 Define success criteria. Loop until verified.
 Don't follow steps. Define success and iterate.
 Strong success criteria let you loop independently.
 
 ### Rule 5 — Use the model only for judgment calls
+
 Use me for: classification, drafting, summarization, extraction.
 Do NOT use me for: routing, retries, deterministic transforms.
 If code can answer, code answers.
 
 ### Rule 6 — Token budgets are not advisory
+
 Per-task: 40,000 tokens. Per-session: 150,000 tokens.
 If approaching budget, summarize and start fresh.
 Surface the breach. Do not silently overrun.
 
 ### Rule 7 — Surface conflicts, don't average them
+
 If two patterns contradict, pick one (more recent / more tested).
 Explain why. Flag the other for cleanup.
 Don't blend conflicting patterns.
 
 ### Rule 8 — Read before you write
+
 Before adding code, read exports, immediate callers, shared utilities.
 "Looks orthogonal" is dangerous. If unsure why code is structured a way, ask.
 
 ### Rule 9 — Tests verify intent, not just behavior
+
 Tests must encode WHY behavior matters, not just WHAT it does.
 A test that can't fail when business logic changes is wrong.
 
 ### Rule 10 — Checkpoint after every significant step
+
 Summarize what was done, what's verified, what's left.
 Don't continue from a state you can't describe back.
 If you lose track, stop and restate.
 
 ### Rule 11 — Match the codebase's conventions, even if you disagree
+
 Conformance > taste inside the codebase.
 If you genuinely think a convention is harmful, surface it. Don't fork silently.
 
 ### Rule 12 — Fail loud
+
 "Completed" is wrong if anything was skipped silently.
 "Tests pass" is wrong if any were skipped.
 Default to surfacing uncertainty, not hiding it.

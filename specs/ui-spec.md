@@ -39,6 +39,7 @@ Every authenticated page uses the same shell:
 Collapsible sidebar. Icons + labels. Active state highlighted.
 
 **Artist Sidebar:**
+
 ```
 +--+
 | D | Dashboard
@@ -56,6 +57,7 @@ Collapsible sidebar. Icons + labels. Active state highlighted.
 ```
 
 **Client Sidebar:**
+
 ```
 +--+
 | D | Dashboard
@@ -73,6 +75,7 @@ Collapsible sidebar. Icons + labels. Active state highlighted.
 ```
 
 **Admin Sidebar:**
+
 ```
 +--+
 | D | Dashboard
@@ -124,15 +127,18 @@ Four cards in a row (responsive: 1 col mobile, 2 col tablet, 4 col desktop):
 
 **Section 2 — Recent Activity**
 Horizontal scrollable list (capped at 10). Each card shows:
+
 - Asset thumbnail
 - Asset name
 - Action type badge (Created, Generated, Shared, etc.)
 - Timestamp (relative: "2h ago")
 
 **Client additional section:**
+
 - Wallet balance card (top-right): "Balance: 150.50 credits" + "Top Up" button
 
 **Admin additional section:**
+
 - Stats row: Total Actors | Total Looks | Total Items | Active Members | Pending Commissions
 
 ---
@@ -266,25 +272,31 @@ The main view for a single actor and all its assets.
 ```
 
 **Marketplace freeze indicators:**
+
 - 🔒 Lock icon next to marketplace status
 - When frozen: "Edit" and "Regenerate" buttons are disabled/grayed
 - "Submit to Marketplace" button: disabled if missing required outputs, shows what's missing
 - "Duplicate" button: always available, creates editable copy with new name
 
 **Source info (shown in asset detail):**
+
 ```
 Source: Original
 ```
+
 or
+
 ```
 Source: Duplicated from "Cyberpunk Woman" (uuid)
 Source: Purchased from Marketplace
 Source: Commissioned (uuid)
 ```
-|  CHARACTER SHEET                                 |
-|  Select Look: [Dropdown ▼]  [Generate]           |
-|  (empty state if none generated)                 |
+
+| CHARACTER SHEET |
+| Select Look: [Dropdown ▼] [Generate] |
+| (empty state if none generated) |
 +--------------------------------------------------+
+
 ```
 
 **Key behaviors:**
@@ -305,10 +317,12 @@ Two-step flow.
 Three option cards:
 
 ```
-+------------+  +------------+  +------------+
-|  Prompt    |  | Reference  |  |  Compose   |
-| [Select]   |  |  [Select]  |  |  [Select]  |
-+------------+  +------------+  +------------+
+
++------------+ +------------+ +------------+
+| Prompt | | Reference | | Compose |
+| [Select] | | [Select] | | [Select] |
++------------+ +------------+ +------------+
+
 ```
 
 **Prompt**: Textarea describing the look.
@@ -316,16 +330,18 @@ Three option cards:
 **Reference**: Image upload. Vision model extracts clothing pieces:
 
 ```
+
 +--------------------------------------------------+
-|  Reference Image: [uploaded image]               |
+| Reference Image: [uploaded image] |
 +--------------------------------------------------+
-|  Extracted Pieces:                               |
-|  [✓] Black Jacket   [✓] White Shirt             |
-|  [✓] Black Pants    [ ] Brown Shoes             |
-|  [✓] Silver Watch   [ ] Black Belt             |
-|                                                  |
-|  [Generate Look with Selected Pieces →]          |
+| Extracted Pieces: |
+| [✓] Black Jacket [✓] White Shirt |
+| [✓] Black Pants [ ] Brown Shoes |
+| [✓] Silver Watch [ ] Black Belt |
+| |
+| [Generate Look with Selected Pieces →] |
 +--------------------------------------------------+
+
 ```
 
 **Compose**: Multi-select from Fashion Item library (thumbnail grid with checkboxes).
@@ -333,19 +349,21 @@ Three option cards:
 #### Step 2: Select & Name
 
 ```
+
 +--------------------------------------------------+
-|  Generated Options                               |
+| Generated Options |
 +--------------------------------------------------+
-|  +--------+  +--------+  +--------+  +--------+  |
-|  | img 1  |  | img 2  |  | img 3  |  | img 4  |  |
-|  | [✓]    |  | [ ]    |  | [ ]    |  | [ ]    |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  [Regenerate]                                    |
+| +--------+ +--------+ +--------+ +--------+ |
+| | img 1 | | img 2 | | img 3 | | img 4 | |
+| | [✓] | | [ ] | | [ ] | | [ ] | |
+| +--------+ +--------+ +--------+ +--------+ |
+| |
+| [Regenerate] |
 +--------------------------------------------------+
-|  Name: [Auto-generated name] [Edit]              |
-|  [Save Look]                                     |
+| Name: [Auto-generated name] [Edit] |
+| [Save Look] |
 +--------------------------------------------------+
+
 ```
 
 ---
@@ -359,10 +377,12 @@ Two-step flow.
 Two option cards:
 
 ```
-+------------+  +------------+
-|  Prompt    |  | Reference  |
-| [Select]   |  |  [Select]  |
-+------------+  +------------+
+
++------------+ +------------+
+| Prompt | | Reference |
+| [Select] | | [Select] |
++------------+ +------------+
+
 ```
 
 **Prompt**: Textarea describing the item.
@@ -380,28 +400,30 @@ Same as Look Designer — grid of options, select one, auto-name, save.
 All three libraries share the same layout pattern:
 
 ```
+
 +--------------------------------------------------+
-|  Actors                              [+ New Actor]|
+| Actors [+ New Actor]|
 +--------------------------------------------------+
-|  Filters                                             |
-|  [Shared with Me ▼] [Age ▼] [Gender ▼] [Vibe ▼]  |
-|  [Style ▼] [Creator ▼] [Date ▼] [Reset]          |
+| Filters |
+| [Shared with Me ▼] [Age ▼] [Gender ▼] [Vibe ▼] |
+| [Style ▼] [Creator ▼] [Date ▼] [Reset] |
 +--------------------------------------------------+
-|                                                  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
-|  |name    |  |name    |  |name    |  |name    |  |
-|  |tags    |  |tags    |  |tags    |  |tags    |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
-|  |name    |  |name    |  |name    |  |name    |  |
-|  |tags    |  |tags    |  |tags    |  |tags    |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  [< 1 2 3 >]                                     |
+| |
+| +--------+ +--------+ +--------+ +--------+ |
+| |thumb | |thumb | |thumb | |thumb | |
+| |name | |name | |name | |name | |
+| |tags | |tags | |tags | |tags | |
+| +--------+ +--------+ +--------+ +--------+ |
+| |
+| +--------+ +--------+ +--------+ +--------+ |
+| |thumb | |thumb | |thumb | |thumb | |
+| |name | |name | |name | |name | |
+| |tags | |tags | |tags | |tags | |
+| +--------+ +--------+ +--------+ +--------+ |
+| |
+| [< 1 2 3 >] |
 +--------------------------------------------------+
+
 ```
 
 **Card structure:**
@@ -419,14 +441,16 @@ All three libraries share the same layout pattern:
 
 **Empty state:**
 ```
+
 +--------------------------------------------------+
-|              [Empty Illustration]                |
-|                                                  |
-|              No actors yet                       |
-|     Create your first actor to get started       |
-|                                                  |
-|              [+ New Actor]                       |
+| [Empty Illustration] |
+| |
+| No actors yet |
+| Create your first actor to get started |
+| |
+| [+ New Actor] |
 +--------------------------------------------------+
+
 ```
 
 **Library differences:**
@@ -446,69 +470,75 @@ All three libraries share the same layout pattern:
 The storefront where Clients browse and purchase Actor Packages and Looks from the Studio.
 
 ```
+
 +--------------------------------------------------+
-|  Marketplace                                     |
+| Marketplace |
 +--------------------------------------------------+
-|  [All] [Actor Packages] [Looks]       Search [🔍]|
+| [All] [Actor Packages] [Looks] Search [🔍]|
 +--------------------------------------------------+
-|  Sort: [Newest ▼]  Price: [Any ▼]                |
+| Sort: [Newest ▼] Price: [Any ▼] |
 +--------------------------------------------------+
-|                                                  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
-|  |name    |  |name    |  |name    |  |name    |  |
-|  |by Artist|  |by Artist|  |by Artist|  |by Artist|  |
-|  |10.00cr |  |5.00cr  |  |12.00cr |  |8.00cr  |  |
-|  |[Buy]   |  |[Buy]   |  |[Buy]   |  |[Buy]   |  |
-|  +--------+  +--------+  +--------+  +--------+  |
-|                                                  |
-|  [< 1 2 3 >]                                     |
+| |
+| +--------+ +--------+ +--------+ +--------+ |
+| |thumb | |thumb | |thumb | |thumb | |
+| |name | |name | |name | |name | |
+| |by Artist| |by Artist| |by Artist| |by Artist| |
+| |10.00cr | |5.00cr | |12.00cr | |8.00cr | |
+| |[Buy] | |[Buy] | |[Buy] | |[Buy] | |
+| +--------+ +--------+ +--------+ +--------+ |
+| |
+| [< 1 2 3 >] |
 +--------------------------------------------------+
+
 ```
 
 **Card structure:**
 - Thumbnail (headshot for Actor Packages, look image for Looks)
 - Name
-- "by ArtistName" 
+- "by ArtistName"
 - Price in credits
 - "Buy" button
 
 **Empty state:**
 ```
+
 +--------------------------------------------------+
-|              [Empty Illustration]                |
-|                                                  |
-|         No listings available yet                |
-|     Check back soon for new assets               |
+| [Empty Illustration] |
+| |
+| No listings available yet |
+| Check back soon for new assets |
 +--------------------------------------------------+
+
 ```
 
 #### Marketplace Detail Page
 
 ```
+
 +--------------------------------------------------+
-|  ← Back to Marketplace                           |
+| ← Back to Marketplace |
 +--------------------------------------------------+
-|  +------------------+  +----------------------+   |
-|  |                  |  | Cyberpunk Woman      |   |
-|  |   HEADSHOT       |  | by Jane Artist       |   |
-|  |   (large)        |  |                      |   |
-|  |                  |  | 10.00 credits        |   |
-|  +------------------+  |                      |   |
-|  +------------------+  | Package includes:    |   |
-|  |   FULLSHOT       |  | • Headshot           |   |
-|  |   (large)        |  | • Fullshot           |   |
-|  |                  |  | • Expression Sheet   |   |
-|  +------------------+  | • Character Sheet    |   |
-|  +------------------+  | • 2 Editorial Shots  |   |
-|  |   CHARACTER      |  |                      |   |
-|  |   SHEET          |  | [Buy for 10.00 cr]   |   |
-|  |   (large)        |  |                      |   |
-|  +------------------+  | Your balance: 150.50 |   |
-|  +--------+---------+  +----------------------+   |
-|  | Ed 1   | Ed 2    |                          |
-|  +--------+---------+                          |
+| +------------------+ +----------------------+ |
+| | | | Cyberpunk Woman | |
+| | HEADSHOT | | by Jane Artist | |
+| | (large) | | | |
+| | | | 10.00 credits | |
+| +------------------+ | | |
+| +------------------+ | Package includes: | |
+| | FULLSHOT | | • Headshot | |
+| | (large) | | • Fullshot | |
+| | | | • Expression Sheet | |
+| +------------------+ | • Character Sheet | |
+| +------------------+ | • 2 Editorial Shots | |
+| | CHARACTER | | | |
+| | SHEET | | [Buy for 10.00 cr] | |
+| | (large) | | | |
+| +------------------+ | Your balance: 150.50 | |
+| +--------+---------+ +----------------------+ |
+| | Ed 1 | Ed 2 | |
+| +--------+---------+ |
 +--------------------------------------------------+
+
 ```
 
 **Purchase flow:**
@@ -529,9 +559,11 @@ The storefront where Clients browse and purchase Actor Packages and Looks from t
 On the Actor Page, Look Detail, or Fashion Item Detail page, a "Submit to Marketplace" button appears when ALL required outputs (as defined in Admin Listings Settings) have status SUCCESS.
 
 ```
+
 +--------------------------------------------------+
-|  [Edit Fields]  [Generate Look]  [Submit to Marketplace]  |
+| [Edit Fields] [Generate Look] [Submit to Marketplace] |
 +--------------------------------------------------+
+
 ```
 
 **Button states:**
@@ -558,21 +590,23 @@ Three sub-pages accessible from the Admin sidebar under "Marketplace":
 Preview of the Client-facing e-commerce storefront. Admin can see exactly what Clients see, with additional admin controls (edit listing, delist, view sales data).
 
 ```
+
 +--------------------------------------------------+
-|  Store (Admin Preview)                           |
+| Store (Admin Preview) |
 +--------------------------------------------------+
-|  [All] [Actor Packages] [Looks]       Search [🔍]|
+| [All] [Actor Packages] [Looks] Search [🔍]|
 +--------------------------------------------------+
-|  Sort: [Newest ▼]  Price: [Any ▼]                |
+| Sort: [Newest ▼] Price: [Any ▼] |
 +--------------------------------------------------+
-|  +--------+  +--------+  +--------+  +--------+  |
-|  |thumb   |  |thumb   |  |thumb   |  |thumb   |  |
-|  |name    |  |name    |  |name    |  |name    |  |
-|  |by Artist|  |by Artist|  |by Artist|  |by Artist|  |
-|  |10.00cr |  |5.00cr  |  |12.00cr |  |8.00cr  |  |
-|  |[Manage]|[Manage]|[Manage]|[Manage]            |
-|  +--------+  +--------+  +--------+  +--------+  |
+| +--------+ +--------+ +--------+ +--------+ |
+| |thumb | |thumb | |thumb | |thumb | |
+| |name | |name | |name | |name | |
+| |by Artist| |by Artist| |by Artist| |by Artist| |
+| |10.00cr | |5.00cr | |12.00cr | |8.00cr | |
+| |[Manage]|[Manage]|[Manage]|[Manage] |
+| +--------+ +--------+ +--------+ +--------+ |
 +--------------------------------------------------+
+
 ```
 
 Each card has a [Manage] button that opens a quick-edit panel (price, active/inactive, delist).
@@ -582,41 +616,45 @@ Each card has a [Manage] button that opens a quick-edit panel (price, active/ina
 Review queue for Artist marketplace proposals.
 
 ```
+
 +--------------------------------------------------+
-|  Submissions                                     |
+| Submissions |
 +--------------------------------------------------+
-|  [Pending (5)] [Approved (20)] [Rejected (3)]    |
+| [Pending (5)] [Approved (20)] [Rejected (3)] |
 +--------------------------------------------------+
-|  +----------------------------------------------+ |
-|  | 🟡 Cyberpunk Woman          Actor Package    | |
-|  |    by Jane Artist • Submitted 2h ago         | |
-|  |                                              | |
-|  |    [Preview]  [Approve]  [Reject]            | |
-|  +----------------------------------------------+ |
-|  +----------------------------------------------+ |
-|  | 🟡 Black Suit Editorial  Look                | |
-|  |    by John Artist • Submitted 5h ago         | |
-|  |                                              | |
-|  |    [Preview]  [Approve]  [Reject]            | |
-|  +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🟡 Cyberpunk Woman Actor Package | |
+| | by Jane Artist • Submitted 2h ago | |
+| | | |
+| | [Preview] [Approve] [Reject] | |
+| +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🟡 Black Suit Editorial Look | |
+| | by John Artist • Submitted 5h ago | |
+| | | |
+| | [Preview] [Approve] [Reject] | |
+| +----------------------------------------------+ |
 +--------------------------------------------------+
+
 ```
 
 **Preview** opens a modal showing all the asset outputs (headshot, fullshot, etc.) so Admin can review quality.
 
 **Approve** opens a price dialog:
 ```
+
 +--------------------------------------------------+
-|  Approve Listing                                 |
+| Approve Listing |
 +--------------------------------------------------+
-|  Asset: Cyberpunk Woman                          |
-|  Type: Actor Package                             |
-|  by: Jane Artist                                 |
-|                                                  |
-|  Price (credits): [10.00]                        |
-|                                                  |
-|  [Cancel]  [Approve & List]                      |
+| Asset: Cyberpunk Woman |
+| Type: Actor Package |
+| by: Jane Artist |
+| |
+| Price (credits): [10.00] |
+| |
+| [Cancel] [Approve & List] |
 +--------------------------------------------------+
+
 ```
 
 **Reject** — immediate, no reason required. Sets `MARKETPLACE_REJECTED`.
@@ -626,36 +664,38 @@ Review queue for Artist marketplace proposals.
 Admin configures what constitutes a marketplace package.
 
 ```
+
 +--------------------------------------------------+
-|  Listings Settings                               |
+| Listings Settings |
 +--------------------------------------------------+
-|  Actor Package                                   |
-|  +----------------------------------------------+ |
-|  | Required outputs:                            | |
-|  | [✓] Headshot                                | |
-|  | [✓] Fullshot                                | |
-|  | [✓] Expression Sheet                        | |
-|  | [✓] Character Sheet                         | |
-|  | [✓] Editorial Shots (count: [2])            | |
-|  |                                              | |
-|  | Generic Standard Look: [Dropdown ▼]          | |
-|  | (Used for Character Sheet & Editorials)      | |
-|  +----------------------------------------------+ |
-|                                                  |
-|  Look                                            |
-|  +----------------------------------------------+ |
-|  | Required outputs:                            | |
-|  | [✓] Look Image                              | |
-|  +----------------------------------------------+ |
-|                                                  |
-|  Fashion Item                                    |
-|  +----------------------------------------------+ |
-|  | Required outputs:                            | |
-|  | [✓] Item Image                              | |
-|  +----------------------------------------------+ |
-|                                                  |
-|  [Save Changes]                                  |
+| Actor Package |
+| +----------------------------------------------+ |
+| | Required outputs: | |
+| | [✓] Headshot | |
+| | [✓] Fullshot | |
+| | [✓] Expression Sheet | |
+| | [✓] Character Sheet | |
+| | [✓] Editorial Shots (count: [2]) | |
+| | | |
+| | Generic Standard Look: [Dropdown ▼] | |
+| | (Used for Character Sheet & Editorials) | |
+| +----------------------------------------------+ |
+| |
+| Look |
+| +----------------------------------------------+ |
+| | Required outputs: | |
+| | [✓] Look Image | |
+| +----------------------------------------------+ |
+| |
+| Fashion Item |
+| +----------------------------------------------+ |
+| | Required outputs: | |
+| | [✓] Item Image | |
+| +----------------------------------------------+ |
+| |
+| [Save Changes] |
 +--------------------------------------------------+
+
 ```
 
 The **Generic Standard Look** dropdown lists all Looks in the workspace. The selected Look is used when generating Character Sheet and Editorial outputs for Actor Packages.
@@ -667,86 +707,94 @@ The **Generic Standard Look** dropdown lists all Looks in the workspace. The sel
 #### Client View: My Commissions
 
 ```
+
 +--------------------------------------------------+
-|  My Commissions                      [+ New]      |
+| My Commissions [+ New] |
 +--------------------------------------------------+
-|  [All] [Requested] [In Review] [Approved]        |
+| [All] [Requested] [In Review] [Approved] |
 +--------------------------------------------------+
-|  +----------------------------------------------+ |
-|  | 🔵 Need cyberpunk actor for editorial        | |
-|  |    Status: SUBMITTED • Submitted 2h ago      | |
-|  |    Assigned to: Jane Artist                  | |
-|  |    [View Details]                             | |
-|  +----------------------------------------------+ |
-|  +----------------------------------------------+ |
-|  | 🟢 Fashion lookbook for summer               | |
-|  |    Status: APPROVED • Approved 1d ago        | |
-|  |    [View Details]                             | |
-|  +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🔵 Need cyberpunk actor for editorial | |
+| | Status: SUBMITTED • Submitted 2h ago | |
+| | Assigned to: Jane Artist | |
+| | [View Details] | |
+| +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🟢 Fashion lookbook for summer | |
+| | Status: APPROVED • Approved 1d ago | |
+| | [View Details] | |
+| +----------------------------------------------+ |
 +--------------------------------------------------+
+
 ```
 
 #### Artist View: Assigned Commissions
 
 ```
+
 +--------------------------------------------------+
-|  My Commissions                                  |
+| My Commissions |
 +--------------------------------------------------+
-|  [All] [Assigned] [In Progress] [Submitted]      |
+| [All] [Assigned] [In Progress] [Submitted] |
 +--------------------------------------------------+
-|  +----------------------------------------------+ |
-|  | 🟡 Need cyberpunk actor for editorial        | |
-|  |    Status: IN PROGRESS • Assigned 3h ago     | |
-|  |    From: Brand Client                        | |
-|  |    [View Brief] [Submit Work]                | |
-|  +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🟡 Need cyberpunk actor for editorial | |
+| | Status: IN PROGRESS • Assigned 3h ago | |
+| | From: Brand Client | |
+| | [View Brief] [Submit Work] | |
+| +----------------------------------------------+ |
 +--------------------------------------------------+
+
 ```
 
 #### Admin View: All Commissions
 
 ```
+
 +--------------------------------------------------+
-|  All Commissions                                 |
+| All Commissions |
 +--------------------------------------------------+
-|  [All] [Requested] [Assigned] [In Progress]      |
-|  [Submitted] [Approved] [Cancelled]              |
+| [All] [Requested] [Assigned] [In Progress] |
+| [Submitted] [Approved] [Cancelled] |
 +--------------------------------------------------+
-|  +----------------------------------------------+ |
-|  | 🔴 Need cyberpunk actor for editorial        | |
-|  |    Status: REQUESTED • 5m ago                | |
-|  |    From: Brand Client                        | |
-|  |    [Assign to Artist/Agent]                  | |
-|  +----------------------------------------------+ |
+| +----------------------------------------------+ |
+| | 🔴 Need cyberpunk actor for editorial | |
+| | Status: REQUESTED • 5m ago | |
+| | From: Brand Client | |
+| | [Assign to Artist/Agent] | |
+| +----------------------------------------------+ |
 +--------------------------------------------------+
+
 ```
 
 #### Commission Detail Page
 
 ```
+
 +--------------------------------------------------+
-|  ← Back to Commissions                           |
+| ← Back to Commissions |
 +--------------------------------------------------+
-|  Need cyberpunk actor for editorial              |
-|  Status: SUBMITTED                               |
+| Need cyberpunk actor for editorial |
+| Status: SUBMITTED |
 +--------------------------------------------------+
-|  Brief                                           |
-|  +----------------------------------------------+ |
-|  | Project Type: Editorial                      | |
-|  | Style: Cyberpunk                             | |
-|  | Reference Images: [img1] [img2]              | |
-|  | Notes: Looking for a young female actor...   | |
-|  +----------------------------------------------+ |
+| Brief |
+| +----------------------------------------------+ |
+| | Project Type: Editorial | |
+| | Style: Cyberpunk | |
+| | Reference Images: [img1] [img2] | |
+| | Notes: Looking for a young female actor... | |
+| +----------------------------------------------+ |
 +--------------------------------------------------+
-|  Submitted Work                                 |
-|  +--------+  +--------+                          |
-|  |thumb   |  |thumb   |   [Approve] [Changes]   |
-|  |name    |  |name    |                          |
-|  +--------+  +--------+                          |
+| Submitted Work |
+| +--------+ +--------+ |
+| |thumb | |thumb | [Approve] [Changes] |
+| |name | |name | |
+| +--------+ +--------+ |
 +--------------------------------------------------+
-|  Premium Cost: 5.00 credits                      |
-|  [Approve & Unlock]                              |
+| Premium Cost: 5.00 credits |
+| [Approve & Unlock] |
 +--------------------------------------------------+
+
 ```
 
 ---
@@ -756,58 +804,64 @@ The **Generic Standard Look** dropdown lists all Looks in the workspace. The sel
 #### Artist Settings
 
 ```
+
 +--------------------------------------------------+
-|  Settings                                        |
+| Settings |
 +--------------------------------------------------+
-|  Profile                                         |
-|  Name: [Jane Artist]                              |
-|  Email: [jane@studio.com]                        |
-|  [Save Changes]                                  |
+| Profile |
+| Name: [Jane Artist] |
+| Email: [jane@studio.com] |
+| [Save Changes] |
 +--------------------------------------------------+
-|  API Keys (if API-enabled)                       |
-|  +----------------------------------------------+ |
-|  | Production Agent  cs_live_abc...xyz  [Copy]  | |
-|  | Last used: 2h ago                            | |
-|  | [Revoke]                                     | |
-|  +----------------------------------------------+ |
-|  | [+ New API Key]                              | |
+| API Keys (if API-enabled) |
+| +----------------------------------------------+ |
+| | Production Agent cs_live_abc...xyz [Copy] | |
+| | Last used: 2h ago | |
+| | [Revoke] | |
+| +----------------------------------------------+ |
+| | [+ New API Key] | |
 +--------------------------------------------------+
+
 ```
 
 #### Client Settings
 
 ```
+
 +--------------------------------------------------+
-|  Settings                                        |
+| Settings |
 +--------------------------------------------------+
-|  Profile                                         |
-|  Name: [Brand Client]                             |
-|  Email: [client@brand.com]                       |
-|  [Save Changes]                                  |
+| Profile |
+| Name: [Brand Client] |
+| Email: [client@brand.com] |
+| [Save Changes] |
 +--------------------------------------------------+
-|  Wallet                                          |
-|  Balance: 150.50 credits                         |
-|  [Top Up]                                        |
+| Wallet |
+| Balance: 150.50 credits |
+| [Top Up] |
 +--------------------------------------------------+
-|  Recent Transactions                             |
-|  -0.05  CHARGE   Headshot generation   2h ago    |
-|  +100.00 TOP_UP   Top-up             1d ago     |
-|  [View All →]                                    |
+| Recent Transactions |
+| -0.05 CHARGE Headshot generation 2h ago |
+| +100.00 TOP_UP Top-up 1d ago |
+| [View All →] |
 +--------------------------------------------------+
+
 ```
 
 #### Admin Settings
 
 ```
+
 +--------------------------------------------------+
-|  Settings                                        |
+| Settings |
 +--------------------------------------------------+
-|  [Users & Roles] [Models] [System Prompts]       |
-|  [Actor Properties] [Look Taxonomy]              |
-|  [Fashion Item Taxonomy] [Commission Forms]      |
+| [Users & Roles] [Models] [System Prompts] |
+| [Actor Properties] [Look Taxonomy] |
+| [Fashion Item Taxonomy] [Commission Forms] |
 +--------------------------------------------------+
-|  (content changes per tab)                       |
+| (content changes per tab) |
 +--------------------------------------------------+
+
 ```
 
 **Users & Roles tab:**
@@ -846,32 +900,40 @@ A reusable component used across all pages that shows async generation progress.
 
 **PENDING state:**
 ```
+
 +--------------------------------------------------+
-|  ⟳ Generating headshot...                        |
-|  [=========>          ] 60%                      |
+| ⟳ Generating headshot... |
+| [=========> ] 60% |
 +--------------------------------------------------+
+
 ```
 
 Or simpler (no progress bar, just status):
 ```
+
 +--------------------------------------------------+
-|  ⟳ Generating...  [View Status →]                |
+| ⟳ Generating... [View Status →] |
 +--------------------------------------------------+
+
 ```
 
 **SUCCESS state:**
 ```
+
 +--------------------------------------------------+
-|  ✓ Generation complete • 15s                     |
+| ✓ Generation complete • 15s |
 +--------------------------------------------------+
+
 ```
 
 **FAILED state:**
 ```
+
 +--------------------------------------------------+
-|  ✗ Generation failed: Model timeout               |
-|  [Retry]                                         |
+| ✗ Generation failed: Model timeout |
+| [Retry] |
 +--------------------------------------------------+
+
 ```
 
 ---
@@ -881,20 +943,22 @@ Or simpler (no progress bar, just status):
 Dropdown from the top-right notification bell:
 
 ```
+
 +--------------------------------------------------+
-|  Notifications                         [Mark All] |
+| Notifications [Mark All] |
 +--------------------------------------------------+
-|  🔵 New commission assigned                      |
-|     "Need cyberpunk actor"          5m ago       |
-|  ─────────────────────────────────────────────── |
-|  🔵 Work submitted for review                    |
-|     "Cyberpunk Woman headshot"      2h ago       |
-|  ─────────────────────────────────────────────── |
-|  ⚪ Commission approved                          |
-|     "Fashion lookbook"              1d ago       |
+| 🔵 New commission assigned |
+| "Need cyberpunk actor" 5m ago |
+| ─────────────────────────────────────────────── |
+| 🔵 Work submitted for review |
+| "Cyberpunk Woman headshot" 2h ago |
+| ─────────────────────────────────────────────── |
+| ⚪ Commission approved |
+| "Fashion lookbook" 1d ago |
 +--------------------------------------------------+
-|  [View All Notifications →]                      |
+| [View All Notifications →] |
 +--------------------------------------------------+
+
 ```
 
 Unread notifications have a blue dot. Clicking navigates to the relevant page.
@@ -944,35 +1008,39 @@ Unread notifications have a blue dot. Clicking navigates to the relevant page.
 All API data is managed by React Query with the following query key patterns:
 
 ```
-['actors']                    — actor list (with filters in query)
-['actors', id]                — single actor with outputs
-['looks']                     — look list
-['looks', id]                 — single look
-['fashion-items']              — fashion item list
-['fashion-items', id]          — single fashion item
-['marketplace']                — marketplace listings (Client view)
-['marketplace', id]            — single listing detail
-['marketplace', 'manage']      — managed listings (Artist/Admin)
-['commissions']                — commission list (filtered by role)
-['commissions', id]            — single commission with assets
-['workflows', id]              — workflow status
-['notifications']              — notification list
-['notifications', 'unread']    — unread count
-['wallet']                     — wallet balance
-['dashboard']                  — dashboard data
-['models']                     — available models
-['taxonomy', category]         — taxonomy entries
-['prompts']                    — system prompts
+
+['actors'] — actor list (with filters in query)
+['actors', id] — single actor with outputs
+['looks'] — look list
+['looks', id] — single look
+['fashion-items'] — fashion item list
+['fashion-items', id] — single fashion item
+['marketplace'] — marketplace listings (Client view)
+['marketplace', id] — single listing detail
+['marketplace', 'manage'] — managed listings (Artist/Admin)
+['commissions'] — commission list (filtered by role)
+['commissions', id] — single commission with assets
+['workflows', id] — workflow status
+['notifications'] — notification list
+['notifications', 'unread'] — unread count
+['wallet'] — wallet balance
+['dashboard'] — dashboard data
+['models'] — available models
+['taxonomy', category] — taxonomy entries
+['prompts'] — system prompts
+
 ```
 
 ### UI State (Zustand)
 
 ```
+
 useUIStore
-  ├── sidebarCollapsed: boolean
-  ├── activeModal: string | null
-  ├── toastQueue: Toast[]
-  └── theme: 'light' | 'dark' (future)
+├── sidebarCollapsed: boolean
+├── activeModal: string | null
+├── toastQueue: Toast[]
+└── theme: 'light' | 'dark' (future)
+
 ```
 
 ### URL State
@@ -980,8 +1048,10 @@ useUIStore
 Filters and pagination are synced to URL search params for shareability:
 
 ```
+
 /actors?page=1&gender=female&style=cyberpunk
 /commissions?status=SUBMITTED
+
 ```
 
 ---
@@ -989,33 +1059,35 @@ Filters and pagination are synced to URL search params for shareability:
 ## Routing
 
 ```
-/                           → Dashboard
-/actors                     → Actor Library
-/actors/new                 → Actor Designer (creation wizard)
-/actors/:id                 → Actor Page
-/looks                      → Look Library
-/looks/new                  → Look Designer
-/looks/:id                  → Look Detail
-/fashion-items              → Fashion Item Library
-/fashion-items/new          → Fashion Item Creator
-/fashion-items/:id          → Fashion Item Detail
-/marketplace                        → Marketplace (Client: browse/buy)
-/marketplace/:id                    → Marketplace Listing Detail
-/marketplace/manage                 → Marketplace Management (Artist/Admin)
-/marketplace/manage/new             → New Listing
-/admin/marketplace/submissions      → Admin Submissions Review
-/admin/marketplace/settings         → Admin Listings Settings
-/commissions                        → Commissions list
-/commissions/new            → New Commission form
-/commissions/:id            → Commission Detail
-/settings                   → Settings
-  /settings/api-keys        → API Keys (Artist)
-  /settings/wallet          → Wallet (Client)
-  /settings/users           → Users & Roles (Admin)
-  /settings/models          → Models (Admin)
-  /settings/prompts         → System Prompts (Admin)
-  /settings/taxonomy/:cat → Taxonomy management (Admin)
-  /settings/commission-forms → Commission Forms (Admin)
+
+/ → Dashboard
+/actors → Actor Library
+/actors/new → Actor Designer (creation wizard)
+/actors/:id → Actor Page
+/looks → Look Library
+/looks/new → Look Designer
+/looks/:id → Look Detail
+/fashion-items → Fashion Item Library
+/fashion-items/new → Fashion Item Creator
+/fashion-items/:id → Fashion Item Detail
+/marketplace → Marketplace (Client: browse/buy)
+/marketplace/:id → Marketplace Listing Detail
+/marketplace/manage → Marketplace Management (Artist/Admin)
+/marketplace/manage/new → New Listing
+/admin/marketplace/submissions → Admin Submissions Review
+/admin/marketplace/settings → Admin Listings Settings
+/commissions → Commissions list
+/commissions/new → New Commission form
+/commissions/:id → Commission Detail
+/settings → Settings
+/settings/api-keys → API Keys (Artist)
+/settings/wallet → Wallet (Client)
+/settings/users → Users & Roles (Admin)
+/settings/models → Models (Admin)
+/settings/prompts → System Prompts (Admin)
+/settings/taxonomy/:cat → Taxonomy management (Admin)
+/settings/commission-forms → Commission Forms (Admin)
+
 ```
 
 ---
@@ -1040,3 +1112,4 @@ Filters and pagination are synced to URL search params for shareability:
 - Empty states use `role="status"`
 - Color is never the sole indicator (always paired with text or icons)
 - Minimum contrast ratio: 4.5:1 for text, 3:1 for large text
+```
