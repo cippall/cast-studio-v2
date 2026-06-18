@@ -31,7 +31,7 @@ import {
 } from '@/components/ui/pagination';
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal } from 'lucide-react';
-import EmptyState from '@/components/EmptyState';
+import EmptyStateV2 from '@/components/EmptyStateV2';
 import { cn } from '@/lib/utils';
 
 export interface Column<T> {
@@ -128,7 +128,7 @@ export function DataTable<T extends { id: string }>({
 
   // Empty state
   if (data.length === 0) {
-    return <EmptyState title={emptyTitle} description={emptyDescription} />;
+    return <EmptyStateV2 title={emptyTitle} description={emptyDescription} />;
   }
 
   return (

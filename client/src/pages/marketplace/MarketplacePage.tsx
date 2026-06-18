@@ -9,10 +9,10 @@ import { useWalletBalance } from '@/hooks/useWallet';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Skeleton } from '@/components/ui/skeleton';
-import EmptyState from '@/components/EmptyState';
-import { cn } from '@/lib/utils';
-import { ShoppingBag, Loader2 } from 'lucide-react';
+import EmptyStateV2 from '@/components/EmptyStateV2';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
+import { ShoppingBag } from 'lucide-react';
 
 const PAGE_SIZE = 12;
 
@@ -42,7 +42,7 @@ function ListingCard({
   const canAfford = balance !== undefined && balance >= listing.price_credits;
 
   return (
-    <Card className="group overflow-hidden transition-shadow hover:shadow-md">
+    <Card className="group overflow-hidden transition-colors hover:border-border-medium">
       <div className="relative aspect-square overflow-hidden bg-muted">
         {thumbnail ? (
           <img
@@ -58,9 +58,6 @@ function ListingCard({
             <span className="text-sm text-muted-foreground">No image</span>
           </div>
         )}
-        <div className="absolute inset-0 flex items-end bg-gradient-to-t from-black/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100">
-          <span className="p-3 text-sm font-medium text-white">View Details</span>
-        </div>
       </div>
       <CardContent className="p-3">
         <h3 className="truncate text-sm font-semibold">{listing.asset.name}</h3>
@@ -74,22 +71,6 @@ function ListingCard({
           >
             {canAfford ? 'Buy' : `Need ${(listing.price_credits - (balance ?? 0)).toFixed(2)} more`}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-function ListingSkeleton() {
-  return (
-    <Card className="overflow-hidden">
-      <Skeleton className="aspect-square w-full" />
-      <CardContent className="p-3">
-        <Skeleton className="h-4 w-3/4" />
-        <Skeleton className="mt-1 h-3 w-1/2" />
-        <div className="mt-2 flex items-center justify-between">
-          <Skeleton className="h-4 w-16" />
-          <Skeleton className="h-8 w-16" />
         </div>
       </CardContent>
     </Card>
@@ -112,7 +93,7 @@ export default function MarketplacePage() {
     [page, listingType],
   );
 
-  const { data, isLoading } = useMarketplace(filters);
+  const { data, isLoading, isError, error } = useMarketplace(filters);
   const { data: wallet } = useWalletBalance();
   const balance = wallet?.balance_credits;
 
@@ -138,7 +119,7 @@ export default function MarketplacePage() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <h1 className="text-2xl font-bold tracking-tight">Marketplace</h1>
         {balance !== undefined && (
           <Badge variant="secondary" className="text-sm">
@@ -148,7 +129,7 @@ export default function MarketplacePage() {
       </div>
 
       {/* Type filter tabs */}
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         {LISTING_TYPE_OPTIONS.map((opt) => (
           <Button
             key={opt.value}
@@ -162,13 +143,18 @@ export default function MarketplacePage() {
       </div>
 
       {isLoading ? (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-          {Array.from({ length: 8 }).map((_, i) => (
-            <ListingSkeleton key={i} />
-          ))}
-        </div>
+        <LoadingState variant="grid" count={8} />
+      ) : isError ? (
+        <ErrorState
+          message={error instanceof Error ? error.message : undefined}
+          onRetry={() => window.location.reload()}
+        />
       ) : listings.length === 0 ? (
-        <EmptyState title="No listings available" description="Check back soon for new assets." />
+        <EmptyStateV2
+          icon={<ShoppingBag className="size-8 text-muted-foreground" />}
+          title="No listings available"
+          description="Check back soon for new assets."
+        />
       ) : (
         <>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">

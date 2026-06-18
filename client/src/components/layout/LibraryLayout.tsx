@@ -22,10 +22,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { cn } from '@/lib/utils';
 import { SlidersHorizontal, LayoutGrid, List, ChevronLeft, ChevronRight } from 'lucide-react';
 import FilterPanel, { type FilterGroup } from '@/components/FilterPanel';
-import EmptyState from '@/components/EmptyState';
+import EmptyStateV2 from '@/components/EmptyStateV2';
+import ErrorState from '@/components/ErrorState';
+import LoadingState from '@/components/LoadingState';
 
 export type ViewMode = 'grid' | 'list';
 export type SortOption = 'date' | 'name' | 'status';
@@ -206,37 +207,9 @@ export default function LibraryLayout({
         {/* Content */}
         <div className="flex-1">
           {isLoading ? (
-            <div
-              className={cn(
-                viewMode === 'grid'
-                  ? 'grid grid-cols-2 gap-4 sm:grid-cols-3 xl:grid-cols-4'
-                  : 'flex flex-col gap-2',
-              )}
-            >
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div
-                  key={i}
-                  className={cn(
-                    'animate-pulse bg-muted',
-                    viewMode === 'grid' ? 'aspect-square' : 'h-16',
-                  )}
-                />
-              ))}
-            </div>
+            <LoadingState variant={viewMode === 'grid' ? 'grid' : 'list'} />
           ) : isError ? (
-            <div className="flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-sm text-muted-foreground">
-                {error instanceof Error ? error.message : 'Failed to load'}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                className="mt-3"
-                onClick={() => window.location.reload()}
-              >
-                Retry
-              </Button>
-            </div>
+            <ErrorState message={error instanceof Error ? error.message : undefined} />
           ) : items.length > 0 ? (
             <>
               {viewMode === 'grid' ? (
@@ -277,7 +250,7 @@ export default function LibraryLayout({
               )}
             </>
           ) : (
-            <EmptyState
+            <EmptyStateV2
               title={emptyTitle}
               description={emptyDescription}
               actionLabel={emptyActionLabel}

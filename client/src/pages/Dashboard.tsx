@@ -8,10 +8,11 @@ import { useCurrentUser } from '@/hooks/useAuth';
 import { useWalletBalance, useDashboardStats } from '@/hooks/useDashboard';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Skeleton } from '@/components/ui/skeleton';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/StatCard';
+import EmptyStateV2 from '@/components/EmptyStateV2';
+import LoadingState from '@/components/LoadingState';
 import {
   User,
   Shirt,
@@ -22,6 +23,7 @@ import {
   Layers,
   ShirtIcon,
   ClipboardList,
+  Inbox,
 } from 'lucide-react';
 
 export default function Dashboard() {
@@ -88,7 +90,7 @@ export default function Dashboard() {
               </CardHeader>
               <CardContent>
                 {walletLoading ? (
-                  <Skeleton className="h-8 w-32" />
+                  <LoadingState variant="list" count={1} />
                 ) : (
                   <div className="flex items-baseline gap-1">
                     <span className="text-3xl font-bold">
@@ -152,11 +154,11 @@ export default function Dashboard() {
         {/* Recent Activity */}
         <div>
           <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
-          <Card>
-            <CardContent className="flex items-center justify-center py-12">
-              <p className="text-sm text-muted-foreground">No recent activity yet.</p>
-            </CardContent>
-          </Card>
+          <EmptyStateV2
+            icon={<Inbox className="size-8 text-muted-foreground" />}
+            title="No recent activity"
+            description="Your recent activity will appear here as you create and manage assets."
+          />
         </div>
       </div>
     </PageContainer>
