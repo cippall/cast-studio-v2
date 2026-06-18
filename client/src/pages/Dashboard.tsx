@@ -52,7 +52,7 @@ export default function Dashboard() {
       <div className="mt-6 flex flex-col gap-6">
         {/* Quick Actions */}
         <div>
-          <h2 className="mb-3 text-lg font-semibold">Quick Actions</h2>
+          <h2 className="mb-3 font-heading text-lg font-semibold">Quick Actions</h2>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {quickActions.map((action) => (
               <Card
@@ -77,7 +77,7 @@ export default function Dashboard() {
         {/* Client: Wallet Balance */}
         {isClient && (
           <div>
-            <h2 className="mb-3 text-lg font-semibold">Wallet</h2>
+            <h2 className="mb-3 font-heading text-lg font-semibold">Wallet</h2>
             <Card className="w-full sm:w-80">
               <CardHeader className="flex flex-row items-center gap-3 pb-2">
                 <div className="flex size-10 items-center justify-center bg-primary/10">
@@ -115,7 +115,7 @@ export default function Dashboard() {
         {/* Admin: Stats */}
         {isAdmin && (
           <div>
-            <h2 className="mb-3 text-lg font-semibold">Overview</h2>
+            <h2 className="mb-3 font-heading text-lg font-semibold">Overview</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               <StatCard
                 icon={User}
@@ -153,7 +153,7 @@ export default function Dashboard() {
 
         {/* Recent Activity */}
         <div>
-          <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
+          <h2 className="mb-3 font-heading text-lg font-semibold">Recent Activity</h2>
           <EmptyStateV2
             icon={<Inbox className="size-8 text-muted-foreground" />}
             title="No recent activity"
