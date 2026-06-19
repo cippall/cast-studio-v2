@@ -1,4 +1,5 @@
-import type { LayoutStep, GenerationSession, GeneratedOption, EntryMethod } from './types';
+import type { LayoutStep, GenerationSession, GeneratedOption } from './types';
+import type { Stage2Props } from './Stage2Props';
 import { LAYOUT_STEPS } from './types';
 import ImageGrid from './ImageGrid';
 import SessionNavigator from './SessionNavigator';
@@ -8,41 +9,6 @@ import RawTextPanel from './RawTextPanel';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { Check, ChevronRight } from 'lucide-react';
-
-interface Stage2Props {
-  entryMethod: EntryMethod;
-  currentStepIndex: number;
-  currentStep: { key: LayoutStep; label: string };
-  currentSessions: GenerationSession[];
-  currentSessionIndex: number;
-  currentOptions: GeneratedOption[];
-  selectedOptionId: string | null;
-  isStepConfirmed: boolean;
-  confirmedSteps: Set<LayoutStep>;
-  isGenerating: boolean;
-  hasGeneratedImages: boolean;
-  canConfirm: boolean;
-  isRawText: boolean;
-  isReference: boolean;
-  isStructuredForm: boolean;
-  prompt: string;
-  randomize: boolean;
-  referenceImages: string[];
-  formValues: Record<string, string>;
-  referenceValidationError: string | null;
-  onSelectOption: (id: string) => void;
-  onConfirmStep: () => void;
-  onGenerate: () => void;
-  onStepIndexChange: (index: number) => void;
-  onSessionSelect: (index: number) => void;
-  onLoadSettings: () => void;
-  onSaveCurrentPrompt: () => void;
-  onRestorePrompt: (stepKey: LayoutStep) => void;
-  onPromptChange: (value: string) => void;
-  onRandomizeChange: (value: boolean) => void;
-  onReferenceImagesChange: (images: string[]) => void;
-  onFormValuesChange: (values: Record<string, string>) => void;
-}
 
 export default function Stage2({
   currentStepIndex,
@@ -200,13 +166,31 @@ export default function Stage2({
       )}
 
       {hasGeneratedImages && (
-        <div className={isStructuredForm ? 'flex justify-end' : 'flex justify-center'}>
-          <Button onClick={onConfirmStep} disabled={!canConfirm}>
-            Confirm Selection
-            <ChevronRight className="ml-2 size-4" />
-          </Button>
-        </div>
+        <ConfirmButton
+          isStructuredForm={isStructuredForm}
+          canConfirm={canConfirm}
+          onConfirm={onConfirmStep}
+        />
       )}
+    </div>
+  );
+}
+
+function ConfirmButton({
+  isStructuredForm,
+  canConfirm,
+  onConfirm,
+}: {
+  isStructuredForm: boolean;
+  canConfirm: boolean;
+  onConfirm: () => void;
+}) {
+  return (
+    <div className={isStructuredForm ? 'flex justify-end' : 'flex justify-center'}>
+      <Button onClick={onConfirm} disabled={!canConfirm}>
+        Confirm Selection
+        <ChevronRight className="ml-2 size-4" />
+      </Button>
     </div>
   );
 }
