@@ -37,7 +37,7 @@ export default function Dashboard() {
 
   const { data: wallet, isLoading: walletLoading, isError: walletError } = useWalletBalance();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
-  const { data: activities, isLoading: activitiesLoading } = useActivityFeed(10);
+  const { data: activities, isLoading: activitiesLoading } = useActivityFeed(8);
 
   const quickActions = [
     { label: 'New Actor', icon: User, path: '/actors/new' },
@@ -161,9 +161,9 @@ export default function Dashboard() {
         <div>
           <h2 className="mb-3 font-heading text-lg font-semibold">Recent Activity</h2>
           {activitiesLoading ? (
-            <div className="flex gap-4 overflow-x-auto pb-2">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="w-40 shrink-0 space-y-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="space-y-2">
                   <Skeleton className="aspect-square w-full" />
                   <Skeleton className="h-3 w-3/4" />
                   <Skeleton className="h-3 w-1/2" />
@@ -171,7 +171,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : activities && activities.length > 0 ? (
-            <div className="flex gap-4 overflow-x-auto pb-2">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
               {activities.map((item) => (
                 <ActivityCard key={item.id + item.action} item={item} />
               ))}
@@ -211,7 +211,7 @@ const actionBadgeVariant: Record<string, 'default' | 'secondary' | 'outline'> = 
 
 function ActivityCard({ item }: { item: import('@cast/types').ActivityFeedItem }) {
   return (
-    <div className="w-40 shrink-0 overflow-hidden border border-border bg-card">
+    <div className="overflow-hidden border border-border bg-card">
       <div className="aspect-square w-full bg-surface">
         {item.thumbnail_url ? (
           <img
