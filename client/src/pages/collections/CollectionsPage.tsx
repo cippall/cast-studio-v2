@@ -9,6 +9,7 @@ import PageContainer from '@/components/layout/PageContainer';
 import LoadingState from '@/components/LoadingState';
 import ErrorState from '@/components/ErrorState';
 import EmptyStateV2 from '@/components/EmptyStateV2';
+import CreateCollectionDialog from '@/components/collections/CreateCollectionDialog';
 import { useCollections, useCreateCollection } from '@/hooks/useCollections';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -21,6 +22,7 @@ export default function CollectionsPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const page = Number(searchParams.get('page') ?? 1);
   const [search, setSearch] = useState(searchParams.get('search') ?? '');
+  const [dialogOpen, setDialogOpen] = useState(false);
 
   const { data, isLoading, isError, error } = useCollections({
     page,
@@ -60,15 +62,23 @@ export default function CollectionsPage() {
   );
 
   const handleCreate = useCallback(() => {
-    const name = prompt('Collection name:');
-    if (name?.trim()) {
-      createCollection.mutate(name.trim(), {
+    setDialogOpen(true);
+  }, []);
+
+  const handleDialogSubmit = useCallback(
+    (name: string) => {
+      createCollection.mutate(name, {
         onSuccess: (collection) => {
+          setDialogOpen(false);
           navigate(`/collections/${collection.id}`);
         },
+        onError: () => {
+          setDialogOpen(false);
+        },
       });
-    }
-  }, [createCollection, navigate]);
+    },
+    [createCollection, navigate],
+  );
 
   return (
     <PageContainer>
@@ -158,6 +168,13 @@ export default function CollectionsPage() {
           </>
         )}
       </div>
+
+      <CreateCollectionDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        onSubmit={handleDialogSubmit}
+        isCreating={createCollection.isPending}
+      />
     </PageContainer>
   );
 }
