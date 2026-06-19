@@ -27,7 +27,7 @@ import {
   clientAccount,
 } from './integration-fixtures';
 
-import * as marketplaceService from '../src/services/marketplace-service.js';
+import * as marketplaceService from '../src/services/marketplace/index.js';
 import * as poolModule from '../src/db/pool.js';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */

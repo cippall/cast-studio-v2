@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { requireSession } from '../../middleware/requireSession.js';
 import { requireWorkspace } from '../../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
-import * as marketplaceService from '../../services/marketplace-service.js';
+import * as marketplaceService from '../../services/marketplace/index.js';
 
 const router = Router();
 

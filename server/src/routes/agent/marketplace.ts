@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireApiKey } from '../../middleware/requireApiKey.js';
 import type { Request, Response } from 'express';
-import * as marketplaceService from '../../services/marketplace-service.js';
+import * as marketplaceService from '../../services/marketplace/index.js';
 
 const router = Router();
 
