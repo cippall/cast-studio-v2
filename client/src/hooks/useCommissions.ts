@@ -81,6 +81,7 @@ export function useUpdateCommissionStatus() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
       queryClient.invalidateQueries({ queryKey: ['commissions', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
@@ -98,6 +99,7 @@ export function useAssignCommission() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['commissions'] });
       queryClient.invalidateQueries({ queryKey: ['commissions', data.id] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

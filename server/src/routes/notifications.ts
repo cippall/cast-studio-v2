@@ -69,6 +69,34 @@ router.patch('/:id/read', requireSession, async (req: Request, res: Response) =>
   }
 });
 
+// --- POST /api/notifications — create a notification (frontend-initiated) ---
+router.post('/', requireSession, async (req: Request, res: Response) => {
+  try {
+    const { recipient_id, type, title, message } = req.body;
+    if (!recipient_id || !type || !title || !message) {
+      res.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'recipient_id, type, title, and message are required',
+        },
+      });
+      return;
+    }
+    const notification = await notificationRepo.createNotification({
+      recipientId: recipient_id,
+      type,
+      title,
+      message,
+    });
+    res.status(201).json(notification);
+  } catch (err) {
+    console.error('Create notification error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to create notification' },
+    });
+  }
+});
+
 // --- POST /api/notifications/read-all ---
 router.post('/read-all', requireSession, async (req: Request, res: Response) => {
   try {

@@ -218,6 +218,7 @@ export function useSubmitToMarketplace() {
       queryClient.invalidateQueries({ queryKey: ['actors'] });
       queryClient.invalidateQueries({ queryKey: ['looks'] });
       queryClient.invalidateQueries({ queryKey: ['fashion-items'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
@@ -252,6 +253,7 @@ export function useApproveSubmission() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'submissions'] });
       queryClient.invalidateQueries({ queryKey: ['marketplace'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }
@@ -266,6 +268,7 @@ export function useRejectSubmission() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin', 'submissions'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
     },
   });
 }

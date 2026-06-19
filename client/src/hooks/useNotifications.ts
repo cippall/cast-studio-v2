@@ -66,3 +66,22 @@ export function useMarkAllNotificationsRead() {
     },
   });
 }
+
+export function useCreateNotification() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      recipientId: string;
+      type: string;
+      title: string;
+      message: string;
+    }) => {
+      const { data } = await apiClient.post('/notifications', input);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
+    },
+  });
+}
