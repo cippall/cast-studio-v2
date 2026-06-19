@@ -1,6 +1,6 @@
 /**
  * ActorDesigner — 3-stage wizard for creating actors.
- * Stage 1: Choose entry method (Form, Reference, Text, Randomize)
+ * Stage 1: Choose entry method (Form, Reference, Text)
  * Stage 2: Iterate headshot -> fullshot -> expressions
  * Stage 3: Name + properties -> save
  */
@@ -14,11 +14,11 @@ import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   AlertCircle,
   FileText,
   ImageIcon,
-  Shuffle,
   FormInput,
   ChevronRight,
   ChevronLeft,
@@ -34,7 +34,7 @@ import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
-type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT' | 'RANDOMIZE';
+type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT';
 type WizardStage = 1 | 2 | 3;
 type LayoutStep = 'headshot' | 'fullshot' | 'expressions';
 
@@ -72,12 +72,6 @@ const ENTRY_METHODS = [
     title: 'Raw Text',
     desc: 'Describe the actor freely in your own words.',
   },
-  {
-    value: 'RANDOMIZE' as EntryMethod,
-    icon: Shuffle,
-    title: 'Randomize',
-    desc: 'System generates random identities. Pick one.',
-  },
 ];
 
 function createEmptyOptions(count: number): GeneratedOption[] {
@@ -95,6 +89,8 @@ interface Stage1Props {
   onSelect: (method: EntryMethod) => void;
   prompt: string;
   onPromptChange: (value: string) => void;
+  randomize: boolean;
+  onRandomizeChange: (value: boolean) => void;
   onCreate: () => void;
   isCreating: boolean;
 }
@@ -104,6 +100,8 @@ function Stage1({
   onSelect,
   prompt,
   onPromptChange,
+  randomize,
+  onRandomizeChange,
   onCreate,
   isCreating,
 }: Stage1Props) {
@@ -112,7 +110,7 @@ function Stage1({
       <RadioGroup
         value={entryMethod}
         onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
       >
         {ENTRY_METHODS.map((method) => (
           <Label
@@ -147,6 +145,19 @@ function Stage1({
             placeholder="A young asian woman with cyberpunk aesthetic, neon-lit city background..."
             rows={4}
           />
+        </div>
+      )}
+
+      {(entryMethod === 'FORM' || entryMethod === 'TEXT') && (
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="randomize"
+            checked={randomize}
+            onCheckedChange={(checked) => onRandomizeChange(checked === true)}
+          />
+          <Label htmlFor="randomize" className="cursor-pointer font-normal">
+            Randomize identity
+          </Label>
         </div>
       )}
 
@@ -320,6 +331,7 @@ export default function ActorDesigner() {
   const [stage, setStage] = useState<WizardStage>(1);
   const [entryMethod, setEntryMethod] = useState<EntryMethod>('FORM');
   const [prompt, setPrompt] = useState('');
+  const [randomize, setRandomize] = useState(false);
 
   // Stage 2 state
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -359,6 +371,7 @@ export default function ActorDesigner() {
         entry_method: entryMethod,
         ...(entryMethod === 'TEXT' && { prompt }),
         ...(entryMethod === 'FORM' && { form_data: {} }),
+        ...(randomize && { randomize: true }),
       });
       return data;
     },
@@ -521,6 +534,8 @@ export default function ActorDesigner() {
           onSelect={setEntryMethod}
           prompt={prompt}
           onPromptChange={setPrompt}
+          randomize={randomize}
+          onRandomizeChange={setRandomize}
           onCreate={() => createActorMutation.mutate()}
           isCreating={createActorMutation.isPending}
         />
