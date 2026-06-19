@@ -34,6 +34,7 @@ describe('Integration: Actor Generation + Versioning', () => {
   it('generates headshot, regenerates creating version 2', async () => {
     // Generate: findAssetById + findWallet + updateWalletBalance + createLedgerEntry + createAssetOutput
     mockQuery.mockResolvedValueOnce({ rows: [actorRow()] } as any);
+    // listActiveModels is mocked at module level (returns [])
     mockQuery.mockResolvedValueOnce({ rows: [walletRow()] } as any);
     mockQuery.mockResolvedValueOnce({ rows: [walletRow({ balance_credits: 49.95 })] } as any);
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] } as any);
@@ -41,7 +42,6 @@ describe('Integration: Actor Generation + Versioning', () => {
 
     const genResult = await generationService.generateActorOutput(ACTOR, artistAccount(), {
       layout_type: 'headshot',
-      model: 'flux-pro',
     });
     expect(genResult.outputs.length).toBe(1);
     expect(genResult.outputs[0].status).toBe('PENDING');
@@ -49,6 +49,7 @@ describe('Integration: Actor Generation + Versioning', () => {
     // Regenerate: findAssetById + findWallet + updateWalletBalance + createLedgerEntry + getAssetOutputs + archiveAssetOutput + markDownstreamObsolete + createAssetOutput
     resetMock();
     mockQuery.mockResolvedValueOnce({ rows: [actorRow()] } as any);
+    // listActiveModels is mocked at module level (returns [])
     mockQuery.mockResolvedValueOnce({ rows: [walletRow({ balance_credits: 49.95 })] } as any);
     mockQuery.mockResolvedValueOnce({ rows: [walletRow({ balance_credits: 49.9 })] } as any);
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'ledger-2' }] } as any);
@@ -62,7 +63,7 @@ describe('Integration: Actor Generation + Versioning', () => {
       ACTOR,
       'headshot',
       artistAccount(),
-      { layout_type: 'headshot', model: 'flux-pro' },
+      { layout_type: 'headshot' },
     );
     expect(regenResult.outputs.length).toBe(1);
     expect(regenResult.outputs[0].status).toBe('PENDING');

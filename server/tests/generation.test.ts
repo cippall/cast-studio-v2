@@ -185,6 +185,11 @@ function resetMock() {
   mockQuery.mockReset();
 }
 
+/** Mock listActiveModels returning empty (so resolveModel falls back to DEFAULT_MODEL) */
+function seedNoActiveModels() {
+  mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+}
+
 /** Build express app with actors routes and fake session */
 function createActorsApp(accountOverride?: Record<string, unknown>) {
   const app = express();
@@ -272,6 +277,8 @@ describe('POST /api/actors/:id/generate', () => {
     // findAssetById returns actor
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
     // createAssetOutput returns PENDING output
@@ -300,6 +307,8 @@ describe('POST /api/actors/:id/generate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
 
     // reserveCreditsForGeneration for output 1
     seedWalletCreditMocks(ARTIST_UUID);
@@ -339,6 +348,8 @@ describe('POST /api/actors/:id/generate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
     const output = makeOutputRow({ layout_type: 'editorial' });
@@ -394,6 +405,8 @@ describe('POST /api/actors/:id/regenerate', () => {
 
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
 
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
@@ -505,6 +518,8 @@ describe('POST /api/actors/:id/character-sheet', () => {
 
     const look = makeLookRow();
     mockQuery.mockResolvedValueOnce({ rows: [look] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
 
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
@@ -656,5 +671,217 @@ describe('GET /api/generation-jobs/:outputId', () => {
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('FAILED');
     expect(res.body.cost_credits).toBe(0.05);
+  });
+});
+
+// ================================================================
+// Model Resolution Tests
+// ================================================================
+describe('Model resolution in generation', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  // Helper: mock listActiveModels query (called by resolveModel)
+  function seedActiveModels(models: Array<{ model_id: string; name: string }>) {
+    mockQuery.mockResolvedValueOnce({
+      rows: models.map((m) => ({
+        id: randomUUID(),
+        model_id: m.model_id,
+        name: m.name,
+        model_type: 'image',
+        task: 'text-to-image',
+        parameters: {},
+        is_active: true,
+        created_at: '2026-06-17T10:00:00.000Z',
+      })),
+    } as any);
+  }
+
+  // Helper: mock findActiveModel query (called by resolveModel when model specified)
+  function seedFindActiveModel(model: { model_id: string; name: string } | null) {
+    if (model) {
+      mockQuery.mockResolvedValueOnce({
+        rows: [
+          {
+            id: randomUUID(),
+            model_id: model.model_id,
+            name: model.name,
+            model_type: 'image',
+            task: 'text-to-image',
+            parameters: {},
+            is_active: true,
+            created_at: '2026-06-17T10:00:00.000Z',
+          },
+        ],
+      } as any);
+    } else {
+      mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    }
+  }
+
+  function randomUUID() {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === 'x' ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  // --- No model specified → uses first active model ---
+
+  it('uses first active model when no model specified', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels returns one model
+    seedActiveModels([{ model_id: 'fal-ai/flux-pro', name: 'Flux Pro' }]);
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    const output = makeOutputRow({ model: 'fal-ai/flux-pro' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs[0].model).toBe('fal-ai/flux-pro');
+  });
+
+  it('uses DEFAULT_MODEL when no active models and no model specified', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels returns empty
+    seedActiveModels([]);
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    const output = makeOutputRow({ model: 'flux-pro' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs[0].model).toBe('flux-pro');
+  });
+
+  // --- Model specified and valid → uses it ---
+
+  it('uses specified model when it is in active models', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels (for error message context)
+    seedActiveModels([
+      { model_id: 'fal-ai/flux-pro', name: 'Flux Pro' },
+      { model_id: 'fal-ai/flux-realism', name: 'Flux Realism' },
+    ]);
+    // resolveModel: findActiveModel returns the model
+    seedFindActiveModel({ model_id: 'fal-ai/flux-realism', name: 'Flux Realism' });
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    const output = makeOutputRow({ model: 'fal-ai/flux-realism' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot', model: 'fal-ai/flux-realism' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs[0].model).toBe('fal-ai/flux-realism');
+  });
+
+  // --- Model specified but invalid → 422 ---
+
+  it('422 when specified model is not in active models', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels returns active list
+    seedActiveModels([{ model_id: 'fal-ai/flux-pro', name: 'Flux Pro' }]);
+    // resolveModel: findActiveModel returns null (not found)
+    seedFindActiveModel(null);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot', model: 'nonexistent-model' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+    expect(res.body.error.message).toContain('nonexistent-model');
+  });
+
+  // --- Regenerate: same model resolution ---
+
+  it('regenerate: 422 when specified model is not in active models', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels
+    seedActiveModels([{ model_id: 'fal-ai/flux-pro', name: 'Flux Pro' }]);
+    // resolveModel: findActiveModel returns null
+    seedFindActiveModel(null);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot', model: 'invalid-model' });
+
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('regenerate: uses first active model when no model specified', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: listActiveModels
+    seedActiveModels([{ model_id: 'fal-ai/flux-pro', name: 'Flux Pro' }]);
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    // getAssetOutputs for regenerate
+    const oldHeadshot = makeOutputRow({
+      layout_type: 'headshot',
+      status: 'SUCCESS',
+      version: 1,
+      image_url: 'https://fal.ai/old.png',
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [oldHeadshot] } as any);
+    // archiveAssetOutput: SELECT
+    mockQuery.mockResolvedValueOnce({ rows: [oldHeadshot] } as any);
+    // archiveAssetOutput: INSERT
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+    // markDownstreamObsolete
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+    // createAssetOutput
+    const newOutput = makeOutputRow({ model: 'fal-ai/flux-pro', version: 2 });
+    mockQuery.mockResolvedValueOnce({ rows: [newOutput] } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs[0].model).toBe('fal-ai/flux-pro');
   });
 });

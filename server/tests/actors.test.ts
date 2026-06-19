@@ -962,6 +962,8 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCreditsForGeneration: findWallet (SELECT)
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1013,6 +1015,8 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1064,8 +1068,8 @@ describe('POST /api/actors/:id/generate', () => {
     expect(res.body.outputs).toHaveLength(1);
     expect(res.body.outputs[0].layout_type).toBe('fullshot');
 
-    // Verify generation_params were passed through to the INSERT (call index 6: 2 auth + 1 findAsset + 3 reserveCredits = calls[6] is createAssetOutput)
-    const insertCall = mockQuery.mock.calls[6] as [string, unknown[]];
+    // Verify generation_params were passed through to the INSERT (call index 7: 2 auth + 1 findAsset + 1 modelResolve + 3 reserveCredits = calls[7] is createAssetOutput)
+    const insertCall = mockQuery.mock.calls[7] as [string, unknown[]];
     // generation_params is stored as JSON string in the DB param
     const genParamsRaw = insertCall[1][6];
     const genParams =
@@ -1085,6 +1089,8 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1164,6 +1170,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1219,6 +1227,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1274,8 +1284,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     expect(res.body.outputs).toHaveLength(1);
 
     // Verify generation_params were passed through to the INSERT
-    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=findWallet, [4]=updateWallet, [5]=ledger, [6]=getAssetOutputs, [7]=markObsolete, [8]=createAssetOutput
-    const insertCall = mockQuery.mock.calls[8] as [string, unknown[]];
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=modelResolve, [4]=findWallet, [5]=updateWallet, [6]=ledger, [7]=getAssetOutputs, [8]=markObsolete, [9]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[9] as [string, unknown[]];
     const genParamsRaw = insertCall[1][6];
     const genParams =
       typeof genParamsRaw === 'string'
@@ -1300,6 +1310,8 @@ describe('POST /api/actors/:id/regenerate', () => {
 
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1350,8 +1362,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     expect(res.body.outputs[0].status).toBe('PENDING');
 
     // Verify the new output has version 3
-    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=findWallet, [4]=updateWallet, [5]=ledger, [6]=getAssetOutputs, [7]=archiveSELECT, [8]=archiveINSERT, [9]=markObsolete, [10]=createAssetOutput
-    const insertCall = mockQuery.mock.calls[10] as [string, unknown[]];
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=modelResolve, [4]=findWallet, [5]=updateWallet, [6]=ledger, [7]=getAssetOutputs, [8]=archiveSELECT, [9]=archiveINSERT, [10]=markObsolete, [11]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[11] as [string, unknown[]];
     expect(insertCall[1]).toContain(3); // version param
   });
 });

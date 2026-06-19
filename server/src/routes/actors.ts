@@ -334,9 +334,11 @@ router.post(
     } catch (err: unknown) {
       if (err instanceof Error && 'statusCode' in err) {
         const statusCode = (err as Error & { statusCode: number }).statusCode;
+        const code =
+          statusCode === 404 ? 'NOT_FOUND' : statusCode === 422 ? 'VALIDATION_ERROR' : 'CONFLICT';
         res.status(statusCode).json({
           error: {
-            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            code,
             message: err.message,
           },
         });
@@ -391,9 +393,11 @@ router.post(
     } catch (err: unknown) {
       if (err instanceof Error && 'statusCode' in err) {
         const statusCode = (err as Error & { statusCode: number }).statusCode;
+        const code =
+          statusCode === 404 ? 'NOT_FOUND' : statusCode === 422 ? 'VALIDATION_ERROR' : 'CONFLICT';
         res.status(statusCode).json({
           error: {
-            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            code,
             message: err.message,
           },
         });
@@ -441,9 +445,11 @@ router.post(
     } catch (err: unknown) {
       if (err instanceof Error && 'statusCode' in err) {
         const statusCode = (err as Error & { statusCode: number }).statusCode;
+        const code =
+          statusCode === 404 ? 'NOT_FOUND' : statusCode === 422 ? 'VALIDATION_ERROR' : 'CONFLICT';
         res.status(statusCode).json({
           error: {
-            code: statusCode === 404 ? 'NOT_FOUND' : 'CONFLICT',
+            code,
             message: err.message,
           },
         });

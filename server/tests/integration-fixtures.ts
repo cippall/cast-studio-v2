@@ -58,6 +58,12 @@ vi.mock('../src/services/email-service.js', () => ({
   sendNotificationEmail: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Mock model-repo to avoid real DB queries for model resolution
+vi.mock('../src/db/repositories/model-repo.js', () => ({
+  listActiveModels: vi.fn().mockResolvedValue([]),
+  findActiveModel: vi.fn().mockResolvedValue(null),
+}));
+
 // Mock notification-service to prevent fire-and-forget side effects from consuming DB mocks.
 // The vi.mock replaces module-level imports; vi.spyOn below intercepts direct imports.
 // Both layers are needed because services import notificationRepo directly from its path.

@@ -6,7 +6,8 @@ import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
-import { DEFAULT_MODEL, DEFAULT_COST } from './generation-constants.js';
+import { DEFAULT_COST } from './generation-constants.js';
+import { resolveModel, InvalidModelError } from './resolve-model.js';
 import type { GenerateOptions, GenerateResponse } from './generation-types.js';
 
 /**
@@ -32,7 +33,8 @@ export async function generateActorOutput(
     });
   }
 
-  const model = options.model ?? DEFAULT_MODEL;
+  // Resolve model: validate against active models or use default
+  const model = await resolveModel(options.model);
   const numOutputs = options.num_outputs ?? 1;
   const prompt =
     (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))

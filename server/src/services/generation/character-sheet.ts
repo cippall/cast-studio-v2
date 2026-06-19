@@ -10,7 +10,8 @@ import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
-import { DEFAULT_MODEL, DEFAULT_COST } from './generation-constants.js';
+import { DEFAULT_COST } from './generation-constants.js';
+import { resolveModel, InvalidModelError } from './resolve-model.js';
 import type { CharacterSheetResponse } from './generation-types.js';
 
 /**
@@ -46,7 +47,8 @@ export async function generateCharacterSheet(
     );
   }
 
-  const resolvedModel = model ?? DEFAULT_MODEL;
+  // Resolve model: validate against active models or use default
+  const resolvedModel = await resolveModel(model);
   const prompt = (asset.prompt_recipe?.identity as Record<string, unknown>)
     ? JSON.stringify(asset.prompt_recipe.identity)
     : '';
