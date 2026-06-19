@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { cn } from '@/lib/utils';
+import AddToCollectionDropdown from '@/components/AddToCollectionDropdown';
 
 interface ProductCardProps {
   id: string;
@@ -41,6 +42,7 @@ export default function ProductCard({
   const navigate = useNavigate();
   const canAfford = balance !== undefined && balance >= priceCredits;
   const typeLabel = TYPE_LABELS[listingType] ?? listingType;
+  const collectionAssetType = listingType === 'ACTOR_PACKAGE' ? 'ACTOR' : listingType;
 
   return (
     <Card
@@ -71,42 +73,49 @@ export default function ProductCard({
         <p className="text-xs text-muted-foreground">by {sellerName}</p>
         <div className="flex items-center justify-between gap-2">
           <span className="text-sm font-semibold">{priceCredits.toFixed(2)} cr</span>
-          {canAfford ? (
-            <Button
-              size="sm"
-              variant="default"
-              onClick={(e) => {
-                e.stopPropagation();
-                onBuy(id);
-              }}
-            >
-              Buy
-            </Button>
-          ) : (
-            <Tooltip>
-              <TooltipTrigger
-                render={(props) => (
-                  <span {...props}>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      disabled
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {balance !== undefined
-                        ? `Need ${(priceCredits - balance).toFixed(2)} more`
-                        : 'Buy'}
-                    </Button>
-                  </span>
-                )}
-              />
-              <TooltipContent>
-                {balance !== undefined
-                  ? `Insufficient balance. You have ${balance.toFixed(2)} cr but need ${priceCredits.toFixed(2)} cr.`
-                  : 'Wallet balance not loaded.'}
-              </TooltipContent>
-            </Tooltip>
-          )}
+          <div className="flex items-center gap-1">
+            <AddToCollectionDropdown
+              assetType={collectionAssetType}
+              assetId={id}
+              assetName={name}
+            />
+            {canAfford ? (
+              <Button
+                size="sm"
+                variant="default"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onBuy(id);
+                }}
+              >
+                Buy
+              </Button>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger
+                  render={(props) => (
+                    <span {...props}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        {balance !== undefined
+                          ? `Need ${(priceCredits - balance).toFixed(2)} more`
+                          : 'Buy'}
+                      </Button>
+                    </span>
+                  )}
+                />
+                <TooltipContent>
+                  {balance !== undefined
+                    ? `Insufficient balance. You have ${balance.toFixed(2)} cr but need ${priceCredits.toFixed(2)} cr.`
+                    : 'Wallet balance not loaded.'}
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
         </div>
       </CardContent>
     </Card>

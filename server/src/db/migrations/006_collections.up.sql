@@ -21,5 +21,6 @@ CREATE TABLE IF NOT EXISTS collection_items (
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );
 
+CREATE UNIQUE INDEX idx_collection_items_unique ON collection_items(collection_id, asset_id);
 CREATE INDEX idx_collection_items_collection_id ON collection_items(collection_id);
 CREATE INDEX idx_collection_items_asset ON collection_items(asset_id);

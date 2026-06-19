@@ -17,6 +17,7 @@ import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { cn } from '@/lib/utils';
 import { MoreHorizontal, Copy, Trash2, Share2 } from 'lucide-react';
 import type { AssetCardType } from '@/components/AssetCard';
+import AddToCollectionDropdown from '@/components/AddToCollectionDropdown';
 
 interface AssetCardV2Props {
   id: string;
@@ -108,6 +109,8 @@ export default function AssetCardV2({
 }: AssetCardV2Props) {
   const navigate = useNavigate();
   const hasActions = onDuplicate || onDelete || onShare;
+
+  const apiAssetType = type === 'actor' ? 'ACTOR' : type === 'look' ? 'LOOK' : 'FASHION_ITEM';
   const mpBadge = marketplaceStatus ? marketplaceStatusBadge(marketplaceStatus) : null;
 
   return (
@@ -133,37 +136,37 @@ export default function AssetCardV2({
         <div className="flex items-start justify-between gap-2">
           <h3 className="truncate text-sm font-medium text-foreground">{name}</h3>
           {hasActions && (
-            <DropdownMenu>
-              <DropdownMenuTrigger
-                onClick={(e) => e.stopPropagation()}
-                className="shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100"
-              >
-                <MoreHorizontal className="size-4 text-muted-foreground" />
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-                {onDuplicate && (
-                  <DropdownMenuItem onClick={onDuplicate}>
-                    <Copy className="mr-2 size-4" />
-                    Duplicate
-                  </DropdownMenuItem>
-                )}
-                {onShare && (
-                  <DropdownMenuItem onClick={onShare}>
-                    <Share2 className="mr-2 size-4" />
-                    Share
-                  </DropdownMenuItem>
-                )}
-                {onDelete && (
-                  <>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={onDelete} variant="destructive">
-                      <Trash2 className="mr-2 size-4" />
-                      Delete
+            <div className="flex items-center gap-1 shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100">
+              <AddToCollectionDropdown assetType={apiAssetType} assetId={id} assetName={name} />
+              <DropdownMenu>
+                <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
+                  <MoreHorizontal className="size-4 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                  {onDuplicate && (
+                    <DropdownMenuItem onClick={onDuplicate}>
+                      <Copy className="mr-2 size-4" />
+                      Duplicate
                     </DropdownMenuItem>
-                  </>
-                )}
-              </DropdownMenuContent>
-            </DropdownMenu>
+                  )}
+                  {onShare && (
+                    <DropdownMenuItem onClick={onShare}>
+                      <Share2 className="mr-2 size-4" />
+                      Share
+                    </DropdownMenuItem>
+                  )}
+                  {onDelete && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={onDelete} variant="destructive">
+                        <Trash2 className="mr-2 size-4" />
+                        Delete
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           )}
         </div>
 
