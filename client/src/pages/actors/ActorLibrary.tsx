@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useActors } from '@/hooks/useActors';
+import { useMarketplaceStatuses } from '@/hooks/useMarketplaceStatuses';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
@@ -105,6 +106,7 @@ export default function ActorLibrary() {
   const { data, isLoading, isError, error } = useActors(
     queryFilters as Parameters<typeof useActors>[0],
   );
+  const { data: marketplaceStatuses } = useMarketplaceStatuses();
 
   const totalPages = data?.totalPages ?? 1;
 
@@ -219,6 +221,7 @@ export default function ActorLibrary() {
             imageUrl={actor.headshot_url}
             tags={extractTags(actor)}
             createdAt={actor.created_at}
+            marketplaceStatus={marketplaceStatuses?.[actor.id] ?? null}
           />
         )}
         emptyTitle="No actors yet"

@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useLooks } from '@/hooks/useLooks';
+import { useMarketplaceStatuses } from '@/hooks/useMarketplaceStatuses';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
@@ -122,6 +123,7 @@ export default function LookLibrary() {
   const { data, isLoading, isError, error } = useLooks(
     queryFilters as Parameters<typeof useLooks>[0],
   );
+  const { data: marketplaceStatuses } = useMarketplaceStatuses();
 
   const totalPages = data?.totalPages ?? 1;
 
@@ -236,6 +238,7 @@ export default function LookLibrary() {
             imageUrl={look.image_url}
             tags={extractTags(look)}
             createdAt={look.created_at}
+            marketplaceStatus={marketplaceStatuses?.[look.id] ?? null}
           />
         )}
         emptyTitle="No looks yet"

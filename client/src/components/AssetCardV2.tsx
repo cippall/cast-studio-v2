@@ -26,6 +26,12 @@ interface AssetCardV2Props {
   creatorName?: string;
   createdAt: string;
   status?: 'active' | 'archived' | 'pending' | 'draft';
+  marketplaceStatus?:
+    | 'MARKETPLACE_PENDING'
+    | 'MARKETPLACE_APPROVED'
+    | 'MARKETPLACE_REJECTED'
+    | 'MARKETPLACE_DELISTED'
+    | null;
   tags?: string[];
   onDuplicate?: () => void;
   onDelete?: () => void;
@@ -68,6 +74,24 @@ function statusVariant(status: string): string {
   }
 }
 
+function marketplaceStatusBadge(status: string): { label: string; classes: string } {
+  switch (status) {
+    case 'MARKETPLACE_PENDING':
+      return { label: 'Pending', classes: 'bg-info/10 text-info border border-info/20' };
+    case 'MARKETPLACE_APPROVED':
+      return { label: 'Listed', classes: 'bg-success/10 text-success border border-success/20' };
+    case 'MARKETPLACE_REJECTED':
+      return {
+        label: 'Rejected',
+        classes: 'bg-destructive/10 text-destructive border border-destructive/20',
+      };
+    case 'MARKETPLACE_DELISTED':
+      return { label: 'Delisted', classes: 'bg-muted text-muted-foreground border border-border' };
+    default:
+      return { label: status, classes: 'bg-muted text-muted-foreground border border-border' };
+  }
+}
+
 export default function AssetCardV2({
   id,
   name,
@@ -76,6 +100,7 @@ export default function AssetCardV2({
   creatorName,
   createdAt,
   status,
+  marketplaceStatus,
   tags,
   onDuplicate,
   onDelete,
@@ -83,6 +108,7 @@ export default function AssetCardV2({
 }: AssetCardV2Props) {
   const navigate = useNavigate();
   const hasActions = onDuplicate || onDelete || onShare;
+  const mpBadge = marketplaceStatus ? marketplaceStatusBadge(marketplaceStatus) : null;
 
   return (
     <Card
@@ -154,6 +180,16 @@ export default function AssetCardV2({
               )}
             >
               {status}
+            </span>
+          )}
+          {mpBadge && (
+            <span
+              className={cn(
+                'inline-flex h-5 items-center px-2 text-[10px] font-semibold uppercase',
+                mpBadge.classes,
+              )}
+            >
+              {mpBadge.label}
             </span>
           )}
         </div>

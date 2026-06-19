@@ -6,6 +6,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useFashionItems } from '@/hooks/useFashionItems';
+import { useMarketplaceStatuses } from '@/hooks/useMarketplaceStatuses';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
@@ -134,6 +135,7 @@ export default function FashionItemLibrary() {
   const { data, isLoading, isError, error } = useFashionItems(
     queryFilters as Parameters<typeof useFashionItems>[0],
   );
+  const { data: marketplaceStatuses } = useMarketplaceStatuses();
 
   const totalPages = data?.totalPages ?? 1;
 
@@ -248,6 +250,7 @@ export default function FashionItemLibrary() {
             imageUrl={item.image_url}
             tags={extractTags(item)}
             createdAt={item.created_at}
+            marketplaceStatus={marketplaceStatuses?.[item.id] ?? null}
           />
         )}
         emptyTitle="No fashion items yet"
