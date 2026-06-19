@@ -929,3 +929,429 @@ describe('POST /api/assets/:id/duplicate', () => {
     expect(res.body.error.code).toBe('VALIDATION_ERROR');
   });
 });
+
+// ================================================================
+// POST /api/actors/:id/generate
+// ================================================================
+describe('POST /api/actors/:id/generate', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('401 when not authenticated', async () => {
+    const res = await request(createRouteApp())
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+    expect(res.status).toBe(401);
+  });
+
+  it('422 when layout_type is missing', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({});
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('202 with minimal payload (layout_type only)', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCreditsForGeneration: findWallet (SELECT)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCreditsForGeneration: updateWalletBalance (UPDATE)
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-001', balance_credits: 9.95 }] } as any);
+    // reserveCreditsForGeneration: createLedgerEntry (INSERT)
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-001' }] } as any);
+    // createAssetOutput
+    const outputId = 'g0000000-0000-4000-8000-000000000001';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: outputId,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {},
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs).toHaveLength(1);
+    expect(res.body.outputs[0].layout_type).toBe('headshot');
+    expect(res.body.outputs[0].status).toBe('PENDING');
+  });
+
+  it('202 with form_data, reference_images, and randomize', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-002',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-002', balance_credits: 9.95 }] } as any);
+    // reserveCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-002' }] } as any);
+    // createAssetOutput
+    const outputId = 'g0000000-0000-4000-8000-000000000002';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: outputId,
+          asset_id: ACTOR_UUID,
+          layout_type: 'fullshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {
+            form_data: { age: 30, vibe: 'cyberpunk' },
+            reference_images: ['https://example.com/ref.png'],
+            seed: 42,
+          },
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({
+        layout_type: 'fullshot',
+        form_data: { age: 30, vibe: 'cyberpunk' },
+        reference_images: ['https://example.com/ref.png'],
+        randomize: true,
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs).toHaveLength(1);
+    expect(res.body.outputs[0].layout_type).toBe('fullshot');
+
+    // Verify generation_params were passed through to the INSERT (call index 6: 2 auth + 1 findAsset + 3 reserveCredits = calls[6] is createAssetOutput)
+    const insertCall = mockQuery.mock.calls[6] as [string, unknown[]];
+    // generation_params is stored as JSON string in the DB param
+    const genParamsRaw = insertCall[1][6];
+    const genParams =
+      typeof genParamsRaw === 'string'
+        ? JSON.parse(genParamsRaw)
+        : (genParamsRaw as Record<string, unknown>);
+    expect(genParams).toHaveProperty('form_data');
+    expect(genParams.form_data).toEqual({ age: 30, vibe: 'cyberpunk' });
+    expect(genParams).toHaveProperty('reference_images');
+    expect(genParams.reference_images).toEqual(['https://example.com/ref.png']);
+  });
+
+  it('202 with options.num_outputs > 1 creates multiple outputs', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-003',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-003', balance_credits: 9.85 }] } as any);
+    // reserveCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-003' }] } as any);
+    // createAssetOutput x3
+    for (let i = 0; i < 3; i++) {
+      mockQuery.mockResolvedValueOnce({
+        rows: [
+          {
+            id: `g0000000-0000-4000-8000-00000000001${i}`,
+            asset_id: ACTOR_UUID,
+            layout_type: 'headshot',
+            model: 'flux-pro',
+            status: 'PENDING',
+            cost_credits: 0.05,
+            version: 1,
+            generation_params: {},
+            created_at: '2026-06-19T12:00:00.000Z',
+          },
+        ],
+      } as any);
+    }
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({
+        layout_type: 'headshot',
+        options: { num_outputs: 3 },
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs).toHaveLength(3);
+  });
+});
+
+// ================================================================
+// POST /api/actors/:id/regenerate
+// ================================================================
+describe('POST /api/actors/:id/regenerate', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('401 when not authenticated', async () => {
+    const res = await request(createRouteApp())
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot' });
+    expect(res.status).toBe(401);
+  });
+
+  it('422 when layout_type is missing', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({});
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('202 with minimal payload (layout_type only)', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-004',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-004', balance_credits: 9.95 }] } as any);
+    // reserveCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-004' }] } as any);
+    // getAssetOutputs (find current outputs)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // markDownstreamObsolete (UPDATE for downstream layouts: fullshot, expressions_3x4, character_sheet, editorial)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // createAssetOutput
+    const outputId = 'g0000000-0000-4000-8000-000000000003';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: outputId,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {},
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs).toHaveLength(1);
+    expect(res.body.outputs[0].layout_type).toBe('headshot');
+    expect(res.body.outputs[0].status).toBe('PENDING');
+  });
+
+  it('202 with form_data, reference_images, and randomize', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-005',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-005', balance_credits: 9.95 }] } as any);
+    // reserveCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-005' }] } as any);
+    // getAssetOutputs (find current outputs)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // markDownstreamObsolete
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // createAssetOutput
+    const outputId = 'g0000000-0000-4000-8000-000000000004';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: outputId,
+          asset_id: ACTOR_UUID,
+          layout_type: 'fullshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {
+            form_data: { age: 25 },
+            reference_images: ['https://example.com/ref2.png'],
+            seed: 99,
+          },
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({
+        layout_type: 'fullshot',
+        form_data: { age: 25 },
+        reference_images: ['https://example.com/ref2.png'],
+        randomize: true,
+      });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs).toHaveLength(1);
+
+    // Verify generation_params were passed through to the INSERT
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=findWallet, [4]=updateWallet, [5]=ledger, [6]=getAssetOutputs, [7]=markObsolete, [8]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[8] as [string, unknown[]];
+    const genParamsRaw = insertCall[1][6];
+    const genParams =
+      typeof genParamsRaw === 'string'
+        ? JSON.parse(genParamsRaw)
+        : (genParamsRaw as Record<string, unknown>);
+    expect(genParams).toHaveProperty('form_data');
+    expect(genParams.form_data).toEqual({ age: 25 });
+    expect(genParams).toHaveProperty('reference_images');
+    expect(genParams.reference_images).toEqual(['https://example.com/ref2.png']);
+  });
+
+  it('202 with version increment when existing outputs exist', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    const existingOutput = makeAssetOutputRow({
+      layout_type: 'headshot',
+      version: 2,
+      status: 'SUCCESS',
+    });
+
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // reserveCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-006',
+          workspace_id: WORKSPACE_UUID,
+          account_id: artist.id,
+          balance_credits: 10,
+          updated_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    // reserveCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-006', balance_credits: 9.95 }] } as any);
+    // reserveCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-006' }] } as any);
+    // getAssetOutputs (returns existing output)
+    mockQuery.mockResolvedValueOnce({ rows: [existingOutput] } as any);
+    // archiveAssetOutput: SELECT current output
+    mockQuery.mockResolvedValueOnce({ rows: [existingOutput] } as any);
+    // archiveAssetOutput: INSERT into asset_output_versions
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'ver-001' }] } as any);
+    // markDownstreamObsolete
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // createAssetOutput with version 3
+    const outputId = 'g0000000-0000-4000-8000-000000000005';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: outputId,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 3,
+          generation_params: { version: 3 },
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createRouteApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+    expect(res.body.outputs[0].status).toBe('PENDING');
+
+    // Verify the new output has version 3
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=findWallet, [4]=updateWallet, [5]=ledger, [6]=getAssetOutputs, [7]=archiveSELECT, [8]=archiveINSERT, [9]=markObsolete, [10]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[10] as [string, unknown[]];
+    expect(insertCall[1]).toContain(3); // version param
+  });
+});

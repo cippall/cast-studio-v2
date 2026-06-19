@@ -41,6 +41,9 @@ const updateActorSchema = z.object({
 const generateSchema = z.object({
   layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4', 'character_sheet', 'editorial']),
   model: z.string().min(1).optional(),
+  form_data: z.record(z.string(), z.unknown()).optional(),
+  reference_images: z.array(z.string()).optional(),
+  randomize: z.boolean().optional(),
   options: z
     .object({
       num_outputs: z.number().int().min(1).max(10).optional(),
@@ -52,6 +55,9 @@ const generateSchema = z.object({
 const regenerateSchema = z.object({
   layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4']),
   model: z.string().min(1).optional(),
+  form_data: z.record(z.string(), z.unknown()).optional(),
+  reference_images: z.array(z.string()).optional(),
+  randomize: z.boolean().optional(),
   options: z
     .object({
       prompt: z.string().optional(),
@@ -317,6 +323,9 @@ router.post(
           model: parsed.data.model,
           num_outputs: parsed.data.options?.num_outputs,
           prompt: parsed.data.options?.prompt,
+          form_data: parsed.data.form_data,
+          reference_images: parsed.data.reference_images,
+          randomize: parsed.data.randomize,
         },
         adminBypass,
       );
@@ -371,6 +380,9 @@ router.post(
           layout_type: parsed.data.layout_type,
           model: parsed.data.model,
           prompt: parsed.data.options?.prompt,
+          form_data: parsed.data.form_data,
+          reference_images: parsed.data.reference_images,
+          randomize: parsed.data.randomize,
         },
         adminBypass,
       );

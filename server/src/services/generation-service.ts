@@ -26,6 +26,9 @@ export interface GenerateOptions {
   model?: string;
   num_outputs?: number;
   prompt?: string;
+  form_data?: Record<string, unknown>;
+  reference_images?: string[];
+  randomize?: boolean;
 }
 
 export interface GenerateResponse {
@@ -83,6 +86,29 @@ export async function generateActorOutput(
       ? JSON.stringify(asset.prompt_recipe.identity)
       : '';
 
+  // Determine seed: randomize generates a fresh random seed
+  const seed = options.randomize ? generateSeed() : (asset.seed ?? generateSeed());
+
+  // Build generation_params with all context
+  const generationParams: Record<string, unknown> = {
+    prompt,
+    seed,
+    model,
+    num_outputs: 1,
+    layout_type: options.layout_type,
+    image_size: '1024x1024',
+  };
+
+  // Include form_data for FORM mode
+  if (options.form_data) {
+    generationParams.form_data = options.form_data;
+  }
+
+  // Include reference_images for REFERENCE mode
+  if (options.reference_images) {
+    generationParams.reference_images = options.reference_images;
+  }
+
   // Reserve credits before generation
   const totalCost = DEFAULT_COST * numOutputs;
   const workspaceRow = {
@@ -114,17 +140,13 @@ export async function generateActorOutput(
     cost_credits: number;
   }> = [];
 
-  const baseSeed = generateSeed();
-
   for (let i = 0; i < numOutputs; i++) {
-    const seed = baseSeed + i;
-    const generationParams: Record<string, unknown> = {
-      seed,
-      prompt,
-      model,
-      num_outputs: 1,
-      layout_type: options.layout_type,
-      image_size: '1024x1024',
+    const outputSeed = seed + i;
+
+    // Clone per-output generation_params with unique seed
+    const outputGenerationParams: Record<string, unknown> = {
+      ...generationParams,
+      seed: outputSeed,
     };
 
     // Save to DB first
@@ -134,7 +156,7 @@ export async function generateActorOutput(
       model,
       status: 'PENDING',
       cost_credits: DEFAULT_COST,
-      generation_params: generationParams,
+      generation_params: outputGenerationParams,
     };
 
     const output = await createAssetOutput(input);
@@ -152,7 +174,7 @@ export async function generateActorOutput(
       await fal.submitTextToImage({
         model,
         prompt,
-        seed,
+        seed: outputSeed,
         num_outputs: 1,
         image_size: '1024x1024',
       });
@@ -194,6 +216,9 @@ export async function regenerateActorOutput(
     (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))
       ? JSON.stringify(asset.prompt_recipe.identity)
       : '';
+
+  // Determine seed: randomize generates a fresh random seed
+  const seed = options.randomize ? generateSeed() : (asset.seed ?? generateSeed());
 
   // Reserve credits before regeneration
   const workspaceRow = {
@@ -237,7 +262,6 @@ export async function regenerateActorOutput(
   await markDownstreamObsolete(assetId, asset.asset_type, layoutType, downstreamReason);
 
   // Create new output with version+1
-  const seed = generateSeed();
   const generationParams: Record<string, unknown> = {
     seed,
     prompt,
@@ -247,6 +271,16 @@ export async function regenerateActorOutput(
     image_size: '1024x1024',
     version: newVersion,
   };
+
+  // Include form_data for FORM mode
+  if (options.form_data) {
+    generationParams.form_data = options.form_data;
+  }
+
+  // Include reference_images for REFERENCE mode
+  if (options.reference_images) {
+    generationParams.reference_images = options.reference_images;
+  }
 
   const input: CreateAssetOutputInput = {
     asset_id: assetId,
