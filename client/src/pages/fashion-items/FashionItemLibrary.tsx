@@ -1,18 +1,23 @@
 /**
  * Fashion Item Library — grid of fashion item cards with filter panel and pagination.
  * Migrated to use LibraryLayout composite component.
+ * Clients see two sections: "My Assets" and "Similar in Marketplace".
  */
 import { useState, useMemo, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useFashionItems } from '@/hooks/useFashionItems';
 import { useMarketplaceStatuses } from '@/hooks/useMarketplaceStatuses';
+import { useMarketplace } from '@/hooks/useMarketplace';
+import type { MarketplaceListing } from '@/hooks/useMarketplace';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { FashionItemListItem } from '@cast/types';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Separator } from '@/components/ui/separator';
+import EmptyStateV2 from '@/components/EmptyStateV2';
 
 const FASHION_FILTER_GROUPS: FilterGroup[] = [
   {
@@ -137,7 +142,24 @@ export default function FashionItemLibrary() {
   );
   const { data: marketplaceStatuses } = useMarketplaceStatuses();
 
+  const { data: marketplaceData } = useMarketplace(
+    { listingType: 'FASHION_ITEM', pageSize: 20 },
+    { enabled: isClient },
+  );
+
   const totalPages = data?.totalPages ?? 1;
+
+  const ownedItemIds = useMemo(() => {
+    if (!data?.data) return new Set<string>();
+    return new Set(data.data.map((i) => i.id));
+  }, [data?.data]);
+
+  const marketplaceListings = useMemo(() => {
+    if (!marketplaceData?.data || !isClient) return [];
+    return marketplaceData.data.filter(
+      (listing) => listing.is_active && !ownedItemIds.has(listing.asset_id),
+    );
+  }, [marketplaceData?.data, isClient, ownedItemIds]);
 
   const handleFilterChange = useCallback(
     (key: string, values: string[]) => {
@@ -258,6 +280,34 @@ export default function FashionItemLibrary() {
         emptyActionLabel="New Item"
         emptyActionPath="/fashion-items/new"
       />
+
+      {isClient && (
+        <div className="mt-10">
+          <h2 className="text-lg font-semibold text-foreground">Similar in Marketplace</h2>
+          <Separator className="my-3" />
+          {marketplaceListings.length > 0 ? (
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {marketplaceListings.map((listing) => (
+                <AssetCardV2
+                  key={`mp-${listing.id}`}
+                  id={listing.asset_id}
+                  name={listing.asset.name}
+                  type="fashion-item"
+                  imageUrl={listing.asset.image_url}
+                  tags={[]}
+                  createdAt={listing.created_at}
+                  marketplaceStatus={null}
+                />
+              ))}
+            </div>
+          ) : (
+            <EmptyStateV2
+              title="No marketplace listings"
+              description="No fashion items are currently available in the marketplace."
+            />
+          )}
+        </div>
+      )}
     </PageContainer>
   );
 }

@@ -93,7 +93,7 @@ function buildMarketplaceQuery(filters: MarketplaceFilters): string {
   return params.toString();
 }
 
-export function useMarketplace(filters: MarketplaceFilters = {}) {
+export function useMarketplace(filters: MarketplaceFilters = {}, options?: { enabled?: boolean }) {
   return useQuery<PaginatedResponse<MarketplaceListing>>({
     queryKey: ['marketplace', filters],
     queryFn: async () => {
@@ -101,6 +101,7 @@ export function useMarketplace(filters: MarketplaceFilters = {}) {
       const { data } = await apiClient.get(`/marketplace?${qs}`);
       return data;
     },
+    enabled: options?.enabled ?? true,
   });
 }
 
