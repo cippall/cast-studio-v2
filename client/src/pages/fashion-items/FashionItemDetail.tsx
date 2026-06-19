@@ -15,6 +15,7 @@ import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
 import PageContainer from '@/components/layout/PageContainer';
+import { formatLabel } from '@/lib/utils';
 
 interface FashionItemOutput {
   id: string;
@@ -243,7 +244,7 @@ export default function FashionItemDetail() {
           value && (
             <div key={key} className="border p-4">
               <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {key}
+                {formatLabel(key)}
               </p>
               <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
             </div>

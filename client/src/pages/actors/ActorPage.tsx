@@ -31,7 +31,7 @@ import {
   Send,
   Sparkles,
 } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { cn, formatLabel } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
@@ -441,7 +441,7 @@ export default function ActorPage() {
               value && (
                 <div key={key} className="border p-4">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {key}
+                    {formatLabel(key)}
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
                 </div>
