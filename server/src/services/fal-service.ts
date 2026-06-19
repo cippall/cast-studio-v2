@@ -288,3 +288,108 @@ export async function imageToText(imageUrl: string, prompt: string): Promise<str
 
   return '';
 }
+
+// --- Model Discovery ---
+
+export interface FalModelSchema {
+  title: string;
+  type: string;
+  description?: string;
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+  enum?: string[];
+}
+
+export interface FalModel {
+  id: string;
+  name: string;
+  description: string;
+  category: 'text_to_image' | 'image_to_image' | 'image_to_text';
+  endpoint: string;
+  inputSchema?: Record<string, FalModelSchema>;
+  outputSchema?: Record<string, FalModelSchema>;
+}
+
+const FAL_REST_BASE = 'https://rest.fal.ai';
+
+/**
+ * Fetch available models from fal.ai REST API.
+ * Returns models grouped by category.
+ * The fal.ai REST endpoint /models returns all public models.
+ * We categorize them by inspecting the endpoint path and input/output schema.
+ */
+export async function fetchFalModels(apiKey: string): Promise<FalModel[]> {
+  // Fetch models from fal.ai REST API - filter by common generation categories
+  const categories = ['text-to-image', 'image-to-image', 'image-to-text'];
+
+  const allModels: FalModel[] = [];
+
+  for (const category of categories) {
+    try {
+      const response = await fetch(`${FAL_REST_BASE}/models?category=${category}&limit=50`, {
+        headers: {
+          Authorization: `Key ${apiKey}`,
+        },
+      });
+
+      if (!response.ok) {
+        continue;
+      }
+
+      const data = (await response.json()) as {
+        models?: Array<{
+          id: string;
+          name?: string;
+          description?: string;
+        }>;
+      };
+
+      if (data.models) {
+        for (const m of data.models) {
+          const modelId = m.id;
+          const categoryMap: Record<string, FalModel['category']> = {
+            'text-to-image': 'text_to_image',
+            'image-to-image': 'image_to_image',
+            'image-to-text': 'image_to_text',
+          };
+
+          // Fetch model schema for richer metadata
+          let inputSchema: Record<string, FalModelSchema> | undefined;
+          try {
+            const schemaRes = await fetch(`${FAL_REST_BASE}/${modelId}/schema`, {
+              headers: { Authorization: `Key ${apiKey}` },
+            });
+            if (schemaRes.ok) {
+              const schemaData = (await schemaRes.json()) as {
+                input?: { properties?: Record<string, FalModelSchema> };
+              };
+              inputSchema = schemaData.input?.properties;
+            }
+          } catch {
+            // Schema fetch is best-effort
+          }
+
+          allModels.push({
+            id: modelId,
+            name: m.name ?? modelId.split('/').pop() ?? modelId,
+            description: m.description ?? '',
+            category: categoryMap[category] ?? 'text_to_image',
+            endpoint: modelId,
+            inputSchema,
+          });
+        }
+      }
+    } catch {
+      // Category fetch is best-effort; continue with other categories
+    }
+  }
+
+  // Deduplicate by id
+  const seen = new Set<string>();
+  return allModels.filter((m) => {
+    if (seen.has(m.id)) return false;
+    seen.add(m.id);
+    return true;
+  });
+}

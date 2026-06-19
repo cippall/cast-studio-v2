@@ -188,6 +188,75 @@ router.get('/fal-key/status', async (req, res) => {
 });
 
 // -------------------------------------------------------------------
+// GET /api/admin/fal-models — browse available models from fal.ai
+// -------------------------------------------------------------------
+router.get('/fal-models', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const workspaceId = req.workspace?.id;
+    if (!workspaceId) {
+      res.status(400).json({
+        error: { code: 'BAD_REQUEST', message: 'Workspace not found' },
+      });
+      return;
+    }
+
+    // Import dynamically to avoid circular deps
+    const { getWorkspaceApiKey, fetchFalModels } = await import('../../services/fal-service.js');
+
+    const apiKey = await getWorkspaceApiKey(workspaceId);
+    if (!apiKey) {
+      res.status(400).json({
+        error: {
+          code: 'NO_API_KEY',
+          message: 'No fal.ai API key configured. Connect your key first.',
+        },
+      });
+      return;
+    }
+
+    const models = await fetchFalModels(apiKey);
+    res.json(models);
+  } catch (err) {
+    console.error('Fetch fal-models error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to fetch models from fal.ai' },
+    });
+  }
+});
+
+// -------------------------------------------------------------------
+// POST /api/admin/models/import — import a fal.ai model into local DB
+// -------------------------------------------------------------------
+router.post('/models/import', async (req, res) => {
+  try {
+    if (!requireAdmin(req, res)) return;
+    const { fal_model_id, name, description, category, parameters } = req.body;
+
+    if (!fal_model_id || !name || !category) {
+      res.status(422).json({
+        error: {
+          code: 'VALIDATION_ERROR',
+          message: 'fal_model_id, name, and category are required',
+        },
+      });
+      return;
+    }
+
+    const id = randomUUID();
+    const result = await query(
+      `INSERT INTO models (id, model_id, name, model_type, task, parameters, is_active, created_at)
+       VALUES ($1,$2,$3,$4,$5,true,NOW()) RETURNING *`,
+      [id, fal_model_id, name, category, category, JSON.stringify(parameters ?? { description })],
+    );
+    res.status(201).json(result.rows[0]);
+  } catch (err) {
+    console.error('Import model error:', err);
+    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to import model' } });
+  }
+});
+
+// -------------------------------------------------------------------
 // GET /api/admin/models — list all AI models
 // -------------------------------------------------------------------
 router.get('/models', async (req, res) => {

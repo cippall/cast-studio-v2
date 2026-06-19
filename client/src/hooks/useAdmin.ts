@@ -371,3 +371,44 @@ export function useDisconnectFalKey() {
     },
   });
 }
+
+/* -- fal.ai Model Browser -- */
+
+export interface FalModel {
+  id: string;
+  name: string;
+  description: string;
+  category: 'text_to_image' | 'image_to_image' | 'image_to_text';
+  endpoint: string;
+  inputSchema?: Record<string, { title: string; type: string; description?: string }>;
+}
+
+export function useFalModels() {
+  return useQuery<FalModel[]>({
+    queryKey: ['admin', 'fal-models'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/admin/fal-models');
+      return data;
+    },
+  });
+}
+
+export function useImportFalModel() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: {
+      fal_model_id: string;
+      name: string;
+      description: string;
+      category: string;
+      parameters?: Record<string, unknown>;
+    }) => {
+      const { data } = await apiClient.post('/admin/models/import', input);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
+    },
+  });
+}
