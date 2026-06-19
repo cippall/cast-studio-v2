@@ -33,6 +33,7 @@ import type { GenerationState } from '@/components/GenerationStatus';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
+import ActorFormFields from '@/components/ActorFormFields';
 
 type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT';
 type WizardStage = 1 | 2 | 3;
@@ -236,6 +237,68 @@ function ImageGrid({ options, selectedId, isStepConfirmed, onSelect }: ImageGrid
   );
 }
 
+/* -- Stage 2: Structured Form Panel (left side of split) -- */
+
+interface StructuredFormPanelProps {
+  formValues: Record<string, string>;
+  onFormValuesChange: (values: Record<string, string>) => void;
+  randomize: boolean;
+  onRandomizeChange: (value: boolean) => void;
+  onGenerate: () => void;
+  isGenerating: boolean;
+  hasImages: boolean;
+}
+
+function StructuredFormPanel({
+  formValues,
+  onFormValuesChange,
+  randomize,
+  onRandomizeChange,
+  onGenerate,
+  isGenerating,
+  hasImages,
+}: StructuredFormPanelProps) {
+  return (
+    <div className="flex flex-col">
+      <div className="flex-1 space-y-4">
+        <ActorFormFields values={formValues} onChange={onFormValuesChange} />
+      </div>
+
+      <div className="mt-6 space-y-4 border-t border-border-subtle pt-4">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="form-randomize"
+            checked={randomize}
+            onCheckedChange={(checked) => onRandomizeChange(checked === true)}
+          />
+          <Label htmlFor="form-randomize" className="cursor-pointer font-normal">
+            Randomize identity
+          </Label>
+        </div>
+
+        <Button onClick={onGenerate} disabled={isGenerating} className="w-full">
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Generating...
+            </>
+          ) : hasImages ? (
+            <>
+              <RotateCcw className="mr-2 size-4" />
+              Regenerate
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 size-4" />
+              Generate
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* -- Stage 3: Name & Properties Form -- */
 
 interface Stage3Props {
@@ -257,10 +320,6 @@ function Stage3({
   onSave,
   isSaving,
 }: Stage3Props) {
-  const updateField = (key: string, value: string) => {
-    onTaxonomyChange({ ...taxonomyValues, [key]: value });
-  };
-
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -273,34 +332,9 @@ function Stage3({
             placeholder="Cyberpunk Woman"
           />
         </div>
-
-        <div className="space-y-2">
-          <Label>Age</Label>
-          <Input
-            value={taxonomyValues.age ?? ''}
-            onChange={(e) => updateField('age', e.target.value)}
-            placeholder="25"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Gender</Label>
-          <Input
-            value={taxonomyValues.gender ?? ''}
-            onChange={(e) => updateField('gender', e.target.value)}
-            placeholder="Female"
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label>Vibe</Label>
-          <Input
-            value={taxonomyValues.vibe ?? ''}
-            onChange={(e) => updateField('vibe', e.target.value)}
-            placeholder="Cyberpunk"
-          />
-        </div>
       </div>
+
+      <ActorFormFields values={taxonomyValues} onChange={onTaxonomyChange} />
 
       <div className="flex items-center gap-3">
         <Button variant="outline" onClick={onBack}>
@@ -332,6 +366,9 @@ export default function ActorDesigner() {
   const [entryMethod, setEntryMethod] = useState<EntryMethod>('FORM');
   const [prompt, setPrompt] = useState('');
   const [randomize, setRandomize] = useState(false);
+
+  // Structured Form state — persists across step navigation
+  const [formValues, setFormValues] = useState<Record<string, string>>({});
 
   // Stage 2 state
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
@@ -370,7 +407,7 @@ export default function ActorDesigner() {
       const { data } = await apiClient.post('/actors', {
         entry_method: entryMethod,
         ...(entryMethod === 'TEXT' && { prompt }),
-        ...(entryMethod === 'FORM' && { form_data: {} }),
+        ...(entryMethod === 'FORM' && { form_data: formValues }),
         ...(randomize && { randomize: true }),
       });
       return data;
@@ -393,6 +430,8 @@ export default function ActorDesigner() {
       const { data } = await apiClient.post(`/actors/${actorId}/generate`, {
         layout_type: layoutType,
         options: { num_outputs: NUM_OPTIONS },
+        ...(entryMethod === 'FORM' && { form_data: formValues }),
+        ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
         id: string;
@@ -422,6 +461,8 @@ export default function ActorDesigner() {
       const { data } = await apiClient.post(`/actors/${actorId}/regenerate`, {
         layout_type: layoutType,
         options: { num_outputs: NUM_OPTIONS },
+        ...(entryMethod === 'FORM' && { form_data: formValues }),
+        ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
         id: string;
@@ -507,6 +548,9 @@ export default function ActorDesigner() {
   const hasGeneratedImages = currentOptions.some(
     (o) => o.imageUrl !== null || o.status !== 'PENDING',
   );
+
+  // Whether we are in Structured Form mode at Stage 2
+  const isStructuredForm = entryMethod === 'FORM' && stage === 2;
 
   return (
     <PageContainer>
@@ -599,44 +643,86 @@ export default function ActorDesigner() {
             />
           </div>
 
-          <ImageGrid
-            options={currentOptions}
-            selectedId={selectedOptionId}
-            isStepConfirmed={isStepConfirmed}
-            onSelect={handleSelectOption}
-          />
+          {/* Structured Form: split screen layout */}
+          {isStructuredForm ? (
+            <div className="flex flex-col gap-6 lg:flex-row">
+              {/* Left panel: form fields (1/3) */}
+              <div className="w-full lg:w-1/3">
+                <StructuredFormPanel
+                  formValues={formValues}
+                  onFormValuesChange={setFormValues}
+                  randomize={randomize}
+                  onRandomizeChange={setRandomize}
+                  onGenerate={handleGenerate}
+                  isGenerating={isGenerating}
+                  hasImages={hasGeneratedImages}
+                />
+              </div>
 
-          <div className="flex flex-wrap items-center gap-3">
-            {!hasGeneratedImages ? (
-              <Button onClick={handleGenerate} disabled={isGenerating}>
-                {isGenerating ? (
-                  <Loader2 className="mr-2 size-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 size-4" />
-                )}
-                Generate {currentStep.label}
-              </Button>
-            ) : (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={handleRegenerate}
-                  disabled={isGenerating || isStepConfirmed}
-                >
+              {/* Right panel: images (2/3) */}
+              <div className="w-full lg:w-2/3">
+                <ImageGrid
+                  options={currentOptions}
+                  selectedId={selectedOptionId}
+                  isStepConfirmed={isStepConfirmed}
+                  onSelect={handleSelectOption}
+                />
+              </div>
+            </div>
+          ) : (
+            /* Non-form modes: full-width image grid */
+            <ImageGrid
+              options={currentOptions}
+              selectedId={selectedOptionId}
+              isStepConfirmed={isStepConfirmed}
+              onSelect={handleSelectOption}
+            />
+          )}
+
+          {/* Bottom actions — for non-form modes, show generate/regenerate here */}
+          {!isStructuredForm && (
+            <div className="flex flex-wrap items-center gap-3">
+              {!hasGeneratedImages ? (
+                <Button onClick={handleGenerate} disabled={isGenerating}>
                   {isGenerating ? (
                     <Loader2 className="mr-2 size-4 animate-spin" />
                   ) : (
-                    <RotateCcw className="mr-2 size-4" />
+                    <Sparkles className="mr-2 size-4" />
                   )}
-                  Regenerate
+                  Generate {currentStep.label}
                 </Button>
-                <Button onClick={handleConfirmStep} disabled={!canConfirm}>
-                  Confirm Selection
-                  <ChevronRight className="ml-2 size-4" />
-                </Button>
-              </>
-            )}
-          </div>
+              ) : (
+                <>
+                  <Button
+                    variant="outline"
+                    onClick={handleRegenerate}
+                    disabled={isGenerating || isStepConfirmed}
+                  >
+                    {isGenerating ? (
+                      <Loader2 className="mr-2 size-4 animate-spin" />
+                    ) : (
+                      <RotateCcw className="mr-2 size-4" />
+                    )}
+                    Regenerate
+                  </Button>
+                  <Button onClick={handleConfirmStep} disabled={!canConfirm}>
+                    Confirm Selection
+                    <ChevronRight className="ml-2 size-4" />
+                  </Button>
+                </>
+              )}
+            </div>
+          )}
+
+          {/* For Structured Form: confirm button below the split */}
+          {isStructuredForm && hasGeneratedImages && (
+            <div className="flex justify-end">
+              <Button onClick={handleConfirmStep} disabled={!canConfirm}>
+                Confirm Selection
+                <ChevronRight className="ml-2 size-4" />
+              </Button>
+            </div>
+          )}
         </div>
       )}
 
