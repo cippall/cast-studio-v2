@@ -20,8 +20,8 @@ function Card({
       data-size={size}
       className={cn(
         'group/card flex flex-col gap-(--card-spacing) overflow-hidden border-0 bg-card py-(--card-spacing) text-sm text-card-foreground [--card-spacing:--spacing(4)] has-data-[slot=card-footer]:pb-0',
-        variant === 'default' && 'border border-border hover:border-border-medium',
-        variant === 'elevated' && 'bg-surface border border-border-medium',
+        variant === 'default' && 'border border-border hover:border-border',
+        variant === 'elevated' && 'bg-surface border border-border',
         'data-[size=sm]:[--card-spacing:--spacing(3)] data-[size=sm]:has-data-[slot=card-footer]:pb-0',
         className,
       )}

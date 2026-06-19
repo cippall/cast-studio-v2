@@ -87,7 +87,7 @@ export default function SettingsPage() {
       case 'api-keys':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/api-keys')}
           >
             <CardHeader>
@@ -108,7 +108,7 @@ export default function SettingsPage() {
       case 'wallet':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/wallet')}
           >
             <CardHeader>
@@ -129,7 +129,7 @@ export default function SettingsPage() {
       case 'users':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/users')}
           >
             <CardHeader>
@@ -150,7 +150,7 @@ export default function SettingsPage() {
       case 'models':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/models')}
           >
             <CardHeader>
@@ -171,7 +171,7 @@ export default function SettingsPage() {
       case 'prompts':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/prompts')}
           >
             <CardHeader>
@@ -192,7 +192,7 @@ export default function SettingsPage() {
       case 'taxonomy-actor':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/taxonomy/ACTOR_PROPERTY')}
           >
             <CardHeader>
@@ -213,7 +213,7 @@ export default function SettingsPage() {
       case 'taxonomy-look':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/taxonomy/LOOK_TAXONOMY')}
           >
             <CardHeader>
@@ -234,7 +234,7 @@ export default function SettingsPage() {
       case 'taxonomy-fashion':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/taxonomy/FASHION_ITEM_TAXONOMY')}
           >
             <CardHeader>
@@ -255,7 +255,7 @@ export default function SettingsPage() {
       case 'commission-forms':
         return (
           <Card
-            className="cursor-pointer border-border transition-colors hover:border-border-medium"
+            className="cursor-pointer border-border transition-colors hover:border-border"
             onClick={() => navigate('/settings/commission-forms')}
           >
             <CardHeader>

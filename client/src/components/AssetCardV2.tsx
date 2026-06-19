@@ -88,7 +88,7 @@ export default function AssetCardV2({
     <Card
       className={cn(
         'group/card cursor-pointer overflow-hidden transition-colors',
-        'hover:border-border-medium',
+        'hover:border-border',
       )}
       onClick={() => navigate(detailPath(type, id))}
     >

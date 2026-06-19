@@ -33,7 +33,7 @@ export default function ErrorState({
       <Button
         variant="outline"
         size="sm"
-        className="mt-4 border-border-medium hover:bg-surface"
+        className="mt-4 border-border hover:bg-surface"
         onClick={handleRetry}
       >
         <RefreshCw className="mr-2 size-4" />

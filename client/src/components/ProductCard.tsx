@@ -44,9 +44,7 @@ export default function ProductCard({
 
   return (
     <Card
-      className={cn(
-        'group cursor-pointer overflow-hidden transition-colors hover:border-border-medium',
-      )}
+      className={cn('group cursor-pointer overflow-hidden transition-colors hover:border-border')}
       onClick={() => navigate(`/marketplace/${id}`)}
     >
       <AspectRatio ratio={1} className="bg-muted">

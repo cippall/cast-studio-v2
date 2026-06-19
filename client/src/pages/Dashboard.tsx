@@ -33,7 +33,7 @@ export default function Dashboard() {
   const isAdmin = user?.role === 'ADMIN';
 
   const { data: wallet, isLoading: walletLoading, isError: walletError } = useWalletBalance();
-  const { data: stats, isLoading: statsLoading, isError: statsError } = useDashboardStats();
+  const { data: stats, isLoading: statsLoading } = useDashboardStats();
 
   const quickActions = [
     { label: 'New Actor', icon: User, path: '/actors/new' },
@@ -57,7 +57,7 @@ export default function Dashboard() {
             {quickActions.map((action) => (
               <Card
                 key={action.path}
-                className="cursor-pointer transition-colors hover:border-border-medium"
+                className="cursor-pointer transition-colors hover:border-border"
                 onClick={() => navigate(action.path)}
               >
                 <CardHeader className="flex flex-row items-center gap-3 pb-2">

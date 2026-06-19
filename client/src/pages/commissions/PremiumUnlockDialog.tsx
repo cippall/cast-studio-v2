@@ -59,20 +59,16 @@ export default function PremiumUnlockDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       {/* Full-screen on mobile, centered modal on desktop */}
-      <DialogContent className="max-h-full max-w-full gap-0 border-0 p-0 sm:max-h-[90vh] sm:max-w-lg sm:border sm:p-6">
-        {/* Header */}
-        <div className="flex-shrink-0 px-4 pt-4 sm:px-0 sm:pt-0">
-          <DialogHeader>
-            <DialogTitle>Approve & Unlock Commission</DialogTitle>
-            <DialogDescription>
-              Approving this commission will deduct the premium cost from your wallet and transfer
-              asset ownership to you.
-            </DialogDescription>
-          </DialogHeader>
-        </div>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Approve & Unlock Commission</DialogTitle>
+          <DialogDescription>
+            Approving this commission will deduct the premium cost from your wallet and transfer
+            asset ownership to you.
+          </DialogDescription>
+        </DialogHeader>
 
-        {/* Scrollable body */}
-        <div className="flex-1 overflow-y-auto px-4 py-4 sm:px-0 sm:py-0">
+        <div className="space-y-4">
           <div className="flex flex-col gap-4">
             {/* Cost breakdown */}
             <div className="border p-4">
@@ -126,26 +122,23 @@ export default function PremiumUnlockDialog({
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="flex-shrink-0 border-t px-4 py-3 sm:border-t-0 sm:px-0 sm:py-0 sm:pt-4">
-          <DialogFooter className="flex-col gap-2 sm:flex-row">
-            <Button
-              variant="outline"
-              onClick={() => onOpenChange(false)}
-              className="w-full sm:w-auto"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleApprove}
-              disabled={!hasSufficientBalance || updateStatus.isPending}
-              className="w-full sm:w-auto"
-            >
-              <CheckCircle className="mr-1 size-4" />
-              {updateStatus.isPending ? 'Processing...' : 'Approve & Unlock'}
-            </Button>
-          </DialogFooter>
-        </div>
+        <DialogFooter className="flex-col gap-2 sm:flex-row">
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            className="w-full sm:w-auto"
+          >
+            Cancel
+          </Button>
+          <Button
+            onClick={handleApprove}
+            disabled={!hasSufficientBalance || updateStatus.isPending}
+            className="w-full sm:w-auto"
+          >
+            <CheckCircle className="mr-1 size-4" />
+            {updateStatus.isPending ? 'Processing...' : 'Approve & Unlock'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
