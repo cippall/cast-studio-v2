@@ -24,7 +24,6 @@ import {
   Loader2,
   Check,
   RotateCcw,
-  Sparkles,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
@@ -334,13 +333,9 @@ function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
                 width={300}
                 height={300}
               />
-            ) : option.status === 'PENDING' ? (
-              <div className="flex size-full items-center justify-center">
-                <Loader2 className="size-8 animate-spin text-muted-foreground" />
-              </div>
             ) : (
-              <div className="flex size-full items-center justify-center">
-                <span className="text-sm text-muted-foreground">Failed</span>
+              <div className="flex size-full items-center justify-center p-4">
+                <GenerationStatus status={option.status} errorMessage={option.errorMessage} />
               </div>
             )}
             {selectedId === option.id && (
@@ -383,10 +378,24 @@ function Step2({
   const hasImages = options.some((o) => o.imageUrl !== null || o.status !== 'PENDING');
   const allPending = options.every((o) => o.status === 'PENDING');
 
+  const overallStatus: GenerationState = allPending
+    ? 'PENDING'
+    : options.some((o) => o.status === 'FAILED')
+      ? 'FAILED'
+      : 'SUCCESS';
+
   return (
     <div className="space-y-6">
       {hasImages && (
         <>
+          <div className="flex items-center justify-between">
+            <h2 className="text-lg font-semibold">Select Option</h2>
+            <GenerationStatus
+              status={overallStatus}
+              errorMessage={options.find((o) => o.status === 'FAILED')?.errorMessage}
+              onRetry={onRegenerate}
+            />
+          </div>
           <ImageGrid options={options} selectedId={selectedId} onSelect={onSelectOption} />
           <div className="flex gap-2">
             <Button variant="outline" onClick={onRegenerate} disabled={isRegenerating}>
@@ -403,8 +412,7 @@ function Step2({
 
       {allPending && (
         <div className="flex flex-col items-center gap-4 py-12">
-          <Loader2 className="size-8 animate-spin text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">Generating options...</p>
+          <GenerationStatus status="PENDING" />
         </div>
       )}
 
