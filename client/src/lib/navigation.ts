@@ -15,6 +15,7 @@ import {
   Cpu,
   FileText,
   ListTree,
+  Folder,
 } from 'lucide-react';
 
 export interface NavItem {
@@ -91,6 +92,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
   if (role === 'CLIENT') {
     return [
       ...baseItems,
+      { label: 'Collections', path: '/collections', icon: Folder },
       { label: 'Marketplace', path: '/marketplace', icon: ShoppingBag },
       { label: 'Commissions', path: '/commissions', icon: MessageSquare },
       {
@@ -108,6 +110,7 @@ export function getNavItems(role: Account['role']): NavItem[] {
   // Artist
   return [
     ...baseItems,
+    { label: 'Collections', path: '/collections', icon: Folder },
     { label: 'Marketplace', path: '/marketplace/manage', icon: ShoppingBag },
     { label: 'Commissions', path: '/commissions', icon: MessageSquare },
     {
