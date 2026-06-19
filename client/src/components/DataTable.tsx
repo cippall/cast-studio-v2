@@ -1,8 +1,5 @@
 /**
  * DataTable — reusable sortable, paginated table for admin/settings pages.
- * Desktop: table with sortable headers.
- * Mobile: card list (each row = card with label:value pairs).
- * Row actions via DropdownMenu.
  */
 import { useState, useMemo } from 'react';
 import {
@@ -13,13 +10,6 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
 import {
   Pagination,
   PaginationContent,
@@ -29,11 +19,12 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { Button } from '@/components/ui/button';
-import { MoreHorizontal } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import ErrorState from '@/components/ErrorState';
-import { cn } from '@/lib/utils';
+import RowDropdown from '@/components/RowDropdown';
+import LoadingStateTable from '@/components/LoadingStateTable';
+import { getSortValue, getPaginationRange } from '@/components/data-table-helpers';
 
 export interface Column<T> {
   key: string;
@@ -92,7 +83,6 @@ export function DataTable<T extends { id: string }>({
     if (!activeSortKey) return data;
     const col = columns.find((c) => c.key === activeSortKey);
     if (!col) return data;
-
     const sorted = [...data].sort((a, b) => {
       const aVal = getSortValue(a, col);
       const bVal = getSortValue(b, col);
@@ -101,21 +91,18 @@ export function DataTable<T extends { id: string }>({
       return 0;
     });
     return sorted;
-  }, [data, activeSortKey, activeSortDir, columns, activeSortDir]); // eslint-disable-line
+  }, [data, activeSortKey, activeSortDir, columns]);
 
   const handleSort = (key: string) => {
     const col = columns.find((c) => c.key === key);
     if (!col?.sortable) return;
-
     if (onSort) {
       onSort(key);
+    } else if (clientSortKey === key) {
+      setClientSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
     } else {
-      if (clientSortKey === key) {
-        setClientSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-      } else {
-        setClientSortKey(key);
-        setClientSortDir('asc');
-      }
+      setClientSortKey(key);
+      setClientSortDir('asc');
     }
   };
 
@@ -127,24 +114,12 @@ export function DataTable<T extends { id: string }>({
     return columns[0]?.render(row) ?? row.id;
   };
 
-  // Loading state
-  if (isLoading) {
-    return <LoadingStateTable columns={columns} rowCount={loadingRowCount} />;
-  }
-
-  // Error state
-  if (isError) {
-    return <ErrorState message={error?.message} />;
-  }
-
-  // Empty state
-  if (data.length === 0) {
-    return <EmptyStateV2 title={emptyTitle} description={emptyDescription} />;
-  }
+  if (isLoading) return <LoadingStateTable columns={columns} rowCount={loadingRowCount} />;
+  if (isError) return <ErrorState message={error?.message} />;
+  if (data.length === 0) return <EmptyStateV2 title={emptyTitle} description={emptyDescription} />;
 
   return (
     <div className="flex flex-col gap-4">
-      {/* Desktop table */}
       <div className="hidden md:block">
         <Table>
           <TableHeader>
@@ -189,7 +164,6 @@ export function DataTable<T extends { id: string }>({
         </Table>
       </div>
 
-      {/* Mobile card list */}
       <div className="flex flex-col gap-3 md:hidden">
         {sortedData.map((row) => (
           <div
@@ -221,7 +195,6 @@ export function DataTable<T extends { id: string }>({
         ))}
       </div>
 
-      {/* Pagination */}
       {totalPages > 1 && onPageChange && (
         <Pagination>
           <PaginationContent>
@@ -255,117 +228,4 @@ export function DataTable<T extends { id: string }>({
       )}
     </div>
   );
-}
-
-/* -- Row dropdown menu -- */
-
-interface RowDropdownProps {
-  actions: React.ReactNode[];
-}
-
-function RowDropdown({ actions }: RowDropdownProps) {
-  if (actions.length === 0) return null;
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger>
-        <Button variant="ghost" size="sm" className="size-8 p-0">
-          <MoreHorizontal className="size-4" />
-          <span className="sr-only">Open menu</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        {actions.map((action, i) => (
-          <DropdownMenuItem key={i}>{action}</DropdownMenuItem>
-        ))}
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/* -- Loading skeleton -- */
-
-interface LoadingStateProps<T extends { id: string }> {
-  columns: Column<T>[];
-  rowCount: number;
-}
-
-function LoadingStateTable<T extends { id: string }>({ columns, rowCount }: LoadingStateProps<T>) {
-  return (
-    <div>
-      <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead key={col.key}>{col.header}</TableHead>
-              ))}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {Array.from({ length: rowCount }).map((_, i) => (
-              <TableRow key={i}>
-                {columns.map((col) => (
-                  <TableCell key={col.key}>
-                    <Skeleton className="h-6 w-24" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
-      <div className="flex flex-col gap-3 md:hidden">
-        {Array.from({ length: rowCount }).map((_, i) => (
-          <div key={i} className="border border-border p-4">
-            <Skeleton className="mb-3 h-5 w-32" />
-            {columns.slice(1).map((col, j) => (
-              <div key={j} className="flex items-center justify-between py-1">
-                <Skeleton className="h-4 w-20" />
-                <Skeleton className="h-4 w-24" />
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-/* -- Helpers -- */
-
-function getSortValue<T extends { id: string }>(row: T, col: Column<T>): string {
-  if (col.sortValue) {
-    return String(col.sortValue(row));
-  }
-  const rendered = col.render(row);
-  if (typeof rendered === 'string' || typeof rendered === 'number') {
-    return String(rendered);
-  }
-  const rowRec = row as unknown as Record<string, unknown>;
-  if (col.key in rowRec) {
-    return String(rowRec[col.key] ?? '');
-  }
-  return '';
-}
-
-function getPaginationRange(current: number, total: number): number[] {
-  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
-
-  const range: number[] = [];
-  if (current <= 4) {
-    for (let i = 1; i <= 5; i++) range.push(i);
-    range.push(-1);
-    range.push(total);
-  } else if (current >= total - 3) {
-    range.push(1);
-    range.push(-1);
-    for (let i = total - 4; i <= total; i++) range.push(i);
-  } else {
-    range.push(1);
-    range.push(-1);
-    for (let i = current - 1; i <= current + 1; i++) range.push(i);
-    range.push(-1);
-    range.push(total);
-  }
-  return range;
 }

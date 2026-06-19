@@ -6,368 +6,42 @@
 import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { AlertCircle } from 'lucide-react';
 import apiClient from '@/lib/api-client';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Textarea } from '@/components/ui/textarea';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  AlertCircle,
-  FileText,
-  ImageIcon,
-  ChevronRight,
-  ChevronLeft,
-  Loader2,
-  Check,
-  RotateCcw,
-} from 'lucide-react';
-import { cn } from '@/lib/utils';
-import GenerationStatus from '@/components/GenerationStatus';
-import type { GenerationState } from '@/components/GenerationStatus';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import type { GenerationState } from '@/components/GenerationStatus';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
-
-type EntryMethod = 'PROMPT' | 'REFERENCE';
-type WizardStep = 1 | 2;
-
-interface GeneratedOption {
-  id: string;
-  imageUrl: string | null;
-  status: GenerationState;
-  errorMessage?: string | null;
-}
-
-const NUM_OPTIONS = 4;
-
-const ENTRY_METHODS = [
-  {
-    value: 'PROMPT' as EntryMethod,
-    icon: FileText,
-    title: 'Prompt',
-    desc: 'Describe the fashion item in your own words.',
-  },
-  {
-    value: 'REFERENCE' as EntryMethod,
-    icon: ImageIcon,
-    title: 'Reference',
-    desc: 'Upload a photo. Vision model extracts the item.',
-  },
-];
-
-function createEmptyOptions(count: number): GeneratedOption[] {
-  return Array.from({ length: count }, (_, i) => ({
-    id: `opt-${i}-${Date.now()}`,
-    imageUrl: null,
-    status: 'PENDING' as GenerationState,
-  }));
-}
-
-/* -- Step 1: Input Method Selection -- */
-
-interface Step1Props {
-  entryMethod: EntryMethod;
-  onSelect: (method: EntryMethod) => void;
-  prompt: string;
-  onPromptChange: (value: string) => void;
-  referenceImage: string | null;
-  onReferenceImageChange: (value: string | null) => void;
-  onGenerate: () => void;
-  isGenerating: boolean;
-}
-
-function Step1({
-  entryMethod,
-  onSelect,
-  prompt,
-  onPromptChange,
-  referenceImage,
-  onReferenceImageChange,
-  onGenerate,
-  isGenerating,
-}: Step1Props) {
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = () => {
-      onReferenceImageChange(reader.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const canGenerate = entryMethod === 'PROMPT' ? prompt.trim().length > 0 : referenceImage !== null;
-
-  return (
-    <div className="space-y-6">
-      <RadioGroup
-        value={entryMethod}
-        onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-2"
-      >
-        {ENTRY_METHODS.map((method) => (
-          <Label
-            key={method.value}
-            htmlFor={`method-${method.value}`}
-            className={cn(
-              'flex cursor-pointer flex-col gap-3 border p-6 transition-colors',
-              entryMethod === method.value ? 'border-primary bg-primary/5' : 'hover:bg-muted/50',
-            )}
-          >
-            <RadioGroupItem
-              value={method.value}
-              id={`method-${method.value}`}
-              className="sr-only"
-            />
-            <method.icon className="size-8 text-muted-foreground" />
-            <div>
-              <p className="font-semibold">{method.title}</p>
-              <p className="mt-1 text-sm text-muted-foreground">{method.desc}</p>
-            </div>
-          </Label>
-        ))}
-      </RadioGroup>
-
-      {entryMethod === 'PROMPT' && (
-        <div className="space-y-2">
-          <Label htmlFor="prompt">Describe the fashion item</Label>
-          <Textarea
-            id="prompt"
-            value={prompt}
-            onChange={(e) => onPromptChange(e.target.value)}
-            placeholder="Black leather jacket, product photography, white background..."
-            rows={4}
-          />
-        </div>
-      )}
-
-      {entryMethod === 'REFERENCE' && (
-        <div className="space-y-2">
-          <Label htmlFor="reference-upload">Reference Image</Label>
-          <input
-            id="reference-upload"
-            type="file"
-            accept="image/*"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-muted-foreground file:mr-4 file:border-0 file:bg-primary file:px-4 file:py-2 file:text-sm file:font-semibold file:text-primary-foreground hover:file:bg-primary/90"
-          />
-          {referenceImage && (
-            <img
-              src={referenceImage}
-              alt="Reference"
-              className="mt-4 h-32 w-32 object-cover"
-              width={128}
-              height={128}
-            />
-          )}
-        </div>
-      )}
-
-      <div className="flex justify-end">
-        <Button onClick={onGenerate} disabled={isGenerating || !canGenerate}>
-          {isGenerating ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Generating...
-            </>
-          ) : (
-            <>
-              Generate Item
-              <ChevronRight className="ml-2 size-4" />
-            </>
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* -- Step 2: Image Grid + Name & Save -- */
-
-interface ImageGridProps {
-  options: GeneratedOption[];
-  selectedId: string | null;
-  onSelect: (id: string) => void;
-}
-
-function ImageGrid({ options, selectedId, onSelect }: ImageGridProps) {
-  return (
-    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4 lg:gap-4">
-      {options.map((option) => (
-        <Card
-          key={option.id}
-          className={cn(
-            'cursor-pointer overflow-hidden transition-all',
-            selectedId === option.id && 'ring-2 ring-primary',
-            option.status === 'PENDING' && 'animate-pulse',
-          )}
-          onClick={() => {
-            if (option.status === 'SUCCESS') {
-              onSelect(option.id);
-            }
-          }}
-        >
-          <div className="relative aspect-square bg-muted">
-            {option.imageUrl ? (
-              <img
-                src={option.imageUrl}
-                alt="Generated option"
-                className="size-full object-cover"
-                width={300}
-                height={300}
-              />
-            ) : (
-              <div className="flex size-full items-center justify-center p-4">
-                <GenerationStatus status={option.status} errorMessage={option.errorMessage} />
-              </div>
-            )}
-            {selectedId === option.id && (
-              <div className="absolute inset-0 flex items-center justify-center bg-primary/20">
-                <Check className="size-8 text-primary" />
-              </div>
-            )}
-          </div>
-        </Card>
-      ))}
-    </div>
-  );
-}
-
-interface Step2Props {
-  options: GeneratedOption[];
-  selectedId: string | null;
-  onSelectOption: (id: string) => void;
-  itemName: string;
-  onNameChange: (value: string) => void;
-  onBack: () => void;
-  onRegenerate: () => void;
-  onSave: () => void;
-  isSaving: boolean;
-  isRegenerating: boolean;
-}
-
-function Step2({
-  options,
-  selectedId,
-  onSelectOption,
-  itemName,
-  onNameChange,
-  onBack,
-  onRegenerate,
-  onSave,
-  isSaving,
-  isRegenerating,
-}: Step2Props) {
-  const hasImages = options.some((o) => o.imageUrl !== null || o.status !== 'PENDING');
-  const allPending = options.every((o) => o.status === 'PENDING');
-
-  const overallStatus: GenerationState = allPending
-    ? 'PENDING'
-    : options.some((o) => o.status === 'FAILED')
-      ? 'FAILED'
-      : 'SUCCESS';
-
-  return (
-    <div className="space-y-6">
-      {hasImages && (
-        <>
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Select Option</h2>
-            <GenerationStatus
-              status={overallStatus}
-              errorMessage={options.find((o) => o.status === 'FAILED')?.errorMessage}
-              onRetry={onRegenerate}
-            />
-          </div>
-          <ImageGrid options={options} selectedId={selectedId} onSelect={onSelectOption} />
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={onRegenerate} disabled={isRegenerating}>
-              {isRegenerating ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <RotateCcw className="mr-2 size-4" />
-              )}
-              Regenerate
-            </Button>
-          </div>
-        </>
-      )}
-
-      {allPending && (
-        <div className="flex flex-col items-center gap-4 py-12">
-          <GenerationStatus status="PENDING" />
-        </div>
-      )}
-
-      <div className="space-y-2">
-        <Label htmlFor="item-name">Item Name</Label>
-        <Input
-          id="item-name"
-          value={itemName}
-          onChange={(e) => onNameChange(e.target.value)}
-          placeholder="Black Leather Jacket"
-        />
-      </div>
-
-      <div className="flex items-center gap-3">
-        <Button variant="outline" onClick={onBack}>
-          <ChevronLeft className="mr-2 size-4" />
-          Back
-        </Button>
-        <Button onClick={onSave} disabled={isSaving || !selectedId || !itemName.trim()}>
-          {isSaving ? (
-            <>
-              <Loader2 className="mr-2 size-4 animate-spin" />
-              Saving...
-            </>
-          ) : (
-            'Save Item'
-          )}
-        </Button>
-      </div>
-    </div>
-  );
-}
-
-/* -- Main Component -- */
+import type { FashionEntryMethod, FashionGeneratedOption } from './fashion-creator-types';
+import FashionItemCreatorStep1 from './FashionItemCreatorStep1';
+import FashionItemCreatorStep2 from './FashionItemCreatorStep2';
 
 export default function FashionItemCreator() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const [createError, setCreateError] = useState<string | null>(null);
-
-  const [step, setStep] = useState<WizardStep>(1);
-  const [entryMethod, setEntryMethod] = useState<EntryMethod>('PROMPT');
+  const [step, setStep] = useState<1 | 2>(1);
+  const [entryMethod, setEntryMethod] = useState<FashionEntryMethod>('PROMPT');
   const [prompt, setPrompt] = useState('');
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
 
-  // Step 2 state
   const [itemId, setItemId] = useState<string | null>(null);
-  const [options, setOptions] = useState<GeneratedOption[]>([]);
+  const [options, setOptions] = useState<FashionGeneratedOption[]>([]);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [itemName, setItemName] = useState('');
 
-  // Dirty detection for Step 2 — guard when user has selected or named something
   const isStep2Dirty = useMemo(
     () => step === 2 && (selectedOptionId !== null || itemName.trim().length > 0),
     [step, selectedOptionId, itemName],
   );
   useUnsavedChanges(isStep2Dirty);
 
-  // Create fashion item mutation
   const createItemMutation = useMutation({
     mutationFn: async () => {
-      const body: Record<string, unknown> = {
-        entry_method: entryMethod,
-      };
-      if (entryMethod === 'PROMPT') {
-        body.prompt = prompt;
-      } else if (entryMethod === 'REFERENCE') {
-        body.reference_image = referenceImage;
-      }
+      const body: Record<string, unknown> = { entry_method: entryMethod };
+      if (entryMethod === 'PROMPT') body.prompt = prompt;
+      else if (entryMethod === 'REFERENCE') body.reference_image = referenceImage;
       const { data } = await apiClient.post('/fashion-items', body);
       return data;
     },
@@ -397,7 +71,6 @@ export default function FashionItemCreator() {
     },
   });
 
-  // Regenerate mutation
   const regenerateMutation = useMutation({
     mutationFn: async () => {
       if (!itemId) return [];
@@ -424,7 +97,6 @@ export default function FashionItemCreator() {
     },
   });
 
-  // Save mutation
   const saveItemMutation = useMutation({
     mutationFn: async () => {
       await apiClient.patch(`/fashion-items/${itemId}`, {
@@ -441,11 +113,9 @@ export default function FashionItemCreator() {
   const handleGenerate = useCallback(() => {
     createItemMutation.mutate();
   }, [createItemMutation]);
-
   const handleRegenerate = useCallback(() => {
     regenerateMutation.mutate();
   }, [regenerateMutation]);
-
   const handleSave = useCallback(() => {
     saveItemMutation.mutate();
   }, [saveItemMutation]);
@@ -469,7 +139,7 @@ export default function FashionItemCreator() {
       )}
 
       {step === 1 && (
-        <Step1
+        <FashionItemCreatorStep1
           entryMethod={entryMethod}
           onSelect={setEntryMethod}
           prompt={prompt}
@@ -482,7 +152,7 @@ export default function FashionItemCreator() {
       )}
 
       {step === 2 && (
-        <Step2
+        <FashionItemCreatorStep2
           options={options}
           selectedId={selectedOptionId}
           onSelectOption={setSelectedOptionId}

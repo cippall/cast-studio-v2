@@ -1,7 +1,5 @@
 /**
  * AssetCardV2 — richer library card with consistent metadata.
- * Uses AspectRatio for image, shows name/type/creator/date/status,
- * hover border change (no shadow), optional DropdownMenu actions.
  */
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
@@ -18,6 +16,13 @@ import { cn } from '@/lib/utils';
 import { MoreHorizontal, Copy, Trash2, Share2 } from 'lucide-react';
 import type { AssetCardType } from '@/components/AssetCard';
 import AddToCollectionDropdown from '@/components/AddToCollectionDropdown';
+import {
+  formatDate,
+  detailPath,
+  typeLabel,
+  statusVariant,
+  marketplaceStatusBadge,
+} from './asset-card-helpers';
 
 interface AssetCardV2Props {
   id: string;
@@ -39,60 +44,6 @@ interface AssetCardV2Props {
   onShare?: () => void;
 }
 
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-}
-
-function detailPath(type: AssetCardType, id: string): string {
-  if (type === 'actor') return `/actors/${id}`;
-  if (type === 'look') return `/looks/${id}`;
-  return `/fashion-items/${id}`;
-}
-
-function typeLabel(type: AssetCardType): string {
-  if (type === 'actor') return 'Actor';
-  if (type === 'look') return 'Look';
-  return 'Fashion Item';
-}
-
-function statusVariant(status: string): string {
-  switch (status) {
-    case 'active':
-      return 'bg-success/10 text-success border border-success/20';
-    case 'archived':
-      return 'bg-muted text-muted-foreground border border-border';
-    case 'pending':
-      return 'bg-warning/10 text-warning border border-warning/20';
-    case 'draft':
-      return 'bg-muted text-muted-foreground border border-border';
-    default:
-      return '';
-  }
-}
-
-function marketplaceStatusBadge(status: string): { label: string; classes: string } {
-  switch (status) {
-    case 'MARKETPLACE_PENDING':
-      return { label: 'Pending', classes: 'bg-info/10 text-info border border-info/20' };
-    case 'MARKETPLACE_APPROVED':
-      return { label: 'Listed', classes: 'bg-success/10 text-success border border-success/20' };
-    case 'MARKETPLACE_REJECTED':
-      return {
-        label: 'Rejected',
-        classes: 'bg-destructive/10 text-destructive border border-destructive/20',
-      };
-    case 'MARKETPLACE_DELISTED':
-      return { label: 'Delisted', classes: 'bg-muted text-muted-foreground border border-border' };
-    default:
-      return { label: status, classes: 'bg-muted text-muted-foreground border border-border' };
-  }
-}
-
 export default function AssetCardV2({
   id,
   name,
@@ -109,7 +60,6 @@ export default function AssetCardV2({
 }: AssetCardV2Props) {
   const navigate = useNavigate();
   const hasActions = onDuplicate || onDelete || onShare;
-
   const apiAssetType = type === 'actor' ? 'ACTOR' : type === 'look' ? 'LOOK' : 'FASHION_ITEM';
   const mpBadge = marketplaceStatus ? marketplaceStatusBadge(marketplaceStatus) : null;
 
@@ -132,7 +82,6 @@ export default function AssetCardV2({
       </AspectRatio>
 
       <CardContent className="p-3">
-        {/* Name + actions row */}
         <div className="flex items-start justify-between gap-2">
           <h3 className="truncate text-sm font-medium text-foreground">{name}</h3>
           {hasActions && (
@@ -170,7 +119,6 @@ export default function AssetCardV2({
           )}
         </div>
 
-        {/* Type + status badges */}
         <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
           <Badge variant="secondary" className="text-[10px] font-medium">
             {typeLabel(type)}
@@ -197,7 +145,6 @@ export default function AssetCardV2({
           )}
         </div>
 
-        {/* Tags */}
         {tags && tags.length > 0 && (
           <div className="mt-1.5 flex flex-wrap gap-1">
             {tags.slice(0, 2).map((tag) => (
@@ -213,7 +160,6 @@ export default function AssetCardV2({
           </div>
         )}
 
-        {/* Creator + date */}
         <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
           {creatorName && (
             <>
