@@ -172,3 +172,14 @@ export interface DashboardStats {
   activeMembers: number;
   pendingCommissions: number;
 }
+
+export type ActivityActionType = 'Created' | 'Generated' | 'Shared';
+
+export interface ActivityFeedItem {
+  id: string;
+  asset_type: 'ACTOR' | 'LOOK' | 'FASHION_ITEM';
+  asset_name: string;
+  thumbnail_url: string | null;
+  action: ActivityActionType;
+  created_at: string;
+}

@@ -27,6 +27,7 @@ import marketplaceRouter from './routes/marketplace.js';
 import adminMarketplaceRouter from './routes/admin/marketplace.js';
 import adminRouter from './routes/admin/admin.js';
 import agentMarketplaceRouter from './routes/agent/marketplace.js';
+import activityRouter from './routes/activity.js';
 import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
@@ -90,6 +91,7 @@ app.use('/api/marketplace', marketplaceRouter);
 app.use('/api/admin/marketplace', adminMarketplaceRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/agent/marketplace', agentMarketplaceRouter);
+app.use('/api', activityRouter);
 
 // Dashboard stats (admin only)
 app.get('/api/dashboard', requireSession, async (req, res) => {
@@ -102,8 +104,10 @@ app.get('/api/dashboard', requireSession, async (req, res) => {
       query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'ACTOR'"),
       query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'LOOK'"),
       query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'FASHION_ITEM'"),
-      query("SELECT COUNT(*)::int AS count FROM accounts"),
-      query("SELECT COUNT(*)::int AS count FROM commissions WHERE status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')"),
+      query('SELECT COUNT(*)::int AS count FROM accounts'),
+      query(
+        "SELECT COUNT(*)::int AS count FROM commissions WHERE status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')",
+      ),
     ]);
     res.json({
       totalActors: actors.rows[0]?.count ?? 0,
@@ -114,7 +118,9 @@ app.get('/api/dashboard', requireSession, async (req, res) => {
     });
   } catch (err) {
     console.error('Dashboard error:', err);
-    res.status(500).json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load dashboard' } });
+    res
+      .status(500)
+      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load dashboard' } });
   }
 });
 
