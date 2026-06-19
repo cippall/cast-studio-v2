@@ -49,8 +49,12 @@
     /* Semantic Colors */
     --success: #65a30d;
     --warning: #ca8a04;
+    --warning-foreground: #1c1917;
     --error: #dc2626;
     --info: #78716c;
+
+    /* Notification Accent */
+    --notification-accent: #ca8a04;
 
     /* Component Tokens */
     --card: #fafaf9;
@@ -119,6 +123,9 @@
     --accent-foreground: #f5f5f4;
     --destructive: #dc2626;
     --destructive-foreground: #fafaf9;
+
+    --warning-foreground: #1c1917;
+    --notification-accent: #ca8a04;
 
     --border: #44403c;
     --border-medium: #57534e;

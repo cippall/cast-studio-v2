@@ -47,7 +47,7 @@ export default function NotificationDropdown() {
           <Button variant="ghost" size="icon" className="relative" aria-label="Notifications">
             <Bell className="size-5" />
             {unread > 0 && (
-              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center bg-primary text-[10px] font-bold text-primary-foreground">
+              <span className="absolute -right-0.5 -top-0.5 flex size-4 items-center justify-center bg-warning text-[10px] font-bold text-warning-foreground">
                 {unread > 9 ? '9+' : unread}
               </span>
             )}
@@ -100,7 +100,7 @@ export default function NotificationDropdown() {
                   }}
                 >
                   <div className="flex items-start gap-2">
-                    {!notif.is_read && <span className="mt-1.5 size-2 shrink-0 bg-primary" />}
+                    {!notif.is_read && <span className="mt-1.5 size-2 shrink-0 bg-warning" />}
                     <div className={cn('flex-1', notif.is_read && 'pl-4')}>
                       <p className="text-sm font-medium">{notif.title}</p>
                       <p className="line-clamp-2 text-xs text-muted-foreground">{notif.message}</p>
