@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/dialog';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -85,10 +86,21 @@ export default function ModelsPage() {
     <PageContainer>
       <div className="flex flex-col gap-6">
         <PageHeader title="Models" description="Configure AI models for generation tasks">
-          <Button disabled>
-            <Plus className="mr-2 size-4" />
-            Add Model
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex">
+                  <Button disabled>
+                    <Plus className="mr-2 size-4" />
+                    Add Model
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Coming Soon</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </PageHeader>
 
         <DataTable<ModelConfig>

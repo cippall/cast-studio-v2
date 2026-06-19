@@ -21,6 +21,7 @@ import {
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { Loader2, Plus, Settings2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -45,10 +46,21 @@ export default function CommissionFormsPage() {
     <PageContainer>
       <div className="flex flex-col gap-6">
         <PageHeader title="Commission Forms" description="Manage commission form templates">
-          <Button disabled>
-            <Plus className="mr-2 size-4" />
-            New Form
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger>
+                <span className="inline-flex">
+                  <Button disabled>
+                    <Plus className="mr-2 size-4" />
+                    New Form
+                  </Button>
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>Coming Soon</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </PageHeader>
 
         {isLoading ? (
