@@ -436,7 +436,9 @@ describe('POST /api/collections/:id/items', () => {
     seedAuthQueries(user, ws);
     // First query: findCollectionById to verify ownership
     mockQuery.mockResolvedValueOnce({ rows: [makeCollectionRow()] } as any);
-    // Second query: addCollectionItem
+    // Second query: duplicate check (no existing item)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // Third query: addCollectionItem
     mockQuery.mockResolvedValueOnce({ rows: [makeCollectionItemRow()] } as any);
 
     const res = await request(createRouteApp(user))
@@ -656,21 +658,50 @@ describe('duplicate item prevention', () => {
     resetMock();
   });
 
-  it('adding same asset twice returns unique constraint violation', async () => {
+  it('returns 409 when adding duplicate asset to collection', async () => {
     const user = makeUserA();
     const ws = makeWorkspaceA();
     seedAuthQueries(user, ws);
     // findCollectionById succeeds
     mockQuery.mockResolvedValueOnce({ rows: [makeCollectionRow()] } as any);
-    // addCollectionItem throws duplicate key error
-    mockQuery.mockRejectedValueOnce(
-      new Error('duplicate key value violates unique constraint "idx_collection_items_unique"'),
-    );
+    // Duplicate check: asset already exists in collection
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: ITEM_UUID,
+          collection_id: COLLECTION_UUID,
+          asset_type: 'LOOK',
+          asset_id: ASSET_UUID,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
 
     const res = await request(createRouteApp(user))
       .post(`/api/collections/${COLLECTION_UUID}/items`)
       .send({ asset_type: 'LOOK', asset_id: ASSET_UUID });
-    expect(res.status).toBe(500);
-    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.status).toBe(409);
+    expect(res.body.error.code).toBe('DUPLICATE_ITEM');
+    expect(res.body.error.message).toBe('Asset already in collection');
+  });
+
+  it('allows adding different assets to same collection', async () => {
+    const user = makeUserA();
+    const ws = makeWorkspaceA();
+    seedAuthQueries(user, ws);
+    // findCollectionById succeeds
+    mockQuery.mockResolvedValueOnce({ rows: [makeCollectionRow()] } as any);
+    // Duplicate check: no existing item found
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // addCollectionItem succeeds
+    mockQuery.mockResolvedValueOnce({
+      rows: [makeCollectionItemRow({ asset_id: ASSET_B_UUID })],
+    } as any);
+
+    const res = await request(createRouteApp(user))
+      .post(`/api/collections/${COLLECTION_UUID}/items`)
+      .send({ asset_type: 'LOOK', asset_id: ASSET_B_UUID });
+    expect(res.status).toBe(201);
+    expect(res.body.asset_id).toBe(ASSET_B_UUID);
   });
 });

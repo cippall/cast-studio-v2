@@ -11,6 +11,13 @@ import type {
   AddCollectionItemInput,
 } from '../types/collection.js';
 
+export class DuplicateItemError extends Error {
+  constructor() {
+    super('Asset already in collection');
+    this.name = 'DuplicateItemError';
+  }
+}
+
 // --- Repository Functions ---
 
 export async function createCollection(input: CreateCollectionInput): Promise<CollectionRow> {
@@ -130,6 +137,17 @@ export async function findCollectionItem(
   return (result.rows[0] as CollectionItemRow) ?? null;
 }
 
+export async function findCollectionItemByAsset(
+  collectionId: string,
+  assetId: string,
+): Promise<CollectionItemRow | null> {
+  const result = await query(
+    `SELECT * FROM collection_items WHERE collection_id = $1 AND asset_id = $2`,
+    [collectionId, assetId],
+  );
+  return (result.rows[0] as CollectionItemRow) ?? null;
+}
+
 export async function removeCollectionItem(
   itemId: string,
   collectionId: string,
@@ -197,6 +215,12 @@ export async function addItemToCollectionService(
   const collection = await findCollectionById(collectionId, account.id, account.workspace_id);
   if (!collection) {
     return null;
+  }
+
+  // Check for duplicate: same asset already in this collection
+  const existing = await findCollectionItemByAsset(collectionId, assetId);
+  if (existing) {
+    throw new DuplicateItemError();
   }
 
   return addCollectionItem({

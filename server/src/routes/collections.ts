@@ -4,6 +4,7 @@ import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
 import * as collectionService from '../services/collection-service.js';
+import { DuplicateItemError } from '../services/collection-service.js';
 
 const router = Router();
 
@@ -207,6 +208,12 @@ router.post('/:id/items', requireSession, requireWorkspace, async (req: Request,
 
     res.status(201).json(item);
   } catch (err) {
+    if (err instanceof DuplicateItemError) {
+      res.status(409).json({
+        error: { code: 'DUPLICATE_ITEM', message: 'Asset already in collection' },
+      });
+      return;
+    }
     console.error('Add collection item error:', err);
     res.status(500).json({
       error: { code: 'INTERNAL_ERROR', message: 'Failed to add item to collection' },
