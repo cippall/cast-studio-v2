@@ -7,6 +7,11 @@ function getApiKey(): string | undefined {
 }
 
 function getModelEndpoint(model: string): string {
+  // Dynamic model IDs (e.g. "fal-ai/flux/dev") use the queue endpoint directly
+  if (model.includes('/')) {
+    return `https://queue.fal.run/${model}`;
+  }
+  // Hardcoded short names keep backward compatibility
   switch (model) {
     case 'flux-pro':
       return `${FAL_API_BASE}/flux-pro`;
