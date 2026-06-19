@@ -8,6 +8,7 @@ export interface CommissionAssetRow {
   asset_id: string;
   asset_output_id: string | null;
   created_at: string;
+  image_url?: string | null;
 }
 
 // --- Repository Functions ---
@@ -17,7 +18,11 @@ export interface CommissionAssetRow {
  */
 export async function getCommissionAssets(commissionId: string): Promise<CommissionAssetRow[]> {
   const result = await query(
-    'SELECT * FROM commission_assets WHERE commission_id = $1 ORDER BY created_at',
+    `SELECT ca.*, ao.image_url
+     FROM commission_assets ca
+     LEFT JOIN asset_outputs ao ON ao.id = ca.asset_output_id
+     WHERE ca.commission_id = $1
+     ORDER BY ca.created_at`,
     [commissionId],
   );
   return result.rows as CommissionAssetRow[];

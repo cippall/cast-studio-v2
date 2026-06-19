@@ -92,6 +92,7 @@ export interface CommissionAsset {
   id: string;
   asset_id: string;
   asset_output_id: string;
+  image_url?: string | null;
 }
 
 export interface Commission {

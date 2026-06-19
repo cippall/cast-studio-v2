@@ -21,11 +21,13 @@ import {
 } from '@/components/ui/dialog';
 import { ArrowLeft, Send, Clock, Wallet, AlertCircle } from 'lucide-react';
 import BriefSection from '@/pages/commissions/BriefSection';
+import SubmittedWorkSection from '@/pages/commissions/SubmittedWorkSection';
 import ClientActions from '@/pages/commissions/ClientActions';
 import ArtistActions from '@/pages/commissions/ArtistActions';
 import AdminActions from '@/pages/commissions/AdminActions';
 import PremiumUnlockDialog from '@/pages/commissions/PremiumUnlockDialog';
 import PageContainer from '@/components/layout/PageContainer';
+import type { Commission } from '@cast/types';
 
 function statusColor(status: string): string {
   switch (status) {
@@ -56,20 +58,6 @@ function formatDate(dateStr: string): string {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-interface CommissionDetailData {
-  id: string;
-  title: string;
-  status: string;
-  client_id: string;
-  assignee_id?: string;
-  brief: Record<string, unknown>;
-  premium_cost?: number;
-  submitted_at?: string;
-  created_at: string;
-  updated_at?: string;
-  assets?: Array<{ id: string; asset_id: string; asset_output_id?: string }>;
 }
 
 export default function CommissionDetail() {
@@ -129,7 +117,7 @@ export default function CommissionDetail() {
     );
   }
 
-  const detail = commission as CommissionDetailData;
+  const detail = commission as Commission;
   const isClient = role === 'CLIENT';
   const isArtist = role === 'ARTIST';
   const isAdmin = role === 'ADMIN';
@@ -205,8 +193,9 @@ export default function CommissionDetail() {
         {/* Main content + sidebar: stacked mobile, 2-col desktop */}
         <div className="flex flex-col gap-6 lg:flex-row">
           {/* Main column */}
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 space-y-6">
             <BriefSection brief={detail.brief} />
+            <SubmittedWorkSection assets={detail.assets ?? []} />
           </div>
 
           {/* Sidebar actions */}
