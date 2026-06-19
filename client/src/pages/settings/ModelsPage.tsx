@@ -132,7 +132,7 @@ export default function ModelsPage() {
 
         {/* Delete confirmation */}
         <Dialog open={!!deleteId} onOpenChange={() => setDeleteId(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Delete Model</DialogTitle>
             </DialogHeader>

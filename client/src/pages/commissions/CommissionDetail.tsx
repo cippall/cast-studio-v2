@@ -232,14 +232,14 @@ export default function CommissionDetail() {
 
         {/* Request Changes Dialog */}
         <Dialog open={showChangesDialog} onOpenChange={setShowChangesDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Request Changes</DialogTitle>
             </DialogHeader>
             <p className="py-2 text-sm text-muted-foreground">
               This will send the commission back to the artist for revisions. Continue?
             </p>
-            <DialogFooter className="gap-2 sm:gap-0">
+            <DialogFooter>
               <Button variant="outline" onClick={() => setShowChangesDialog(false)}>
                 Cancel
               </Button>
@@ -256,7 +256,7 @@ export default function CommissionDetail() {
 
         {/* Assign Dialog */}
         <Dialog open={showAssignDialog} onOpenChange={setShowAssignDialog}>
-          <DialogContent className="sm:max-w-md">
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Assign Commission</DialogTitle>
             </DialogHeader>

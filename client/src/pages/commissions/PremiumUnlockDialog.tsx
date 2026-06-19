@@ -1,7 +1,7 @@
 /**
  * PremiumUnlockDialog — confirmation dialog for commission premium unlock.
  * Shows cost, current balance, and balance after unlock.
- * Responsive: full-screen mobile, centered modal desktop.
+ * Centered modal on all screen sizes.
  */
 import { useState } from 'react';
 import { useWalletBalance } from '@/hooks/useDashboard';
@@ -58,7 +58,6 @@ export default function PremiumUnlockDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      {/* Full-screen on mobile, centered modal on desktop */}
       <DialogContent className="max-w-lg">
         <DialogHeader>
           <DialogTitle>Approve & Unlock Commission</DialogTitle>
@@ -71,10 +70,10 @@ export default function PremiumUnlockDialog({
         <div className="space-y-4">
           <div className="flex flex-col gap-4">
             {/* Cost breakdown */}
-            <div className="border p-4">
+            <div className="border border-border p-4">
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Premium Cost</span>
-                <span className="text-lg font-semibold">{premiumCost.toFixed(2)} credits</span>
+                <span className="text-base font-semibold">{premiumCost.toFixed(2)} credits</span>
               </div>
               <div className="mt-3 border-t pt-3">
                 <div className="flex items-center justify-between text-sm">
@@ -122,7 +121,7 @@ export default function PremiumUnlockDialog({
           </div>
         </div>
 
-        <DialogFooter className="flex-col gap-2 sm:flex-row">
+        <DialogFooter className="flex-col-reverse gap-2 sm:flex-row sm:justify-end">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}

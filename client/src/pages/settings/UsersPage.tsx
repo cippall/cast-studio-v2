@@ -146,7 +146,7 @@ export default function UsersPage() {
 
         {/* Edit dialog */}
         <Dialog open={!!editId} onOpenChange={() => setEditId(null)}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>Edit User</DialogTitle>
             </DialogHeader>
