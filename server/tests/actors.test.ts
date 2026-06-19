@@ -50,6 +50,14 @@ function makeAdminRow(overrides: Record<string, unknown> = {}) {
   });
 }
 
+function makeClientRoleRow(overrides: Record<string, unknown> = {}) {
+  return makeAccountRow({
+    role: 'CLIENT',
+    id: 'client-0000-0000-4000-8000-000000000001',
+    ...overrides,
+  });
+}
+
 function makeWorkspaceRow(overrides: Record<string, unknown> = {}) {
   return {
     id: WORKSPACE_UUID,
@@ -419,6 +427,26 @@ describe('GET /api/actors', () => {
     // Admin bypass: no workspace_id filter in the query
     const countCall = mockQuery.mock.calls[2] as [string, unknown[]];
     expect(countCall[0]).not.toContain('workspace_id');
+  });
+
+  it('200 client sees purchased assets via client_id filter', async () => {
+    const client = makeClientRoleRow();
+    seedRequireSessionQueries(client);
+
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 1 }] } as any);
+    mockQuery.mockResolvedValueOnce({
+      rows: [makeActorRow({ workspace_id: 'other-workspace-uuid', client_id: client.id })],
+    } as any);
+
+    const res = await request(createRouteApp(client)).get('/api/actors');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(1);
+
+    // Verify the query uses (workspace_id = $X OR client_id = $Y) pattern
+    const dataCall = mockQuery.mock.calls[3] as [string, unknown[]];
+    expect(dataCall[0]).toContain('client_id');
+    expect(dataCall[0]).toContain('OR');
+    expect(dataCall[1]).toContain(client.id);
   });
 });
 

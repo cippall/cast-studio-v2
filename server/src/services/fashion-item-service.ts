@@ -228,6 +228,9 @@ export async function listFashionItems(
   data: FashionItemListItem[];
   pagination: { page: number; pageSize: number; totalItems: number; totalPages: number };
 }> {
+  // Clients see their own workspace assets + purchased assets (via client_id)
+  const clientId = account.role === 'CLIENT' ? account.id : undefined;
+
   const result = await listAssets({
     workspaceId: account.workspace_id,
     assetType: 'FASHION_ITEM',
@@ -238,6 +241,7 @@ export async function listFashionItems(
     sortBy: options.sortBy,
     sortOrder: options.sortOrder,
     adminBypass,
+    clientId,
   });
 
   return {

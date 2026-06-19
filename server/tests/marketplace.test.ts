@@ -704,6 +704,23 @@ describe('GET /api/marketplace', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toHaveLength(0);
   });
+
+  it('excludes purchased listings (purchased_by IS NOT NULL)', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    // The SQL query should include purchased_by IS NULL filter
+    mockQuery.mockResolvedValueOnce({ rows: [{ count: 0 }] } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).get('/api/marketplace');
+    expect(res.status).toBe(200);
+    expect(res.body.data).toHaveLength(0);
+
+    // Verify the count query includes purchased_by IS NULL
+    const countCall = mockQuery.mock.calls[2] as [string, unknown[]];
+    expect(countCall[0]).toContain('purchased_by IS NULL');
+  });
 });
 
 // ================================================================

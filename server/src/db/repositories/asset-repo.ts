@@ -70,6 +70,8 @@ export interface ListAssetOptions {
   includeDeleted?: boolean;
   /** When set, filters to assets shared with this account via asset_permissions */
   sharedWithMeAccountId?: string;
+  /** When set, includes assets where client_id matches (purchased assets) */
+  clientId?: string;
 }
 
 // --- Repository Functions ---
@@ -190,6 +192,7 @@ export async function listAssets(options: ListAssetOptions): Promise<{
     adminBypass = false,
     includeDeleted = false,
     sharedWithMeAccountId,
+    clientId,
   } = options;
 
   const params: unknown[] = [];
@@ -201,10 +204,15 @@ export async function listAssets(options: ListAssetOptions): Promise<{
   conditions.push(`a.asset_type = $${idx++}`);
   params.push(assetType);
 
-  // Workspace filter
+  // Workspace filter — when clientId is set, include purchased assets (client_id match)
   if (workspaceId && !adminBypass) {
-    conditions.push(`a.workspace_id = $${idx++}`);
-    params.push(workspaceId);
+    if (clientId) {
+      conditions.push(`(a.workspace_id = $${idx++} OR a.client_id = $${idx++})`);
+      params.push(workspaceId, clientId);
+    } else {
+      conditions.push(`a.workspace_id = $${idx++}`);
+      params.push(workspaceId);
+    }
   }
 
   // Soft delete filter
