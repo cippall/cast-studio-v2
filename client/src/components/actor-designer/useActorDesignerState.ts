@@ -1,4 +1,4 @@
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
@@ -263,17 +263,16 @@ export function useActorDesignerState(): ActorDesignerState {
     [currentStep.key, stepSessions, entryMethod],
   );
 
-  const prevPromptRef = useRef(prompt);
-  const prevImagesLengthRef = useRef(referenceImages.length);
-  if (
-    entryMethod === 'REFERENCE' &&
-    referenceValidationError &&
-    (prompt !== prevPromptRef.current || referenceImages.length !== prevImagesLengthRef.current)
-  ) {
-    setReferenceValidationError(null);
-  }
-  prevPromptRef.current = prompt;
-  prevImagesLengthRef.current = referenceImages.length;
+  // Clear validation error when user provides input (prompt text or reference images)
+  useEffect(() => {
+    if (
+      entryMethod === 'REFERENCE' &&
+      referenceValidationError &&
+      (prompt.trim() !== '' || referenceImages.length > 0)
+    ) {
+      setReferenceValidationError(null);
+    }
+  }, [prompt, referenceImages.length, entryMethod, referenceValidationError]);
 
   const handleSaveCurrentPrompt = useCallback(() => {
     setStepPrompts((p) => ({ ...p, [currentStep.key]: prompt }));
