@@ -28,6 +28,7 @@ import adminMarketplaceRouter from './routes/admin/marketplace.js';
 import adminRouter from './routes/admin/admin.js';
 import agentMarketplaceRouter from './routes/agent/marketplace.js';
 import activityRouter from './routes/activity.js';
+import collectionsRouter from './routes/collections.js';
 import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
@@ -92,6 +93,7 @@ app.use('/api/admin/marketplace', adminMarketplaceRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/agent/marketplace', agentMarketplaceRouter);
 app.use('/api', activityRouter);
+app.use('/api/collections', collectionsRouter);
 
 // Dashboard stats (admin only)
 app.get('/api/dashboard', requireSession, async (req, res) => {
