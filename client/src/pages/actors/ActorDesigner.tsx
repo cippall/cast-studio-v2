@@ -17,9 +17,22 @@ import { useActorDesignerState } from '@/components/actor-designer/useActorDesig
 export default function ActorDesigner() {
   const s = useActorDesignerState();
 
-  useUnsavedChanges(
-    s.stage === 3 && (s.actorName !== '' || JSON.stringify(s.taxonomyValues) !== '{}'),
-  );
+  // Stage 1: dirty if user changed anything from initial defaults
+  const stage1Dirty =
+    s.stage === 1 &&
+    (s.entryMethod !== 'FORM' ||
+      s.prompt !== '' ||
+      s.referenceImages.length > 0 ||
+      Object.keys(s.formValues).length > 0);
+
+  // Stage 2: dirty if any images have been generated
+  const stage2Dirty = s.stage === 2 && s.hasGeneratedImages;
+
+  // Stage 3: dirty if name or taxonomy edited
+  const stage3Dirty =
+    s.stage === 3 && (s.actorName !== '' || JSON.stringify(s.taxonomyValues) !== '{}');
+
+  useUnsavedChanges(stage1Dirty || stage2Dirty || stage3Dirty);
 
   return (
     <PageContainer>
