@@ -33,7 +33,7 @@ router.post('/models/import', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'fal_model_id, name, and category are required',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;
@@ -77,7 +77,7 @@ router.post('/models', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'model_id and name are required',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;
@@ -108,7 +108,7 @@ router.patch('/models/:id', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid update payload',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;

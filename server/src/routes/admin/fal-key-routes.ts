@@ -31,7 +31,7 @@ router.post('/fal-key', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'api_key is required',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;
@@ -84,7 +84,7 @@ router.post('/fal-key/test', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'api_key is required',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;

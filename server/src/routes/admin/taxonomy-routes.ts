@@ -53,7 +53,7 @@ router.post('/taxonomy', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'category, key, and label are required',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;
@@ -97,7 +97,7 @@ router.patch('/taxonomy/:id', async (req, res) => {
         error: {
           code: 'VALIDATION_ERROR',
           message: 'Invalid update payload',
-          details: parse.error.flatten(),
+          details: parse.error.flatten().fieldErrors,
         },
       });
       return;
