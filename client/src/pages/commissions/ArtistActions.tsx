@@ -1,8 +1,9 @@
 /**
  * ArtistActions — Start Working / Submit Work buttons for assigned artists.
+ * No Card wrapper; direct button group with clear visual hierarchy.
+ * Primary action (Submit Work) is filled, secondary (Start Working) is outline.
  */
 import { useCurrentUser } from '@/hooks/useAuth';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Send } from 'lucide-react';
 
@@ -36,23 +37,19 @@ export default function ArtistActions({
   if (!canStart && !canSubmit) return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Artist Actions</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-3">
-        {canStart && (
-          <Button variant="outline" onClick={onStartProgress} disabled={pending}>
-            Start Working
-          </Button>
-        )}
-        {canSubmit && (
-          <Button variant="default" onClick={onSubmitWork} disabled={pending}>
-            <Send className="mr-1 size-4" />
-            Submit Work
-          </Button>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-3">
+      <h3 className="font-heading text-sm font-semibold">Artist Actions</h3>
+      {canSubmit && (
+        <Button variant="default" onClick={onSubmitWork} disabled={pending}>
+          <Send className="mr-1 size-4" />
+          Submit Work
+        </Button>
+      )}
+      {canStart && (
+        <Button variant="outline" onClick={onStartProgress} disabled={pending}>
+          Start Working
+        </Button>
+      )}
+    </div>
   );
 }

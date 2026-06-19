@@ -199,7 +199,7 @@ export default function CommissionDetail() {
           </div>
 
           {/* Sidebar actions */}
-          <div className="flex flex-col gap-4 lg:w-80 lg:shrink-0">
+          <div className="flex flex-col gap-4 lg:sticky lg:top-6 lg:w-80 lg:shrink-0 lg:self-start">
             {isClient && (
               <ClientActions
                 commission={detail}

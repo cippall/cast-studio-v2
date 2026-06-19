@@ -1,7 +1,7 @@
 /**
  * AdminActions — Assign commission button for admin.
+ * No Card wrapper; direct button group for clear visual hierarchy.
  */
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { User } from 'lucide-react';
 
@@ -20,17 +20,12 @@ export default function AdminActions({
   if (commission.status !== 'REQUESTED') return null;
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Assign Commission</CardTitle>
-        <CardDescription>Assign this commission to an artist or agent.</CardDescription>
-      </CardHeader>
-      <CardContent>
-        <Button onClick={onAssign}>
-          <User className="mr-1 size-4" />
-          Assign to Artist/Agent
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-3">
+      <h3 className="font-heading text-sm font-semibold">Admin Actions</h3>
+      <Button variant="default" onClick={onAssign}>
+        <User className="mr-1 size-4" />
+        Assign to Artist/Agent
+      </Button>
+    </div>
   );
 }
