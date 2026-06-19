@@ -72,6 +72,7 @@ export default function ModelsPage() {
       key: 'is_active',
       header: 'Active',
       sortable: true,
+      sortValue: (row) => (row.is_active ? 1 : 0),
       render: (row) => (
         <Badge variant={row.is_active ? 'default' : 'outline'}>
           {row.is_active ? 'Active' : 'Inactive'}

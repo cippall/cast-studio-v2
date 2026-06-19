@@ -154,12 +154,14 @@ export default function TaxonomyPage() {
       key: 'input_type',
       header: 'Input Type',
       sortable: true,
+      sortValue: (row) => row.input_type,
       render: (row) => <Badge variant="secondary">{row.input_type}</Badge>,
     },
     {
       key: 'is_required',
       header: 'Required',
       sortable: true,
+      sortValue: (row) => (row.is_required ? 1 : 0),
       render: (row) => (
         <Badge variant={row.is_required ? 'default' : 'outline'}>
           {row.is_required ? 'Yes' : 'No'}
@@ -170,6 +172,7 @@ export default function TaxonomyPage() {
       key: 'is_active',
       header: 'Active',
       sortable: true,
+      sortValue: (row) => (row.is_active ? 1 : 0),
       render: (row) => (
         <Badge variant={row.is_active ? 'default' : 'outline'}>
           {row.is_active ? 'Yes' : 'No'}

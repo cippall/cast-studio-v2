@@ -40,6 +40,7 @@ export interface Column<T> {
   header: string;
   sortable?: boolean;
   render: (row: T) => React.ReactNode;
+  sortValue?: (row: T) => string | number;
 }
 
 export interface DataTableProps<T extends { id: string }> {
@@ -333,6 +334,9 @@ function LoadingStateTable<T extends { id: string }>({ columns, rowCount }: Load
 /* -- Helpers -- */
 
 function getSortValue<T extends { id: string }>(row: T, col: Column<T>): string {
+  if (col.sortValue) {
+    return String(col.sortValue(row));
+  }
   const rendered = col.render(row);
   if (typeof rendered === 'string' || typeof rendered === 'number') {
     return String(rendered);

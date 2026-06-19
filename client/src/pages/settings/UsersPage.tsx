@@ -87,6 +87,7 @@ export default function UsersPage() {
       key: 'role',
       header: 'Role',
       sortable: true,
+      sortValue: (row) => row.role,
       render: (row) => (
         <Badge variant={row.role === 'ADMIN' ? 'default' : 'secondary'}>{row.role}</Badge>
       ),
@@ -95,6 +96,7 @@ export default function UsersPage() {
       key: 'is_api_able',
       header: 'API Enabled',
       sortable: true,
+      sortValue: (row) => (row.is_api_able ? 1 : 0),
       render: (row) => (
         <Badge variant={row.is_api_able ? 'default' : 'outline'}>
           {row.is_api_able ? 'Yes' : 'No'}
