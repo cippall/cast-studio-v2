@@ -26,6 +26,7 @@ import {
   Check,
   RotateCcw,
   Sparkles,
+  Settings2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import GenerationStatus from '@/components/GenerationStatus';
@@ -45,6 +46,16 @@ interface GeneratedOption {
   imageUrl: string | null;
   status: GenerationState;
   errorMessage?: string | null;
+}
+
+interface GenerationSession {
+  id: string;
+  sessionNumber: number;
+  prompt: string;
+  referenceImages: string[];
+  randomize: boolean;
+  formValues: Record<string, string>;
+  images: GeneratedOption[];
 }
 
 const LAYOUT_STEPS: { key: LayoutStep; label: string }[] = [
@@ -82,6 +93,56 @@ function createEmptyOptions(count: number): GeneratedOption[] {
     imageUrl: null,
     status: 'PENDING' as GenerationState,
   }));
+}
+
+/* -- Session Navigator -- */
+
+interface SessionNavigatorProps {
+  sessions: GenerationSession[];
+  selectedIndex: number;
+  onSelect: (index: number) => void;
+  onLoadSettings: () => void;
+}
+
+function SessionNavigator({
+  sessions,
+  selectedIndex,
+  onSelect,
+  onLoadSettings,
+}: SessionNavigatorProps) {
+  if (sessions.length <= 1) return null;
+
+  return (
+    <div className="flex items-center justify-between border border-border-subtle bg-muted/30 px-3 py-2 text-sm">
+      <div className="flex items-center gap-2">
+        <Button
+          variant="ghost"
+          size="sm"
+          className="size-7 p-0"
+          disabled={selectedIndex === 0}
+          onClick={() => onSelect(selectedIndex - 1)}
+        >
+          <ChevronLeft className="size-4" />
+        </Button>
+        <span className="text-muted-foreground">
+          Session {selectedIndex + 1} of {sessions.length}
+        </span>
+        <Button
+          variant="ghost"
+          size="sm"
+          className="size-7 p-0"
+          disabled={selectedIndex === sessions.length - 1}
+          onClick={() => onSelect(selectedIndex + 1)}
+        >
+          <ChevronRight className="size-4" />
+        </Button>
+      </div>
+      <Button variant="ghost" size="sm" className="h-7 gap-1 text-xs" onClick={onLoadSettings}>
+        <Settings2 className="size-3" />
+        Load Settings
+      </Button>
+    </div>
+  );
 }
 
 /* -- Stage 1: Entry Method Selection -- */
@@ -533,17 +594,24 @@ export default function ActorDesigner() {
 
   // Stage 2 state
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [stepOptions, setStepOptions] = useState<Record<LayoutStep, GeneratedOption[]>>(() => ({
-    headshot: createEmptyOptions(NUM_OPTIONS),
-    fullshot: createEmptyOptions(NUM_OPTIONS),
-    expressions: createEmptyOptions(NUM_OPTIONS),
-  }));
   const [selectedOptions, setSelectedOptions] = useState<Record<LayoutStep, string | null>>({
     headshot: null,
     fullshot: null,
     expressions: null,
   });
   const [confirmedSteps, setConfirmedSteps] = useState<Set<LayoutStep>>(new Set());
+
+  // Generation sessions: tracked per layout step
+  const [stepSessions, setStepSessions] = useState<Record<LayoutStep, GenerationSession[]>>(() => ({
+    headshot: [],
+    fullshot: [],
+    expressions: [],
+  }));
+  const [selectedSessionIndices, setSelectedSessionIndices] = useState<Record<LayoutStep, number>>({
+    headshot: 0,
+    fullshot: 0,
+    expressions: 0,
+  });
 
   // Stage 3 state
   const [actorName, setActorName] = useState('');
@@ -569,6 +637,19 @@ export default function ActorDesigner() {
 
   const currentStep = LAYOUT_STEPS[currentStepIndex];
 
+  // Helper: get current session's images for the active step
+  const currentSessions = stepSessions[currentStep.key];
+  const currentSessionIndex = selectedSessionIndices[currentStep.key];
+  const currentOptions =
+    currentSessions.length > 0
+      ? currentSessions[currentSessionIndex].images
+      : createEmptyOptions(NUM_OPTIONS);
+
+  // Helper: check if current step has any generated images (in any session)
+  const hasGeneratedImages = stepSessions[currentStep.key].some((session) =>
+    session.images.some((o) => o.imageUrl !== null || o.status !== 'PENDING'),
+  );
+
   // Create actor mutation
   const createActorMutation = useMutation({
     mutationFn: async () => {
@@ -590,6 +671,46 @@ export default function ActorDesigner() {
       setCreateError(error.message ?? 'Failed to create actor');
     },
   });
+
+  // Helper: create a new session from generated outputs
+  const createSessionFromOutputs = useCallback(
+    (
+      layoutType: LayoutStep,
+      outputs: Array<{
+        id: string;
+        image_url: string | null;
+        status: string;
+        error_message?: string | null;
+      }>,
+    ) => {
+      setStepSessions((prev) => {
+        const existing = prev[layoutType];
+        const newSessionNumber = existing.length + 1;
+        const newSession: GenerationSession = {
+          id: `session-${layoutType}-${newSessionNumber}-${Date.now()}`,
+          sessionNumber: newSessionNumber,
+          prompt,
+          referenceImages: [...referenceImages],
+          randomize,
+          formValues: { ...formValues },
+          images: outputs.map((o) => ({
+            id: o.id,
+            imageUrl: o.image_url,
+            status: o.status as GenerationState,
+            errorMessage: o.error_message,
+          })),
+        };
+        const updated = [...existing, newSession];
+        // Set selected session to the newly created one
+        setSelectedSessionIndices((prevIdx) => ({
+          ...prevIdx,
+          [layoutType]: updated.length - 1,
+        }));
+        return { ...prev, [layoutType]: updated };
+      });
+    },
+    [prompt, referenceImages, randomize, formValues],
+  );
 
   // Generate mutation
   const generateMutation = useMutation({
@@ -614,15 +735,7 @@ export default function ActorDesigner() {
     },
     onSuccess: (outputs) => {
       const layoutType = LAYOUT_STEPS[currentStepIndex].key;
-      setStepOptions((prev) => ({
-        ...prev,
-        [layoutType]: outputs.map((o) => ({
-          id: o.id,
-          imageUrl: o.image_url,
-          status: o.status as GenerationState,
-          errorMessage: o.error_message,
-        })),
-      }));
+      createSessionFromOutputs(layoutType, outputs);
       // Save the prompt used for this step (Raw Text mode)
       if (entryMethod === 'TEXT') {
         setStepPrompts((prev) => ({ ...prev, [layoutType]: prompt }));
@@ -653,15 +766,7 @@ export default function ActorDesigner() {
     },
     onSuccess: (outputs) => {
       const layoutType = LAYOUT_STEPS[currentStepIndex].key;
-      setStepOptions((prev) => ({
-        ...prev,
-        [layoutType]: outputs.map((o) => ({
-          id: o.id,
-          imageUrl: o.image_url,
-          status: o.status as GenerationState,
-          errorMessage: o.error_message,
-        })),
-      }));
+      createSessionFromOutputs(layoutType, outputs);
       setSelectedOptions((prev) => ({ ...prev, [layoutType]: null }));
       // Save the prompt used for this step (Raw Text mode)
       if (entryMethod === 'TEXT') {
@@ -700,15 +805,11 @@ export default function ActorDesigner() {
     if (currentStepIndex < LAYOUT_STEPS.length - 1) {
       const nextIndex = currentStepIndex + 1;
       setCurrentStepIndex(nextIndex);
-      const nextStep = LAYOUT_STEPS[nextIndex];
-      const nextOptions = stepOptions[nextStep.key];
-      if (nextOptions.every((o) => o.imageUrl === null && o.status === 'PENDING')) {
-        generateMutation.mutate(nextStep.key);
-      }
+      // No auto-generate — user must click explicitly
     } else {
       setStage(3);
     }
-  }, [currentStep, currentStepIndex, stepOptions, generateMutation]);
+  }, [currentStep, currentStepIndex]);
 
   const handleGenerate = useCallback(() => {
     if (!actorId) return;
@@ -720,18 +821,33 @@ export default function ActorDesigner() {
     regenerateMutation.mutate(currentStep.key);
   }, [actorId, currentStep.key, regenerateMutation]);
 
+  // Load settings from a specific session
+  const handleLoadSettings = useCallback(
+    (sessionIndex: number) => {
+      const session = stepSessions[currentStep.key][sessionIndex];
+      if (!session) return;
+      setPrompt(session.prompt);
+      setRandomize(session.randomize);
+      if (entryMethod === 'REFERENCE') {
+        setReferenceImages([...session.referenceImages]);
+      }
+      if (entryMethod === 'FORM') {
+        setFormValues({ ...session.formValues });
+      }
+      // Also update stepPrompts for Raw Text mode
+      if (entryMethod === 'TEXT') {
+        setStepPrompts((prev) => ({ ...prev, [currentStep.key]: session.prompt }));
+      }
+    },
+    [currentStep.key, stepSessions, entryMethod],
+  );
+
   const [createError, setCreateError] = useState<string | null>(null);
 
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
-  const generateError = generateMutation.error as Error | null;
-  const regenerateError = regenerateMutation.error as Error | null;
-  const currentOptions = stepOptions[currentStep.key];
   const selectedOptionId = selectedOptions[currentStep.key];
   const isStepConfirmed = confirmedSteps.has(currentStep.key);
   const canConfirm = selectedOptionId !== null && !isGenerating && !isStepConfirmed;
-  const hasGeneratedImages = currentOptions.some(
-    (o) => o.imageUrl !== null || o.status !== 'PENDING',
-  );
 
   // Whether we are in Structured Form mode at Stage 2
   const isStructuredForm = entryMethod === 'FORM' && stage === 2;
@@ -856,23 +972,47 @@ export default function ActorDesigner() {
               </div>
 
               {/* Right panel: images (2/3) */}
-              <div className="w-full lg:w-2/3">
+              <div className="w-full space-y-3 lg:w-2/3">
                 <ImageGrid
                   options={currentOptions}
                   selectedId={selectedOptionId}
                   isStepConfirmed={isStepConfirmed}
                   onSelect={handleSelectOption}
                 />
+                <SessionNavigator
+                  sessions={currentSessions}
+                  selectedIndex={currentSessionIndex}
+                  onSelect={(idx) =>
+                    setSelectedSessionIndices((prev) => ({
+                      ...prev,
+                      [currentStep.key]: idx,
+                    }))
+                  }
+                  onLoadSettings={() => handleLoadSettings(currentSessionIndex)}
+                />
               </div>
             </div>
           ) : (
             /* Non-form modes: full-width image grid */
-            <ImageGrid
-              options={currentOptions}
-              selectedId={selectedOptionId}
-              isStepConfirmed={isStepConfirmed}
-              onSelect={handleSelectOption}
-            />
+            <div className="space-y-3">
+              <ImageGrid
+                options={currentOptions}
+                selectedId={selectedOptionId}
+                isStepConfirmed={isStepConfirmed}
+                onSelect={handleSelectOption}
+              />
+              <SessionNavigator
+                sessions={currentSessions}
+                selectedIndex={currentSessionIndex}
+                onSelect={(idx) =>
+                  setSelectedSessionIndices((prev) => ({
+                    ...prev,
+                    [currentStep.key]: idx,
+                  }))
+                }
+                onLoadSettings={() => handleLoadSettings(currentSessionIndex)}
+              />
+            </div>
           )}
 
           {/* Reference Photo: slots + prompt + generate below image grid */}
