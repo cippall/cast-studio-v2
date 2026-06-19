@@ -3,6 +3,7 @@ import type { AccountRow } from '../middleware/requireSession.js';
 import type {
   CollectionRow,
   CollectionItemRow,
+  CollectionItemDetail,
   CollectionWithItemCount,
   CollectionListResult,
   CreateCollectionInput,
