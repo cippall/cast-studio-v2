@@ -15,17 +15,21 @@ const createActorSchema = z.discriminatedUnion('entry_method', [
   z.object({
     entry_method: z.literal('FORM'),
     form_data: z.record(z.string(), z.unknown()).optional(),
+    randomize: z.boolean().optional(),
   }),
   z.object({
     entry_method: z.literal('REFERENCE'),
-    reference_image: z.string().optional(),
+    reference_images: z.array(z.string()).optional(),
+    randomize: z.boolean().optional(),
   }),
   z.object({
     entry_method: z.literal('TEXT'),
     prompt: z.string().min(1, 'prompt is required'),
+    randomize: z.boolean().optional(),
   }),
   z.object({
     entry_method: z.literal('RANDOMIZE'),
+    randomize: z.boolean().optional(),
   }),
 ]);
 

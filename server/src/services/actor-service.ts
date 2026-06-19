@@ -21,8 +21,9 @@ const LAYOUT_TYPES = ['headshot', 'fullshot', 'expressions_3x4', 'character_shee
 export interface CreateActorParams {
   entry_method: 'FORM' | 'REFERENCE' | 'TEXT' | 'RANDOMIZE';
   form_data?: Record<string, unknown>;
-  reference_image?: string;
+  reference_images?: string[];
   prompt?: string;
+  randomize?: boolean;
 }
 
 export interface UpdateActorData {
@@ -65,7 +66,7 @@ export function buildPromptRecipe(
     case 'FORM':
       return { identity: data.form_data ?? {}, style: data.style ?? null };
     case 'REFERENCE':
-      return { identity: null, reference_image: data.reference_image ?? null, style: null };
+      return { identity: null, reference_images: data.reference_images ?? null, style: null };
     case 'TEXT':
       return { identity: null, prompt: data.prompt ?? null, style: null };
     case 'RANDOMIZE':

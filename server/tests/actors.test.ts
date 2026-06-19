@@ -190,13 +190,17 @@ describe('POST /api/actors', () => {
     expect(res.status).toBe(422);
   });
 
-  it('422 when REFERENCE without reference_image', async () => {
+  it('201 when REFERENCE without reference_images (images optional)', async () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
+
+    const createdActor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [createdActor] } as any);
+
     const res = await request(createRouteApp(artist))
       .post('/api/actors')
       .send({ entry_method: 'REFERENCE' });
-    expect(res.status).toBe(422);
+    expect(res.status).toBe(201);
   });
 
   it('422 when TEXT without prompt', async () => {
