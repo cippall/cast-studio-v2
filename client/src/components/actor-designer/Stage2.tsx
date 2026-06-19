@@ -46,6 +46,7 @@ interface Stage2Props {
 
 export default function Stage2({
   currentStepIndex,
+  currentStep,
   currentSessions,
   currentSessionIndex,
   currentOptions,
@@ -111,6 +112,18 @@ export default function Stage2({
             </button>
           );
         })}
+      </div>
+
+      {/* Step header */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 className="text-lg font-semibold">
+            {currentStep.label}
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              Step {currentStepIndex + 1} of {LAYOUT_STEPS.length}
+            </span>
+          </h2>
+        </div>
       </div>
 
       {/* Image grid area */}
