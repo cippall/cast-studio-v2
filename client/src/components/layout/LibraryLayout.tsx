@@ -31,7 +31,7 @@ import LoadingState from '@/components/LoadingState';
 export type ViewMode = 'grid' | 'list';
 export type SortOption = 'date' | 'name' | 'status';
 
-export interface LibraryLayoutProps {
+export interface LibraryLayoutProps<T> {
   title: string;
   description?: string;
   filterGroups: FilterGroup[];
@@ -40,7 +40,7 @@ export interface LibraryLayoutProps {
   onFilterChange: (key: string, values: string[]) => void;
   onResetFilters: () => void;
   /** Flattened data items to render */
-  items: readonly any[];
+  items: readonly T[];
   /** Total count for display */
   total?: number;
   /** Current page (1-indexed) */
@@ -62,9 +62,9 @@ export interface LibraryLayoutProps {
   /** Optional element in the header (e.g. shared-with-me toggle) */
   extraActions?: ReactNode;
   /** Render a card for grid view */
-  renderCard: (item: any, index: number) => ReactNode;
+  renderCard: (item: T, index: number) => ReactNode;
   /** Render a row for list view (falls back to renderCard if omitted) */
-  renderListRow?: (item: any, index: number) => ReactNode;
+  renderListRow?: (item: T, index: number) => ReactNode;
   /** Empty state */
   emptyTitle: string;
   emptyDescription: string;
@@ -75,7 +75,7 @@ export interface LibraryLayoutProps {
   onToggleFilters?: () => void;
 }
 
-export default function LibraryLayout({
+export default function LibraryLayout<T>({
   title,
   description,
   filterGroups,
@@ -105,7 +105,7 @@ export default function LibraryLayout({
   emptyActionPath,
   showFilters = true,
   onToggleFilters,
-}: LibraryLayoutProps) {
+}: LibraryLayoutProps<T>) {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
 
   const activeFilterCount = Object.values(selectedFilters).reduce(

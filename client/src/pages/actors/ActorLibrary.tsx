@@ -9,6 +9,7 @@ import { useActors } from '@/hooks/useActors';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
+import type { ActorListItem } from '@cast/types';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -172,7 +173,7 @@ export default function ActorLibrary() {
 
   return (
     <PageContainer>
-      <LibraryLayout
+      <LibraryLayout<ActorListItem>
         title="Actors"
         description="actors"
         filterGroups={ACTOR_FILTER_GROUPS}

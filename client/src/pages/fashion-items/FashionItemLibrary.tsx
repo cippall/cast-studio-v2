@@ -9,6 +9,7 @@ import { useFashionItems } from '@/hooks/useFashionItems';
 import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layout/LibraryLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
+import type { FashionItemListItem } from '@cast/types';
 import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 
@@ -201,7 +202,7 @@ export default function FashionItemLibrary() {
 
   return (
     <PageContainer>
-      <LibraryLayout
+      <LibraryLayout<FashionItemListItem>
         title="Fashion Items"
         description="items"
         filterGroups={FASHION_FILTER_GROUPS}
