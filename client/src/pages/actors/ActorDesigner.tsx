@@ -384,6 +384,79 @@ function ReferencePhotoPanel({
   );
 }
 
+/* -- Stage 2: Raw Text Panel (full-width bottom section) -- */
+
+interface RawTextPanelProps {
+  prompt: string;
+  onPromptChange: (value: string) => void;
+  randomize: boolean;
+  onRandomizeChange: (value: boolean) => void;
+  onGenerate: () => void;
+  isGenerating: boolean;
+  hasImages: boolean;
+}
+
+function RawTextPanel({
+  prompt,
+  onPromptChange,
+  randomize,
+  onRandomizeChange,
+  onGenerate,
+  isGenerating,
+  hasImages,
+}: RawTextPanelProps) {
+  return (
+    <div className="flex flex-col items-center gap-6">
+      {/* Prompt textarea */}
+      <div className="w-full max-w-xl space-y-2">
+        <Label htmlFor="raw-text-prompt" className="text-center block">
+          Describe your actor
+        </Label>
+        <Textarea
+          id="raw-text-prompt"
+          value={prompt}
+          onChange={(e) => onPromptChange(e.target.value)}
+          placeholder="A young asian woman with cyberpunk aesthetic, neon-lit city background..."
+          rows={4}
+        />
+      </div>
+
+      {/* Randomize + Generate */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="text-randomize"
+            checked={randomize}
+            onCheckedChange={(checked) => onRandomizeChange(checked === true)}
+          />
+          <Label htmlFor="text-randomize" className="cursor-pointer font-normal">
+            Randomize identity
+          </Label>
+        </div>
+
+        <Button onClick={onGenerate} disabled={isGenerating}>
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Generating...
+            </>
+          ) : hasImages ? (
+            <>
+              <RotateCcw className="mr-2 size-4" />
+              Regenerate
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 size-4" />
+              Generate
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* -- Stage 3: Name & Properties Form -- */
 
 interface Stage3Props {
@@ -487,6 +560,13 @@ export default function ActorDesigner() {
   // Actor ID after creation
   const [actorId, setActorId] = useState<string | null>(null);
 
+  // Per-step prompts for Raw Text mode — tracks what prompt was used per layout step
+  const [stepPrompts, setStepPrompts] = useState<Record<LayoutStep, string>>(() => ({
+    headshot: prompt,
+    fullshot: prompt,
+    expressions: prompt,
+  }));
+
   const currentStep = LAYOUT_STEPS[currentStepIndex];
 
   // Create actor mutation
@@ -522,6 +602,7 @@ export default function ActorDesigner() {
         ...(entryMethod === 'REFERENCE' && {
           reference_images: referenceImages,
         }),
+        ...(entryMethod === 'TEXT' && { prompt }),
         ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
@@ -542,6 +623,10 @@ export default function ActorDesigner() {
           errorMessage: o.error_message,
         })),
       }));
+      // Save the prompt used for this step (Raw Text mode)
+      if (entryMethod === 'TEXT') {
+        setStepPrompts((prev) => ({ ...prev, [layoutType]: prompt }));
+      }
     },
   });
 
@@ -556,6 +641,7 @@ export default function ActorDesigner() {
         ...(entryMethod === 'REFERENCE' && {
           reference_images: referenceImages,
         }),
+        ...(entryMethod === 'TEXT' && { prompt }),
         ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
@@ -577,6 +663,10 @@ export default function ActorDesigner() {
         })),
       }));
       setSelectedOptions((prev) => ({ ...prev, [layoutType]: null }));
+      // Save the prompt used for this step (Raw Text mode)
+      if (entryMethod === 'TEXT') {
+        setStepPrompts((prev) => ({ ...prev, [layoutType]: prompt }));
+      }
     },
   });
 
@@ -647,6 +737,8 @@ export default function ActorDesigner() {
   const isStructuredForm = entryMethod === 'FORM' && stage === 2;
   // Whether we are in Reference Photo mode at Stage 2
   const isReference = entryMethod === 'REFERENCE' && stage === 2;
+  // Whether we are in Raw Text mode at Stage 2
+  const isRawText = entryMethod === 'TEXT' && stage === 2;
 
   return (
     <PageContainer>
@@ -697,7 +789,15 @@ export default function ActorDesigner() {
                   disabled={isUpcoming}
                   onClick={() => {
                     if (canNavigate) {
+                      // Save current prompt before switching steps (Raw Text mode)
+                      if (isRawText) {
+                        setStepPrompts((prev) => ({ ...prev, [currentStep.key]: prompt }));
+                      }
                       setCurrentStepIndex(index);
+                      // Restore prompt for the step we're navigating to (Raw Text mode)
+                      if (isRawText) {
+                        setPrompt(stepPrompts[step.key] ?? prompt);
+                      }
                     }
                   }}
                   className={cn(
@@ -790,8 +890,21 @@ export default function ActorDesigner() {
             />
           )}
 
-          {/* Bottom actions — for non-form, non-reference modes, show generate/regenerate here */}
-          {!isStructuredForm && !isReference && (
+          {/* Raw Text: prompt + generate below image grid */}
+          {isRawText && (
+            <RawTextPanel
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              randomize={randomize}
+              onRandomizeChange={setRandomize}
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              hasImages={hasGeneratedImages}
+            />
+          )}
+
+          {/* Bottom actions — for non-form, non-reference, non-text modes */}
+          {!isStructuredForm && !isReference && !isRawText && (
             <div className="flex flex-wrap items-center gap-3">
               {!hasGeneratedImages ? (
                 <Button onClick={handleGenerate} disabled={isGenerating}>
@@ -828,6 +941,16 @@ export default function ActorDesigner() {
           {/* For Structured Form: confirm button below the split */}
           {isStructuredForm && hasGeneratedImages && (
             <div className="flex justify-end">
+              <Button onClick={handleConfirmStep} disabled={!canConfirm}>
+                Confirm Selection
+                <ChevronRight className="ml-2 size-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* For Raw Text: confirm button below the panel */}
+          {isRawText && hasGeneratedImages && (
+            <div className="flex justify-center">
               <Button onClick={handleConfirmStep} disabled={!canConfirm}>
                 Confirm Selection
                 <ChevronRight className="ml-2 size-4" />
