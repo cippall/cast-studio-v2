@@ -23,6 +23,8 @@ import {
   ShirtIcon,
   ClipboardList,
   Inbox,
+  Folder,
+  Store,
 } from 'lucide-react';
 import ActivityCard from '@/components/ActivityCard';
 import WalletBalanceCard from '@/components/WalletBalanceCard';
@@ -32,6 +34,7 @@ export default function Dashboard() {
   const { data: user } = useCurrentUser();
   const isClient = user?.role === 'CLIENT';
   const isAdmin = user?.role === 'ADMIN';
+  const isArtist = user?.role === 'ARTIST';
 
   const { data: wallet, isLoading: walletLoading, isError: walletError } = useWalletBalance();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
@@ -45,6 +48,11 @@ export default function Dashboard() {
 
   if (isClient) {
     quickActions.push({ label: 'New Commission', icon: MessageSquare, path: '/commissions/new' });
+  }
+
+  if (isArtist) {
+    quickActions.push({ label: 'New Collection', icon: Folder, path: '/collections' });
+    quickActions.push({ label: 'Marketplace', icon: Store, path: '/marketplace/manage' });
   }
 
   return (
