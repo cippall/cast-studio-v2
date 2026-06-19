@@ -36,7 +36,6 @@ export async function listCollections(options: {
   page?: number;
   pageSize?: number;
   search?: string;
-  adminBypass?: boolean;
 }): Promise<CollectionListResult> {
   const page = Math.max(1, options.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20));
