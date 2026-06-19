@@ -5,11 +5,13 @@
 import { useState } from 'react';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { toast } from 'sonner';
 import {
   Key,
   Palette,
@@ -23,11 +25,36 @@ import {
 } from 'lucide-react';
 import SettingsLayout from '@/components/layout/SettingsLayout';
 import type { SettingsSection } from '@/components/layout/SettingsLayout';
+import apiClient from '@/lib/api-client';
 
 export default function SettingsPage() {
   const { data: user } = useCurrentUser();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [activeSection, setActiveSection] = useState('profile');
+  const [profileName, setProfileName] = useState(user?.name ?? '');
+  const [profileEmail, setProfileEmail] = useState(user?.email ?? '');
+
+  const updateProfileMutation = useMutation({
+    mutationFn: async (input: { name: string; email: string }) => {
+      await apiClient.patch(`/accounts/${user?.id}`, { name: input.name });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['auth', 'me'] });
+      toast.success('Profile updated');
+    },
+    onError: (error: Error) => {
+      toast.error(error.message ?? 'Failed to update profile');
+    },
+  });
+
+  const isProfileModified =
+    profileName !== (user?.name ?? '') || profileEmail !== (user?.email ?? '');
+
+  const handleSaveProfile = () => {
+    if (!isProfileModified) return;
+    updateProfileMutation.mutate({ name: profileName, email: profileEmail });
+  };
 
   const isAdmin = user?.role === 'ADMIN';
   const isArtist = user?.role === 'ARTIST' || isAdmin;
@@ -70,16 +97,27 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="space-y-2">
                 <Label>Name</Label>
-                <Input defaultValue={user?.name ?? ''} disabled />
+                <Input value={profileName} onChange={(e) => setProfileName(e.target.value)} />
               </div>
               <div className="space-y-2">
                 <Label>Email</Label>
-                <Input defaultValue={user?.email ?? ''} disabled />
+                <Input
+                  value={profileEmail}
+                  onChange={(e) => setProfileEmail(e.target.value)}
+                  disabled
+                />
               </div>
               <div className="flex items-center gap-2">
                 <Label>Role:</Label>
                 <Badge variant={isAdmin ? 'default' : 'secondary'}>{user?.role}</Badge>
               </div>
+              <Button
+                size="sm"
+                onClick={handleSaveProfile}
+                disabled={!isProfileModified || updateProfileMutation.isPending}
+              >
+                {updateProfileMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
             </CardContent>
           </Card>
         );
