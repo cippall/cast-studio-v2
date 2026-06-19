@@ -28,8 +28,11 @@ router.get('/', requireSession, requireWorkspace, async (req: Request, res: Resp
   try {
     const page = Math.max(1, parseInt(req.query.page as string) || 1);
     const pageSize = Math.min(100, Math.max(1, parseInt(req.query.pageSize as string) || 20));
-
-    const result = await collectionService.listCollectionsService({ page, pageSize }, req.account!);
+    const search = (req.query.search as string) || undefined;
+    const result = await collectionService.listCollectionsService(
+      { page, pageSize, search },
+      req.account!,
+    );
     res.json(result);
   } catch (err) {
     console.error('List collections error:', err);

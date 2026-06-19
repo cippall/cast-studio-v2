@@ -174,6 +174,31 @@ export interface DashboardStats {
   pendingCommissions: number;
 }
 
+// --- Collection types ---
+
+export interface Collection {
+  id: string;
+  user_id: string;
+  workspace_id: string;
+  name: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CollectionWithItemCount extends Collection {
+  item_count: number;
+}
+
+export interface CollectionListResult {
+  data: CollectionWithItemCount[];
+  pagination: {
+    page: number;
+    pageSize: number;
+    totalItems: number;
+    totalPages: number;
+  };
+}
+
 export type ActivityActionType = 'Created' | 'Generated' | 'Shared';
 
 export interface ActivityFeedItem {

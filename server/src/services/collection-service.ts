@@ -27,30 +27,38 @@ export async function listCollections(options: {
   workspaceId: string;
   page?: number;
   pageSize?: number;
+  search?: string;
   adminBypass?: boolean;
 }): Promise<CollectionListResult> {
   const page = Math.max(1, options.page ?? 1);
   const pageSize = Math.min(100, Math.max(1, options.pageSize ?? 20));
   const offset = (page - 1) * pageSize;
 
+  const conditions: string[] = ['c.user_id = $1', 'c.workspace_id = $2'];
+  const params: (string | number)[] = [options.userId, options.workspaceId];
+  if (options.search) {
+    conditions.push(`c.name ILIKE $${params.length + 1}`);
+    params.push(`%${options.search}%`);
+  }
+  const whereClause = conditions.join(' AND ');
+
   const countResult = await query(
-    `SELECT COUNT(*)::int AS count
-     FROM collections
-     WHERE user_id = $1 AND workspace_id = $2`,
-    [options.userId, options.workspaceId],
+    `SELECT COUNT(*)::int AS count FROM collections WHERE ${whereClause}`,
+    params,
   );
   const totalItems = countResult.rows[0]?.count ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
 
+  const dataParams = [...params, pageSize, offset];
   const dataResult = await query(
     `SELECT c.*, COUNT(ci.id)::int AS item_count
      FROM collections c
      LEFT JOIN collection_items ci ON ci.collection_id = c.id
-     WHERE c.user_id = $1 AND c.workspace_id = $2
+     WHERE ${whereClause}
      GROUP BY c.id
      ORDER BY c.updated_at DESC
-     LIMIT $3 OFFSET $4`,
-    [options.userId, options.workspaceId, pageSize, offset],
+     LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+    dataParams,
   );
 
   return {
@@ -154,7 +162,7 @@ export async function createCollectionService(
 }
 
 export async function listCollectionsService(
-  options: { page?: number; pageSize?: number },
+  options: { page?: number; pageSize?: number; search?: string },
   account: AccountRow,
 ): Promise<CollectionListResult> {
   return listCollections({
@@ -162,6 +170,7 @@ export async function listCollectionsService(
     workspaceId: account.workspace_id,
     page: options.page,
     pageSize: options.pageSize,
+    search: options.search,
   });
 }
 

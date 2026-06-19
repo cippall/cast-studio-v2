@@ -48,6 +48,7 @@ const ModelsPage = lazy(() => import('@/pages/settings/ModelsPage'));
 const PromptsPage = lazy(() => import('@/pages/settings/PromptsPage'));
 const TaxonomyPage = lazy(() => import('@/pages/settings/TaxonomyPage'));
 const CommissionFormsPage = lazy(() => import('@/pages/settings/CommissionFormsPage'));
+const CollectionsPage = lazy(() => import('@/pages/collections/CollectionsPage'));
 
 function lazyRoute(element: React.ReactElement) {
   return <Suspense fallback={<PageSkeleton />}>{element}</Suspense>;
@@ -81,6 +82,9 @@ export const router = createBrowserRouter([
           { path: 'fashion-items', element: lazyRoute(<FashionItemLibrary />) },
           { path: 'fashion-items/new', element: lazyRoute(<FashionItemCreator />) },
           { path: 'fashion-items/:id', element: lazyRoute(<FashionItemDetail />) },
+
+          // Collections
+          { path: 'collections', element: lazyRoute(<CollectionsPage />) },
 
           // Marketplace
           { path: 'marketplace', element: lazyRoute(<MarketplacePage />) },
