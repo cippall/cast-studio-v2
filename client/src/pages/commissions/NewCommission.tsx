@@ -4,11 +4,10 @@
  * Uses PageContainer + PageHeader.
  * Responsive: single column mobile, 2-column desktop (form fields in 2 cols).
  */
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useCreateCommission, useCommissionFormTemplates } from '@/hooks/useCommissions';
-import type { FormField } from '@cast/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,9 +40,19 @@ export default function NewCommission() {
   const form = useForm<FormData>({
     defaultValues: {
       title: '',
-      brief: Object.fromEntries(fields.map((f) => [f.key, ''])),
+      brief: {},
     },
   });
+
+  // Reset brief defaults when template fields change
+  useEffect(() => {
+    if (fields.length > 0) {
+      form.reset({
+        title: form.getValues('title'),
+        brief: Object.fromEntries(fields.map((f) => [f.key, ''])),
+      });
+    }
+  }, [fields, form]);
 
   const createMutation = useCreateCommission();
 
