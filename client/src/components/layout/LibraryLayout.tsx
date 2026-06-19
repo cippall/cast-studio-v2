@@ -2,27 +2,14 @@
  * LibraryLayout — composite layout for all library pages.
  */
 import { useState, type ReactNode } from 'react';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '@/components/ui/sheet';
 import { Button } from '@/components/ui/button';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { SlidersHorizontal, LayoutGrid, List } from 'lucide-react';
 import FilterPanel, { type FilterGroup } from '@/components/FilterPanel';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import LibraryPagination from './LibraryPagination';
+import LibraryToolbar from './LibraryToolbar';
+import MobileFilterSheet from './MobileFilterSheet';
 
 export type ViewMode = 'grid' | 'list';
 export type SortOption = 'date' | 'name' | 'status';
@@ -91,7 +78,6 @@ export default function LibraryLayout<T>({
   onToggleFilters,
 }: LibraryLayoutProps<T>) {
   const [showMobileFilters, setShowMobileFilters] = useState(false);
-
   const activeFilterCount = Object.values(selectedFilters).reduce(
     (sum, vals) => sum + vals.length,
     0,
@@ -118,53 +104,14 @@ export default function LibraryLayout<T>({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center gap-2">
-        <Button
-          variant="outline"
-          size="sm"
-          className="lg:hidden"
-          onClick={() => setShowMobileFilters(true)}
-        >
-          <SlidersHorizontal className="mr-2 size-4" />
-          Filters
-          {activeFilterCount > 0 && (
-            <span className="ml-1.5 flex size-5 items-center justify-center bg-primary text-[10px] text-primary-foreground">
-              {activeFilterCount}
-            </span>
-          )}
-        </Button>
-        <div className="flex-1" />
-        <Select value={sort} onValueChange={(v) => onSortChange(v as SortOption)}>
-          <SelectTrigger className="w-36" size="sm">
-            <SelectValue placeholder="Sort by" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="date">Date</SelectItem>
-            <SelectItem value="name">Name</SelectItem>
-            <SelectItem value="status">Status</SelectItem>
-          </SelectContent>
-        </Select>
-        <div className="inline-flex border">
-          <Button
-            variant={viewMode === 'grid' ? 'default' : 'ghost'}
-            size="sm"
-            className="rounded-none border-0"
-            onClick={() => onViewModeChange('grid')}
-            aria-label="Grid view"
-          >
-            <LayoutGrid className="size-4" />
-          </Button>
-          <Button
-            variant={viewMode === 'list' ? 'default' : 'ghost'}
-            size="sm"
-            className="rounded-none border-0"
-            onClick={() => onViewModeChange('list')}
-            aria-label="List view"
-          >
-            <List className="size-4" />
-          </Button>
-        </div>
-      </div>
+      <LibraryToolbar
+        sort={sort}
+        onSortChange={onSortChange}
+        viewMode={viewMode}
+        onViewModeChange={onViewModeChange}
+        activeFilterCount={activeFilterCount}
+        onMobileFilterOpen={() => setShowMobileFilters(true)}
+      />
 
       <div className="flex gap-6">
         {showFilters && (
@@ -214,26 +161,15 @@ export default function LibraryLayout<T>({
         </div>
       </div>
 
-      <Sheet open={showMobileFilters} onOpenChange={setShowMobileFilters}>
-        <SheetContent side="left" className="w-72 pt-12">
-          <SheetHeader>
-            <SheetTitle>Filters</SheetTitle>
-            <SheetDescription>
-              {activeFilterCount > 0
-                ? `${activeFilterCount} filter${activeFilterCount > 1 ? 's' : ''} active`
-                : 'Refine your results'}
-            </SheetDescription>
-          </SheetHeader>
-          <div className="mt-4">
-            <FilterPanel
-              groups={filterGroups}
-              selected={selectedFilters}
-              onChange={onFilterChange}
-              onReset={onResetFilters}
-            />
-          </div>
-        </SheetContent>
-      </Sheet>
+      <MobileFilterSheet
+        open={showMobileFilters}
+        onOpenChange={setShowMobileFilters}
+        filterGroups={filterGroups}
+        selected={selectedFilters}
+        onChange={onFilterChange}
+        onReset={onResetFilters}
+        activeFilterCount={activeFilterCount}
+      />
     </div>
   );
 }

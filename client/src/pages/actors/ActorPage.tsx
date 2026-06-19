@@ -3,18 +3,15 @@
  */
 import { useCurrentUser } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { ChevronDown, Copy, Edit3, ImageIcon, Lock, RotateCcw, Send } from 'lucide-react';
-import { cn, formatLabel } from '@/lib/utils';
-import GenerationStatus from '@/components/GenerationStatus';
+import { Copy, Edit3, ImageIcon, Lock, RotateCcw, Send } from 'lucide-react';
+import { formatLabel } from '@/lib/utils';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
 import PageContainer from '@/components/layout/PageContainer';
-import { OUTPUT_SECTIONS, getOutputStatus } from './actor-page-types';
 import OutputSectionContent from './OutputSectionContent';
+import ActorOutputs from './ActorOutputs';
 import { useActorPage } from './useActorPage';
 
 export default function ActorPage() {
@@ -118,60 +115,6 @@ export default function ActorPage() {
     </div>
   );
 
-  const outputsContent = (
-    <div className="space-y-4">
-      {OUTPUT_SECTIONS.map((section) => {
-        const output = actor.outputs?.[section.key];
-        const isObsolete = output?.is_obsolete === true;
-        const isOpen = openSections.has(section.key);
-        const sectionStatus = getOutputStatus(output);
-
-        return (
-          <Collapsible
-            key={section.key}
-            open={isOpen}
-            onOpenChange={() => toggleSection(section.key)}
-          >
-            <Card>
-              <CollapsibleTrigger className="w-full">
-                <div className="flex items-center justify-between px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{section.label}</h3>
-                    <GenerationStatus status={sectionStatus} />
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      'size-5 text-muted-foreground transition-transform',
-                      isOpen && 'rotate-180',
-                    )}
-                  />
-                </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <OutputSectionContent
-                    sectionKey={section.key}
-                    sectionLabel={section.label}
-                    output={output}
-                    isObsolete={isObsolete}
-                    isGenerating={isGenerating}
-                    isArtist={isArtist}
-                    isFrozen={isFrozen}
-                    characterSheetLookId={characterSheetLookId}
-                    onCharacterSheetLookChange={setCharacterSheetLookId}
-                    looks={looks}
-                    onGenerate={(lt) => generateMutation.mutate(lt)}
-                    onRegenerate={(lt) => regenerateMutation.mutate(lt)}
-                  />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
-          </Collapsible>
-        );
-      })}
-    </div>
-  );
-
   const propertiesContent = (
     <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
       {Object.entries(actor.taxonomy_values ?? {}).map(
@@ -252,7 +195,21 @@ export default function ActorPage() {
         actions={actions}
         image={imageSlot}
         overviewContent={overviewContent}
-        outputsContent={outputsContent}
+        outputsContent={
+          <ActorOutputs
+            actor={actor}
+            looks={looks}
+            isArtist={isArtist}
+            isFrozen={isFrozen}
+            isGenerating={isGenerating}
+            characterSheetLookId={characterSheetLookId}
+            onCharacterSheetLookChange={setCharacterSheetLookId}
+            openSections={openSections}
+            onToggleSection={toggleSection}
+            onGenerate={(lt) => generateMutation.mutate(lt)}
+            onRegenerate={(lt) => regenerateMutation.mutate(lt)}
+          />
+        }
         propertiesContent={propertiesContent}
         banner={banner}
       />

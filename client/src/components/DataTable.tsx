@@ -3,14 +3,6 @@
  */
 import { useState, useMemo } from 'react';
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
   Pagination,
   PaginationContent,
   PaginationEllipsis,
@@ -22,8 +14,9 @@ import {
 import { cn } from '@/lib/utils';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import ErrorState from '@/components/ErrorState';
-import RowDropdown from '@/components/RowDropdown';
 import LoadingStateTable from '@/components/LoadingStateTable';
+import { DataTableDesktop } from '@/components/DataTableDesktop';
+import { DataTableMobile } from '@/components/DataTableMobile';
 import { getSortValue, getPaginationRange } from '@/components/data-table-helpers';
 
 export interface Column<T> {
@@ -83,35 +76,24 @@ export function DataTable<T extends { id: string }>({
     if (!activeSortKey) return data;
     const col = columns.find((c) => c.key === activeSortKey);
     if (!col) return data;
-    const sorted = [...data].sort((a, b) => {
+    return [...data].sort((a, b) => {
       const aVal = getSortValue(a, col);
       const bVal = getSortValue(b, col);
       if (aVal < bVal) return activeSortDir === 'asc' ? -1 : 1;
       if (aVal > bVal) return activeSortDir === 'asc' ? 1 : -1;
       return 0;
     });
-    return sorted;
   }, [data, activeSortKey, activeSortDir, columns]);
 
   const handleSort = (key: string) => {
     const col = columns.find((c) => c.key === key);
     if (!col?.sortable) return;
-    if (onSort) {
-      onSort(key);
-    } else if (clientSortKey === key) {
-      setClientSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
-    } else {
+    if (onSort) onSort(key);
+    else if (clientSortKey === key) setClientSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+    else {
       setClientSortKey(key);
       setClientSortDir('asc');
     }
-  };
-
-  const getCardTitle = (row: T): React.ReactNode => {
-    if (cardTitleKey) {
-      const col = columns.find((c) => c.key === cardTitleKey);
-      if (col) return col.render(row);
-    }
-    return columns[0]?.render(row) ?? row.id;
   };
 
   if (isLoading) return <LoadingStateTable columns={columns} rowCount={loadingRowCount} />;
@@ -121,80 +103,23 @@ export function DataTable<T extends { id: string }>({
   return (
     <div className="flex flex-col gap-4">
       <div className="hidden md:block">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              {columns.map((col) => (
-                <TableHead
-                  key={col.key}
-                  className={cn(col.sortable && 'cursor-pointer select-none hover:text-foreground')}
-                  onClick={() => handleSort(col.key)}
-                >
-                  <span className="flex items-center gap-1">
-                    {col.header}
-                    {col.sortable && activeSortKey === col.key && (
-                      <span className="text-xs">
-                        {activeSortDir === 'asc' ? '\u2191' : '\u2193'}
-                      </span>
-                    )}
-                  </span>
-                </TableHead>
-              ))}
-              {rowActions && <TableHead className="w-12" />}
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {sortedData.map((row) => (
-              <TableRow
-                key={row.id}
-                className={cn(onRowClick && 'cursor-pointer')}
-                onClick={() => onRowClick?.(row)}
-              >
-                {columns.map((col) => (
-                  <TableCell key={col.key}>{col.render(row)}</TableCell>
-                ))}
-                {rowActions && (
-                  <TableCell onClick={(e) => e.stopPropagation()}>
-                    <RowDropdown actions={rowActions(row)} />
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <DataTableDesktop
+          columns={columns}
+          sortedData={sortedData}
+          activeSortKey={activeSortKey ?? undefined}
+          activeSortDir={activeSortDir}
+          onSort={handleSort}
+          onRowClick={onRowClick}
+          rowActions={rowActions}
+        />
       </div>
-
-      <div className="flex flex-col gap-3 md:hidden">
-        {sortedData.map((row) => (
-          <div
-            key={row.id}
-            className="border border-border p-4"
-            onClick={() => onRowClick?.(row)}
-            role={onRowClick ? 'button' : undefined}
-            tabIndex={onRowClick ? 0 : undefined}
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <div className="font-medium">{getCardTitle(row)}</div>
-              {rowActions && (
-                <div onClick={(e) => e.stopPropagation()}>
-                  <RowDropdown actions={rowActions(row)} />
-                </div>
-              )}
-            </div>
-            <div className="flex flex-col gap-2">
-              {columns
-                .filter((col) => col.key !== cardTitleKey)
-                .map((col) => (
-                  <div key={col.key} className="flex items-baseline justify-between gap-2">
-                    <span className="shrink-0 text-sm text-muted-foreground">{col.header}</span>
-                    <span className="text-right text-sm">{col.render(row)}</span>
-                  </div>
-                ))}
-            </div>
-          </div>
-        ))}
-      </div>
-
+      <DataTableMobile
+        columns={columns}
+        sortedData={sortedData}
+        cardTitleKey={cardTitleKey}
+        onRowClick={onRowClick}
+        rowActions={rowActions}
+      />
       {totalPages > 1 && onPageChange && (
         <Pagination>
           <PaginationContent>
