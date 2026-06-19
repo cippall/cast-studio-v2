@@ -90,6 +90,7 @@ function makeAssetRow(overrides: Record<string, unknown> = {}) {
     source_asset_id: null,
     source_type: 'ORIGINAL',
     deleted_at: null,
+    sold_at: null,
     created_at: '2026-06-17T10:00:00.000Z',
     ...overrides,
   };
@@ -926,6 +927,7 @@ describe('POST /api/marketplace/:id/purchase', () => {
           purchased_by: null,
           seller_id: ARTIST_UUID,
           asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
         },
       ],
     } as any); // SELECT listing FOR UPDATE
@@ -934,21 +936,7 @@ describe('POST /api/marketplace/:id/purchase', () => {
     } as any); // SELECT wallet FOR UPDATE
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger
-    const sourceAsset = makeAssetRow();
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [sourceAsset] }); // SELECT source asset
-    const duplicateAssetId = 'g0000000-0000-4000-8000-000000000030';
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: duplicateAssetId }] }); // INSERT duplicate asset
-    const sourceOutputs = [
-      makeOutputRow('headshot', 'SUCCESS', { image_url: 'https://fal.ai/headshot.png' }),
-      makeOutputRow('fullshot', 'SUCCESS', { image_url: 'https://fal.ai/fullshot.png' }),
-      makeOutputRow('expressions_3x4', 'SUCCESS', { image_url: 'https://fal.ai/expressions.png' }),
-      makeOutputRow('character_sheet', 'SUCCESS', {
-        image_url: 'https://fal.ai/character_sheet.png',
-      }),
-      makeOutputRow('editorial', 'SUCCESS', { image_url: 'https://fal.ai/editorial1.png' }),
-    ];
-    mockPoolClient.query.mockResolvedValueOnce({ rows: sourceOutputs } as any); // SELECT source outputs
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // INSERT duplicate outputs bulk
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (transfer ownership)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -963,13 +951,7 @@ describe('POST /api/marketplace/:id/purchase', () => {
     expect(res.body.cost_credits).toBe(10.0);
     expect(res.body.new_balance).toBe(40.0);
     expect(res.body.purchased_at).toBeDefined();
-    expect(res.body.assets).toHaveLength(5);
-    expect(res.body.assets[0].layout_type).toBe('headshot');
-    expect(res.body.assets[0].image_url).toBe('https://fal.ai/headshot.png');
-    expect(res.body.assets[1].layout_type).toBe('fullshot');
-    expect(res.body.assets[2].layout_type).toBe('expressions_3x4');
-    expect(res.body.assets[3].layout_type).toBe('character_sheet');
-    expect(res.body.assets[4].layout_type).toBe('editorial');
+    expect(res.body.assets).toEqual([]); // Single purchase: ownership transferred, no duplication
   });
 });
 

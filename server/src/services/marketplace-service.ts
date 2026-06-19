@@ -168,11 +168,16 @@ export async function listArtistSubmissions(
   const conditions: string[] = ['a.workspace_id = $1', 'a.creator_id = $2', ''];
   let idx = 3;
 
-  conditions.push('a.marketplace_status IS NOT NULL');
+  // Include assets that were ever on marketplace (status is set) OR were sold (sold_at is set)
+  conditions.push('(a.marketplace_status IS NOT NULL OR a.sold_at IS NOT NULL)');
 
   if (status) {
-    conditions.push(`a.marketplace_status = $${idx++}`);
-    params.push(status);
+    if (status === 'SOLD') {
+      conditions.push(`a.sold_at IS NOT NULL`);
+    } else {
+      conditions.push(`a.marketplace_status = $${idx++}`);
+      params.push(status);
+    }
   }
 
   const whereClause = `WHERE ${conditions.join(' AND ')}`;
@@ -233,11 +238,15 @@ export async function listAllSubmissions(
   const conditions: string[] = [];
   let idx = 1;
 
-  conditions.push('a.marketplace_status IS NOT NULL');
+  conditions.push('(a.marketplace_status IS NOT NULL OR a.sold_at IS NOT NULL)');
 
   if (status) {
-    conditions.push(`a.marketplace_status = $${idx++}`);
-    params.push(status);
+    if (status === 'SOLD') {
+      conditions.push(`a.sold_at IS NOT NULL`);
+    } else {
+      conditions.push(`a.marketplace_status = $${idx++}`);
+      params.push(status);
+    }
   }
 
   const whereClause = `WHERE ${conditions.join(' AND ')}`;
@@ -253,7 +262,7 @@ export async function listAllSubmissions(
   const dataParams = [...params, pageSize, offset];
   const dataResult = await query(
     `SELECT a.id AS asset_id, a.name AS asset_name, a.asset_type, a.creator_id,
-            a.marketplace_status, a.created_at AS submitted_at,
+            a.marketplace_status, a.sold_at, a.created_at AS submitted_at,
             acc.name AS creator_name
      FROM assets a
      JOIN accounts acc ON acc.id = a.creator_id
@@ -647,11 +656,13 @@ export interface PurchaseResult {
   new_balance: number;
   assets: { layout_type: string; image_url: string | null }[];
 }
-
 /**
- * Purchase a marketplace listing.
+ * Purchase a marketplace listing (single purchase model).
+ * Transfers ownership of the original asset to the buyer.
  * Validates: listing is active and not yet purchased, client has sufficient balance.
- * Creates duplicate asset + outputs in client's workspace, deducts wallet, marks listing purchased.
+ * All wallet deduction + ownership transfer + listing mark-purchased in single transaction.
+ * After purchase: only buyer + Admins can see the asset.
+ * Artist sees "sold" reference via marketplace_listings (purchased_by set).
  */
 export async function purchaseListing(
   listingId: string,
@@ -664,7 +675,7 @@ export async function purchaseListing(
     // 1. Fetch and lock the listing to prevent concurrent purchases
     const listingSql = `
       SELECT ml.id AS listing_id, ml.asset_id, ml.price_credits, ml.is_active,
-             ml.purchased_by, ml.seller_id, a.asset_type
+             ml.purchased_by, ml.seller_id, a.asset_type, a.name AS asset_name
       FROM marketplace_listings ml
       JOIN assets a ON a.id = ml.asset_id
       WHERE ml.id = $1
@@ -681,6 +692,13 @@ export async function purchaseListing(
     // 2. Validate listing is active and not purchased
     if (!listingRec.is_active || listingRec.purchased_by) {
       throw Object.assign(new Error('This listing has already been purchased.'), {
+        statusCode: 409,
+      });
+    }
+
+    // Cannot buy your own listing
+    if (String(listingRec.seller_id) === account.id) {
+      throw Object.assign(new Error('You cannot purchase your own listing.'), {
         statusCode: 409,
       });
     }
@@ -727,71 +745,17 @@ export async function purchaseListing(
       [account.workspace_id, wallet.id, Number((-priceCredits).toFixed(4)), 'CHARGE'],
     );
 
-    // 6. Duplicate the asset into client's workspace
-    const sourceAssetResult = await dbClient.query(`SELECT * FROM assets WHERE id = $1 `, [
-      sourceAssetId,
-    ]);
-    if (sourceAssetResult.rows.length === 0) {
-      throw Object.assign(new Error('Source asset not found'), { statusCode: 404 });
-    }
-    const sourceAsset = sourceAssetResult.rows[0] as AssetRow;
-
-    const duplicateResult = await dbClient.query(
-      `INSERT INTO assets (workspace_id, creator_id, client_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-       RETURNING id`,
-      [
-        account.workspace_id,
-        account.id,
-        account.id,
-        assetType,
-        sourceAsset.name,
-        sourceAsset.seed,
-        JSON.stringify(sourceAsset.prompt_recipe),
-        sourceAssetId,
-        'MARKETPLACE_PURCHASE',
-      ],
+    // 6. Transfer ownership of the original asset to the buyer
+    //    - Set client_id to buyer's account id
+    //    - Clear marketplace_status (no longer listed)
+    //    - Set sold_at timestamp
+    //    - Unfreeze (is_marketplace_frozen = FALSE) so buyer can use it
+    await dbClient.query(
+      `UPDATE assets SET client_id = $1, marketplace_status = NULL, sold_at = NOW(), is_marketplace_frozen = FALSE WHERE id = $2`,
+      [account.id, sourceAssetId],
     );
-    const duplicateAssetId = duplicateResult.rows[0].id as string;
 
-    // 7. Duplicate all asset_outputs in a single bulk INSERT
-    const sourceOutputsResult = await dbClient.query(
-      `SELECT * FROM asset_outputs WHERE asset_id = $1`,
-      [sourceAssetId],
-    );
-    const sourceOutputs = sourceOutputsResult.rows as AssetOutputRow[];
-    const purchasedAssets: { layout_type: string; image_url: string | null }[] = [];
-
-    if (sourceOutputs.length > 0) {
-      const values: unknown[] = [];
-      const placeholders: string[] = [];
-      let paramIdx = 1;
-      for (const output of sourceOutputs) {
-        placeholders.push(
-          `($${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++}, $${paramIdx++})`,
-        );
-        values.push(
-          duplicateAssetId,
-          output.layout_type,
-          output.model,
-          output.image_url,
-          output.local_backup_url,
-          output.cost_credits,
-          output.status,
-          output.version,
-          output.generation_params ? JSON.stringify(output.generation_params) : null,
-          output.reference_images ? JSON.stringify(output.reference_images) : null,
-          output.source_asset_outputs ? JSON.stringify(output.source_asset_outputs) : null,
-        );
-        purchasedAssets.push({ layout_type: output.layout_type, image_url: output.image_url });
-      }
-      await dbClient.query(
-        `INSERT INTO asset_outputs (asset_id, layout_type, model, image_url, local_backup_url, cost_credits, status, version, generation_params, reference_images, source_asset_outputs) VALUES ${placeholders.join(', ')}`,
-        values,
-      );
-    }
-
-    // 8. Mark listing as purchased
+    // 7. Mark listing as purchased
     const purchasedAt = new Date().toISOString();
     await dbClient.query(
       `UPDATE marketplace_listings SET purchased_by = $1, purchased_at = $2 WHERE id = $3`,
@@ -800,15 +764,15 @@ export async function purchaseListing(
 
     await dbClient.query('COMMIT');
 
-    // 9. Notify the seller (non-blocking, outside transaction)
+    // 8. Notify the seller (non-blocking, outside transaction)
     try {
       const sellerId = String(listingRec.seller_id);
-      const assetName = sourceAsset.name ?? assetType;
+      const assetName = String(listingRec.asset_name ?? assetType);
       await dispatchNotification({
         type: 'WORKFLOW_COMPLETED',
         recipientId: sellerId,
-        title: 'Asset Purchased',
-        message: `Your asset "${assetName}" was purchased for ${priceCredits} credits.`,
+        title: 'Asset Sold',
+        message: `Your asset "${assetName}" was sold for ${priceCredits} credits.`,
         templateData: { title: assetName },
       });
     } catch {
@@ -820,7 +784,7 @@ export async function purchaseListing(
       purchased_at: purchasedAt,
       cost_credits: priceCredits,
       new_balance: newBalance,
-      assets: purchasedAssets,
+      assets: [], // Ownership transferred, no duplication
     };
   } catch (err) {
     await dbClient.query('ROLLBACK');

@@ -16,6 +16,7 @@ export interface AssetRow {
   source_asset_id: string | null;
   source_type: string;
   deleted_at: string | null;
+  sold_at: string | null;
   created_at: string;
   /** Populated via LEFT JOIN in list queries */
   headshot_url?: string | null;

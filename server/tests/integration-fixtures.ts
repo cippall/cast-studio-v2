@@ -163,6 +163,7 @@ export function actorRow(overrides: Record<string, unknown> = {}) {
     source_asset_id: null,
     source_type: 'ORIGINAL',
     deleted_at: null,
+    sold_at: null,
     created_at: '2026-06-17T10:00:00Z',
     ...overrides,
   };
