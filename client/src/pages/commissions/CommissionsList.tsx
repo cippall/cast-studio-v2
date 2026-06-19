@@ -6,7 +6,7 @@
  * Uses PageContainer + PageHeader.
  * Responsive: 1 col mobile, 2 col tablet, 3 col desktop card grid.
  */
-import { useState } from 'react';
+import { useState, memo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useCommissions } from '@/hooks/useCommissions';
@@ -97,7 +97,11 @@ interface CommissionListItem {
   brief?: Record<string, unknown>;
 }
 
-function CommissionCard({ commission, role, onAssign }: CommissionCardProps) {
+const CommissionCard = memo(function CommissionCard({
+  commission,
+  role,
+  onAssign,
+}: CommissionCardProps) {
   const navigate = useNavigate();
 
   return (
@@ -149,7 +153,7 @@ function CommissionCard({ commission, role, onAssign }: CommissionCardProps) {
       </CardContent>
     </Card>
   );
-}
+});
 
 export default function CommissionsList() {
   const navigate = useNavigate();
