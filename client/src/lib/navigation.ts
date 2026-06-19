@@ -111,7 +111,8 @@ export function getNavItems(role: Account['role']): NavItem[] {
   return [
     ...baseItems,
     { label: 'Collections', path: '/collections', icon: Folder },
-    { label: 'Marketplace', path: '/marketplace/manage', icon: ShoppingBag },
+    { label: 'Marketplace', path: '/marketplace', icon: ShoppingBag },
+    { label: 'My Listings', path: '/marketplace/manage', icon: ShoppingBag },
     { label: 'Commissions', path: '/commissions', icon: MessageSquare },
     {
       label: 'Settings',
