@@ -4,7 +4,7 @@
  * Stage 2: Iterate headshot -> fullshot -> expressions
  * Stage 3: Name + properties -> save
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
@@ -32,6 +32,7 @@ import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT' | 'RANDOMIZE';
 type WizardStage = 1 | 2 | 3;
@@ -337,6 +338,14 @@ export default function ActorDesigner() {
   // Stage 3 state
   const [actorName, setActorName] = useState('');
   const [taxonomyValues, setTaxonomyValues] = useState<Record<string, string>>({});
+
+  // Track initial values for dirty detection
+  const initialActorName = useMemo(() => '', []);
+  const initialTaxonomyValues = useMemo(() => ({}) as Record<string, string>, []);
+  const isStage3Dirty =
+    actorName !== initialActorName ||
+    JSON.stringify(taxonomyValues) !== JSON.stringify(initialTaxonomyValues);
+  useUnsavedChanges(stage === 3 && isStage3Dirty);
 
   // Actor ID after creation
   const [actorId, setActorId] = useState<string | null>(null);

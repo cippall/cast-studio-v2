@@ -3,7 +3,7 @@
  * Step 1: Choose input method (Prompt, Reference)
  * Step 2: Select generated option, name, and save
  */
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
@@ -28,6 +28,7 @@ import GenerationStatus from '@/components/GenerationStatus';
 import type { GenerationState } from '@/components/GenerationStatus';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
+import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 
 type EntryMethod = 'PROMPT' | 'REFERENCE';
 type WizardStep = 1 | 2;
@@ -348,6 +349,13 @@ export default function FashionItemCreator() {
   const [options, setOptions] = useState<GeneratedOption[]>([]);
   const [selectedOptionId, setSelectedOptionId] = useState<string | null>(null);
   const [itemName, setItemName] = useState('');
+
+  // Dirty detection for Step 2 — guard when user has selected or named something
+  const isStep2Dirty = useMemo(
+    () => step === 2 && (selectedOptionId !== null || itemName.trim().length > 0),
+    [step, selectedOptionId, itemName],
+  );
+  useUnsavedChanges(isStep2Dirty);
 
   // Create fashion item mutation
   const createItemMutation = useMutation({
