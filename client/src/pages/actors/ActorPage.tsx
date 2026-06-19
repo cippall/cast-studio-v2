@@ -359,14 +359,17 @@ export default function ActorPage() {
     });
   };
 
-  const hasRequiredOutputs = useMemo(() => {
-    if (!actor?.outputs) return false;
-    const required = ['headshot', 'fullshot', 'expressions'];
-    return required.every((key) => {
+  const requiredOutputs = ['headshot', 'fullshot', 'expressions'] as const;
+
+  const missingOutputs = useMemo(() => {
+    if (!actor?.outputs) return requiredOutputs.slice();
+    return requiredOutputs.filter((key) => {
       const output = actor.outputs[key];
-      return output && output.status === 'SUCCESS';
+      return !output || output.status !== 'SUCCESS';
     });
   }, [actor?.outputs]);
+
+  const hasRequiredOutputs = missingOutputs.length === 0;
 
   if (isLoading) {
     return (
@@ -578,6 +581,9 @@ export default function ActorPage() {
             <Send className="mr-2 size-4" />
             Submit to Marketplace
           </Button>
+          {!hasRequiredOutputs && !isFrozen && (
+            <p className="text-xs text-muted-foreground">Missing: {missingOutputs.join(', ')}</p>
+          )}
         </>
       )}
     </>
