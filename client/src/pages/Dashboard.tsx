@@ -57,7 +57,7 @@ export default function Dashboard() {
         {/* Quick Actions */}
         <div>
           <h2 className="mb-3 font-heading text-lg font-semibold">Quick Actions</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
             {quickActions.map((action) => (
               <Card
                 key={action.path}
