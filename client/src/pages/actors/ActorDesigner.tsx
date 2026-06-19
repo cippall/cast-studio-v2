@@ -4,7 +4,7 @@
  * Stage 2: Iterate headshot -> fullshot -> expressions
  * Stage 3: Name + properties -> save
  */
-import { useState, useCallback, useMemo } from 'react';
+import { useState, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
@@ -373,6 +373,7 @@ interface ReferencePhotoPanelProps {
   onGenerate: () => void;
   isGenerating: boolean;
   hasImages: boolean;
+  validationError: string | null;
 }
 
 function ReferencePhotoPanel({
@@ -385,6 +386,7 @@ function ReferencePhotoPanel({
   onGenerate,
   isGenerating,
   hasImages,
+  validationError,
 }: ReferencePhotoPanelProps) {
   return (
     <div className="flex flex-col items-center gap-6">
@@ -421,6 +423,13 @@ function ReferencePhotoPanel({
             Randomize identity
           </Label>
         </div>
+
+        {validationError && (
+          <div className="flex items-center gap-2 text-sm text-error">
+            <AlertCircle className="size-4 shrink-0" />
+            <span>{validationError}</span>
+          </div>
+        )}
 
         <Button onClick={onGenerate} disabled={isGenerating}>
           {isGenerating ? (
@@ -813,8 +822,14 @@ export default function ActorDesigner() {
 
   const handleGenerate = useCallback(() => {
     if (!actorId) return;
+    // Validate Reference Photo mode: require prompt or at least one reference image
+    if (entryMethod === 'REFERENCE' && !prompt.trim() && referenceImages.length === 0) {
+      setReferenceValidationError('Add a description or upload at least one reference image.');
+      return;
+    }
+    setReferenceValidationError(null);
     generateMutation.mutate(currentStep.key);
-  }, [actorId, currentStep.key, generateMutation]);
+  }, [actorId, currentStep.key, generateMutation, entryMethod, prompt, referenceImages]);
 
   const handleRegenerate = useCallback(() => {
     if (!actorId) return;
@@ -843,6 +858,20 @@ export default function ActorDesigner() {
   );
 
   const [createError, setCreateError] = useState<string | null>(null);
+  const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
+
+  // Clear validation error when user provides input in Reference mode
+  const prevPromptRef = useRef(prompt);
+  const prevImagesLengthRef = useRef(referenceImages.length);
+  if (
+    entryMethod === 'REFERENCE' &&
+    referenceValidationError &&
+    (prompt !== prevPromptRef.current || referenceImages.length !== prevImagesLengthRef.current)
+  ) {
+    setReferenceValidationError(null);
+  }
+  prevPromptRef.current = prompt;
+  prevImagesLengthRef.current = referenceImages.length;
 
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
   const selectedOptionId = selectedOptions[currentStep.key];
@@ -1027,6 +1056,7 @@ export default function ActorDesigner() {
               onGenerate={handleGenerate}
               isGenerating={isGenerating}
               hasImages={hasGeneratedImages}
+              validationError={referenceValidationError}
             />
           )}
 
@@ -1090,6 +1120,16 @@ export default function ActorDesigner() {
 
           {/* For Raw Text: confirm button below the panel */}
           {isRawText && hasGeneratedImages && (
+            <div className="flex justify-center">
+              <Button onClick={handleConfirmStep} disabled={!canConfirm}>
+                Confirm Selection
+                <ChevronRight className="ml-2 size-4" />
+              </Button>
+            </div>
+          )}
+
+          {/* For Reference Photo: confirm button below the panel */}
+          {isReference && hasGeneratedImages && (
             <div className="flex justify-center">
               <Button onClick={handleConfirmStep} disabled={!canConfirm}>
                 Confirm Selection

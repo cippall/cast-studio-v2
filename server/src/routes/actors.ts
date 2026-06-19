@@ -18,7 +18,7 @@ const createActorSchema = z.discriminatedUnion('entry_method', [
   }),
   z.object({
     entry_method: z.literal('REFERENCE'),
-    reference_image: z.string().min(1, 'reference_image is required'),
+    reference_image: z.string().optional(),
   }),
   z.object({
     entry_method: z.literal('TEXT'),
