@@ -13,6 +13,8 @@ import {
   useDisconnectFalKey,
   useFalModels,
   useImportFalModel,
+  useModelSchema,
+  useSaveModelParameters,
   type ModelConfig,
   type FalModel,
 } from '@/hooks/useAdmin';
@@ -33,7 +35,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
-import { Loader2, Plus, Plug, CheckCircle2, XCircle, Download, ExternalLink } from 'lucide-react';
+import ModelParameterForm from '@/components/ModelParameterForm';
+import {
+  Loader2,
+  Plus,
+  Plug,
+  CheckCircle2,
+  XCircle,
+  Download,
+  ExternalLink,
+  Settings2,
+} from 'lucide-react';
 import { toast } from 'sonner';
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -60,8 +72,15 @@ export default function ModelsPage() {
   const [apiKeyInput, setApiKeyInput] = useState('');
   const [testResult, setTestResult] = useState<'success' | 'error' | null>(null);
   const [importingId, setImportingId] = useState<string | null>(null);
+  const [configuringModel, setConfiguringModel] = useState<ModelConfig | null>(null);
 
   const isConnected = falStatus?.connected ?? false;
+
+  // Fetch schema for the model being configured
+  const { data: modelSchema, isLoading: schemaLoading } = useModelSchema(
+    configuringModel?.id ?? null,
+  );
+  const saveParameters = useSaveModelParameters();
 
   const handleTestConnection = async () => {
     if (!apiKeyInput.trim()) {
@@ -123,6 +142,18 @@ export default function ModelsPage() {
     } catch (err: unknown) {
       const error = err as { message?: string };
       toast.error(error.message ?? 'Failed to delete model');
+    }
+  };
+
+  const handleConfigureSave = async (parameters: Record<string, unknown>) => {
+    if (!configuringModel) return;
+    try {
+      await saveParameters.mutateAsync({ id: configuringModel.id, parameters });
+      toast.success('Parameters saved');
+      setConfiguringModel(null);
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error.message ?? 'Failed to save parameters');
     }
   };
 
@@ -436,6 +467,14 @@ export default function ModelsPage() {
               cardTitleKey="name"
               rowActions={(row) => [
                 <button
+                  key="configure"
+                  className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
+                  onClick={() => setConfiguringModel(row)}
+                >
+                  <Settings2 className="mr-2 size-4" />
+                  Configure
+                </button>,
+                <button
                   key="toggle"
                   className="flex w-full cursor-pointer items-center px-2 py-1.5 text-sm"
                   onClick={() => handleToggleActive(row.id, row.is_active)}
@@ -475,6 +514,28 @@ export default function ModelsPage() {
                 )}
               </Button>
             </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Configure Parameters dialog */}
+        <Dialog open={!!configuringModel} onOpenChange={() => setConfiguringModel(null)}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Configure Parameters</DialogTitle>
+              {configuringModel && (
+                <p className="text-sm text-muted-foreground">
+                  {configuringModel.name} ({configuringModel.model_id})
+                </p>
+              )}
+            </DialogHeader>
+            <ModelParameterForm
+              schema={modelSchema}
+              isLoading={schemaLoading}
+              initialValues={(configuringModel?.parameters as Record<string, unknown>) ?? {}}
+              onSave={handleConfigureSave}
+              isSaving={saveParameters.isPending}
+              onCancel={() => setConfiguringModel(null)}
+            />
           </DialogContent>
         </Dialog>
       </div>

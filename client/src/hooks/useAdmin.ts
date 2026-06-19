@@ -412,3 +412,47 @@ export function useImportFalModel() {
     },
   });
 }
+
+/* -- Model Parameter Schema -- */
+
+export interface ModelParameterSchema {
+  input: Record<string, FalModelSchemaField>;
+  output: Record<string, FalModelSchemaField>;
+}
+
+export interface FalModelSchemaField {
+  title: string;
+  type: string;
+  description?: string;
+  default?: unknown;
+  minimum?: number;
+  maximum?: number;
+  enum?: string[];
+}
+
+export function useModelSchema(modelId: string | null) {
+  return useQuery<ModelParameterSchema>({
+    queryKey: ['admin', 'model-schema', modelId],
+    queryFn: async () => {
+      const { data } = await apiClient.get(`/admin/models/${modelId}/schema`);
+      return data;
+    },
+    enabled: !!modelId,
+  });
+}
+
+export function useSaveModelParameters() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; parameters: Record<string, unknown> }) => {
+      const { data } = await apiClient.patch(`/admin/models/${input.id}`, {
+        parameters: input.parameters,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
+    },
+  });
+}
