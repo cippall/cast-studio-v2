@@ -543,36 +543,35 @@ export default function ActorDesigner() {
 
       {stage === 2 && (
         <div className="space-y-6">
-          {/* Horizontal stepper — scrollable on mobile */}
-          <div className="flex items-center gap-2 overflow-x-auto pb-2">
+          {/* Full-width segmented stepper */}
+          <div className="flex w-full border border-border-subtle">
             {LAYOUT_STEPS.map((step, index) => {
               const isActive = index === currentStepIndex;
               const isComplete = confirmedSteps.has(step.key);
+              const isUpcoming = !isActive && !isComplete;
+              const canNavigate = isComplete && !isActive;
               return (
-                <div key={step.key} className="flex shrink-0 items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      if (index < currentStepIndex || isComplete) {
-                        setCurrentStepIndex(index);
-                      }
-                    }}
-                    className={cn(
-                      'flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-medium transition-colors',
-                      isActive && 'bg-primary text-primary-foreground',
-                      isComplete &&
-                        !isActive &&
-                        'bg-success/10 text-success border border-success/20',
-                      !isActive && !isComplete && 'bg-muted text-muted-foreground',
-                    )}
-                  >
-                    {isComplete && !isActive && <Check className="size-4" />}
-                    {step.label}
-                  </button>
-                  {index < LAYOUT_STEPS.length - 1 && (
-                    <ChevronRight className="size-4 shrink-0 text-muted-foreground" />
+                <button
+                  key={step.key}
+                  type="button"
+                  disabled={isUpcoming}
+                  onClick={() => {
+                    if (canNavigate) {
+                      setCurrentStepIndex(index);
+                    }
+                  }}
+                  className={cn(
+                    'flex flex-1 items-center justify-center gap-2 border-r border-border-subtle px-4 py-3 text-sm font-medium transition-colors last:border-r-0',
+                    isActive && 'bg-primary text-primary-foreground',
+                    isComplete &&
+                      !isActive &&
+                      'bg-muted/50 text-muted-foreground hover:bg-muted cursor-pointer',
+                    isUpcoming && 'text-muted-foreground/50 cursor-not-allowed',
                   )}
-                </div>
+                >
+                  {isComplete && !isActive && <Check className="size-4" />}
+                  {step.label}
+                </button>
               );
             })}
           </div>
