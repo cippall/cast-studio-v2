@@ -71,6 +71,50 @@ router.post('/', requireSession, requireWorkspace, async (req: Request, res: Res
   }
 });
 
+// --- GET /api/collections/:id — get single collection ---
+
+router.get('/:id', requireSession, requireWorkspace, async (req: Request, res: Response) => {
+  try {
+    const collection = await collectionService.findCollectionById(
+      req.params.id,
+      req.account!.id,
+      req.account!.workspace_id,
+    );
+
+    if (!collection) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Collection not found' },
+      });
+      return;
+    }
+
+    res.json(collection);
+  } catch (err) {
+    console.error('Get collection error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to get collection' },
+    });
+  }
+});
+
+// --- GET /api/collections/:id/items — get collection items with asset details ---
+
+router.get('/:id/items', requireSession, requireWorkspace, async (req: Request, res: Response) => {
+  try {
+    const items = await collectionService.getCollectionItemsWithAssets(
+      req.params.id,
+      req.account!.id,
+      req.account!.workspace_id,
+    );
+    res.json(items);
+  } catch (err) {
+    console.error('Get collection items error:', err);
+    res.status(500).json({
+      error: { code: 'INTERNAL_ERROR', message: 'Failed to get collection items' },
+    });
+  }
+});
+
 // --- PUT /api/collections/:id — rename collection ---
 
 router.put('/:id', requireSession, requireWorkspace, async (req: Request, res: Response) => {

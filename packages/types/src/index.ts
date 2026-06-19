@@ -209,3 +209,18 @@ export interface ActivityFeedItem {
   action: ActivityActionType;
   created_at: string;
 }
+
+// --- Collection item detail (for collection detail page) ---
+
+export interface CollectionItemWithAsset {
+  id: string;
+  collection_id: string;
+  asset_type: string;
+  asset_id: string;
+  created_at: string;
+  asset: {
+    name: string;
+    image_url: string | null;
+    headshot_url?: string | null;
+  } | null;
+}

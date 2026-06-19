@@ -212,3 +212,70 @@ export async function removeItemFromCollectionService(
 ): Promise<boolean> {
   return removeCollectionItem(itemId, collectionId, account.id, account.workspace_id);
 }
+
+export async function getCollectionItems(
+  collectionId: string,
+  userId: string,
+  workspaceId: string,
+): Promise<CollectionItemRow[]> {
+  // Verify the collection belongs to the user
+  const collection = await findCollectionById(collectionId, userId, workspaceId);
+  if (!collection) {
+    return [];
+  }
+
+  const result = await query(
+    `SELECT ci.*
+     FROM collection_items ci
+     WHERE ci.collection_id = $1
+     ORDER BY ci.created_at DESC`,
+    [collectionId],
+  );
+  return result.rows as CollectionItemRow[];
+}
+
+export async function getCollectionItemsWithAssets(
+  collectionId: string,
+  userId: string,
+  workspaceId: string,
+): Promise<CollectionItemDetail[]> {
+  // Verify the collection belongs to the user
+  const collection = await findCollectionById(collectionId, userId, workspaceId);
+  if (!collection) {
+    return [];
+  }
+
+  const result = await query(
+    `SELECT ci.*,
+            a.name AS asset_name,
+            a.asset_type AS asset_type_ref,
+            ao.image_url AS asset_image_url
+     FROM collection_items ci
+     LEFT JOIN assets a ON ci.asset_id = a.id
+     LEFT JOIN LATERAL (
+       SELECT ao2.image_url
+       FROM asset_outputs ao2
+       WHERE ao2.asset_id = ci.asset_id
+       ORDER BY ao2.created_at DESC
+       LIMIT 1
+     ) ao ON TRUE
+     WHERE ci.collection_id = $1
+     ORDER BY ci.created_at DESC`,
+    [collectionId],
+  );
+
+  return result.rows.map((row) => ({
+    id: row.id,
+    collection_id: row.collection_id,
+    asset_type: row.asset_type,
+    asset_id: row.asset_id,
+    created_at: row.created_at,
+    asset: row.asset_name
+      ? {
+          name: row.asset_name,
+          image_url: row.asset_image_url,
+          headshot_url: row.asset_type === 'ACTOR' ? row.asset_image_url : null,
+        }
+      : null,
+  }));
+}

@@ -35,6 +35,19 @@ export interface AddCollectionItemInput {
   asset_id: string;
 }
 
+export interface CollectionItemDetail {
+  id: string;
+  collection_id: string;
+  asset_type: string;
+  asset_id: string;
+  created_at: string;
+  asset: {
+    name: string;
+    image_url: string | null;
+    headshot_url?: string | null;
+  } | null;
+}
+
 export interface CollectionListResult {
   data: CollectionWithItemCount[];
   pagination: {
