@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { Loader2 } from 'lucide-react';
-import type { ModelParameterSchema, FalModelSchemaField } from '@/hooks/useAdmin';
+import type { ModelParameterSchema, FalModelSchemaField } from '@/hooks/useAdminModels';
 
 interface ModelParameterFormProps {
   schema: ModelParameterSchema | undefined;

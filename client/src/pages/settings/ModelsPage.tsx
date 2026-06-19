@@ -7,17 +7,19 @@ import {
   useAdminModels,
   useDeleteModel,
   useUpdateModel,
+  useModelSchema,
+  useSaveModelParameters,
+  type ModelConfig,
+} from '@/hooks/useAdminModels';
+import {
   useFalKeyStatus,
   useSaveFalKey,
   useTestFalKey,
   useDisconnectFalKey,
   useFalModels,
   useImportFalModel,
-  useModelSchema,
-  useSaveModelParameters,
-  type ModelConfig,
   type FalModel,
-} from '@/hooks/useAdmin';
+} from '@/hooks/useFalConfig';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';

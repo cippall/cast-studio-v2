@@ -11,7 +11,7 @@ import {
   useUpdateTaxonomyEntry,
   useDeleteTaxonomyEntry,
   type TaxonomyEntry,
-} from '@/hooks/useAdmin';
+} from '@/hooks/useAdminTaxonomy';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';

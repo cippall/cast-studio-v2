@@ -3,7 +3,7 @@
  * Wrapped in PageContainer for responsive padding.
  */
 import { useState } from 'react';
-import { useAdminUsers, useUpdateUser, type AdminUser } from '@/hooks/useAdmin';
+import { useAdminUsers, useUpdateUser, type AdminUser } from '@/hooks/useAdminUsers';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type Column } from '@/components/DataTable';
 import {

@@ -8,7 +8,7 @@ import {
   useUpdatePrompt,
   useDeletePrompt,
   type SystemPrompt,
-} from '@/hooks/useAdmin';
+} from '@/hooks/useAdminPrompts';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';

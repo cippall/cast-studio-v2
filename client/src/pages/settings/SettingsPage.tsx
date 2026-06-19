@@ -9,13 +9,11 @@ import { useCurrentUser } from '@/hooks/useAuth';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useApiKeys } from '@/hooks/useApiKeys';
-import {
-  useAdminModels,
-  useAdminUsers,
-  useAdminPrompts,
-  useAdminTaxonomy,
-  useAdminCommissionForms,
-} from '@/hooks/useAdmin';
+import { useAdminUsers } from '@/hooks/useAdminUsers';
+import { useAdminModels } from '@/hooks/useAdminModels';
+import { useAdminPrompts } from '@/hooks/useAdminPrompts';
+import { useAdminTaxonomy } from '@/hooks/useAdminTaxonomy';
+import { useAdminCommissionForms } from '@/hooks/useAdminCommissionForms';
 import { useWalletBalance } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
