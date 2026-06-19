@@ -34,6 +34,7 @@ import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
 import { useUnsavedChanges } from '@/hooks/useUnsavedChanges';
 import ActorFormFields from '@/components/ActorFormFields';
+import ReferenceImageUpload from '@/components/ReferenceImageUpload';
 
 type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT';
 type WizardStage = 1 | 2 | 3;
@@ -299,6 +300,90 @@ function StructuredFormPanel({
   );
 }
 
+/* -- Stage 2: Reference Photo Panel (full-width bottom section) -- */
+
+interface ReferencePhotoPanelProps {
+  referenceImages: string[];
+  onReferenceImagesChange: (images: string[]) => void;
+  prompt: string;
+  onPromptChange: (value: string) => void;
+  randomize: boolean;
+  onRandomizeChange: (value: boolean) => void;
+  onGenerate: () => void;
+  isGenerating: boolean;
+  hasImages: boolean;
+}
+
+function ReferencePhotoPanel({
+  referenceImages,
+  onReferenceImagesChange,
+  prompt,
+  onPromptChange,
+  randomize,
+  onRandomizeChange,
+  onGenerate,
+  isGenerating,
+  hasImages,
+}: ReferencePhotoPanelProps) {
+  return (
+    <div className="flex flex-col items-center gap-6">
+      {/* Reference image slots */}
+      <ReferenceImageUpload
+        images={referenceImages}
+        onChange={onReferenceImagesChange}
+        maxSlots={4}
+      />
+
+      {/* Prompt textarea */}
+      <div className="w-full max-w-xl space-y-2">
+        <Label htmlFor="reference-prompt" className="text-center block">
+          Describe your actor
+        </Label>
+        <Textarea
+          id="reference-prompt"
+          value={prompt}
+          onChange={(e) => onPromptChange(e.target.value)}
+          placeholder="A young asian woman with cyberpunk aesthetic, neon-lit city background..."
+          rows={3}
+        />
+      </div>
+
+      {/* Randomize + Generate */}
+      <div className="flex flex-col items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="ref-randomize"
+            checked={randomize}
+            onCheckedChange={(checked) => onRandomizeChange(checked === true)}
+          />
+          <Label htmlFor="ref-randomize" className="cursor-pointer font-normal">
+            Randomize identity
+          </Label>
+        </div>
+
+        <Button onClick={onGenerate} disabled={isGenerating}>
+          {isGenerating ? (
+            <>
+              <Loader2 className="mr-2 size-4 animate-spin" />
+              Generating...
+            </>
+          ) : hasImages ? (
+            <>
+              <RotateCcw className="mr-2 size-4" />
+              Regenerate
+            </>
+          ) : (
+            <>
+              <Sparkles className="mr-2 size-4" />
+              Generate
+            </>
+          )}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* -- Stage 3: Name & Properties Form -- */
 
 interface Stage3Props {
@@ -367,6 +452,9 @@ export default function ActorDesigner() {
   const [prompt, setPrompt] = useState('');
   const [randomize, setRandomize] = useState(false);
 
+  // Reference Photo state
+  const [referenceImages, setReferenceImages] = useState<string[]>([]);
+
   // Structured Form state — persists across step navigation
   const [formValues, setFormValues] = useState<Record<string, string>>({});
 
@@ -431,6 +519,9 @@ export default function ActorDesigner() {
         layout_type: layoutType,
         options: { num_outputs: NUM_OPTIONS },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
+        ...(entryMethod === 'REFERENCE' && {
+          reference_images: referenceImages,
+        }),
         ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
@@ -462,6 +553,9 @@ export default function ActorDesigner() {
         layout_type: layoutType,
         options: { num_outputs: NUM_OPTIONS },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
+        ...(entryMethod === 'REFERENCE' && {
+          reference_images: referenceImages,
+        }),
         ...(randomize && { randomize: true }),
       });
       return (data.outputs ?? []) as Array<{
@@ -551,6 +645,8 @@ export default function ActorDesigner() {
 
   // Whether we are in Structured Form mode at Stage 2
   const isStructuredForm = entryMethod === 'FORM' && stage === 2;
+  // Whether we are in Reference Photo mode at Stage 2
+  const isReference = entryMethod === 'REFERENCE' && stage === 2;
 
   return (
     <PageContainer>
@@ -679,8 +775,23 @@ export default function ActorDesigner() {
             />
           )}
 
-          {/* Bottom actions — for non-form modes, show generate/regenerate here */}
-          {!isStructuredForm && (
+          {/* Reference Photo: slots + prompt + generate below image grid */}
+          {isReference && (
+            <ReferencePhotoPanel
+              referenceImages={referenceImages}
+              onReferenceImagesChange={setReferenceImages}
+              prompt={prompt}
+              onPromptChange={setPrompt}
+              randomize={randomize}
+              onRandomizeChange={setRandomize}
+              onGenerate={handleGenerate}
+              isGenerating={isGenerating}
+              hasImages={hasGeneratedImages}
+            />
+          )}
+
+          {/* Bottom actions — for non-form, non-reference modes, show generate/regenerate here */}
+          {!isStructuredForm && !isReference && (
             <div className="flex flex-wrap items-center gap-3">
               {!hasGeneratedImages ? (
                 <Button onClick={handleGenerate} disabled={isGenerating}>
