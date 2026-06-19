@@ -316,3 +316,58 @@ export function useDeleteCommissionForm() {
     },
   });
 }
+
+/* -- fal.ai API Key -- */
+
+export interface FalKeyStatus {
+  connected: boolean;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export function useFalKeyStatus() {
+  return useQuery<FalKeyStatus>({
+    queryKey: ['admin', 'fal-key', 'status'],
+    queryFn: async () => {
+      const { data } = await apiClient.get('/admin/fal-key/status');
+      return data.data;
+    },
+  });
+}
+
+export function useSaveFalKey() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (apiKey: string) => {
+      const { data } = await apiClient.post('/admin/fal-key', { api_key: apiKey });
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'fal-key'] });
+    },
+  });
+}
+
+export function useTestFalKey() {
+  return useMutation({
+    mutationFn: async (apiKey: string) => {
+      const { data } = await apiClient.post('/admin/fal-key/test', { api_key: apiKey });
+      return data.data;
+    },
+  });
+}
+
+export function useDisconnectFalKey() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async () => {
+      const { data } = await apiClient.delete('/admin/fal-key');
+      return data.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'fal-key'] });
+    },
+  });
+}
