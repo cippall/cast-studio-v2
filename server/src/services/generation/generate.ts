@@ -8,6 +8,7 @@ import type { AccountRow } from '../../middleware/requireSession.js';
 import type { WorkspaceRow } from '../../middleware/requireWorkspace.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
+import { getWorkspaceApiKey } from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { refundCredits } from '../../db/repositories/wallet-repo.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
@@ -129,15 +130,39 @@ export async function generateActorOutput(
       cost_credits: output.cost_credits,
     });
 
+    // Resolve workspace-specific fal.ai key (falls back to FAL_KEY env)
+    const workspaceKey = await getWorkspaceApiKey(account.workspace_id);
+
     // Submit to fal.ai (non-blocking — worker will poll)
     try {
-      await fal.submitTextToImage({
-        model,
-        prompt,
-        seed: outputSeed,
-        num_outputs: 1,
-        image_size: '1024x1024',
-      });
+      if (options.reference_images && options.reference_images.length > 0) {
+        // REFERENCE mode: use image-to-image with first reference image
+        await fal.submitImageToImage(
+          {
+            model,
+            prompt,
+            seed: outputSeed,
+            num_outputs: 1,
+            image_url: options.reference_images[0],
+            strength: 0.7,
+            reference_images: options.reference_images,
+          },
+          workspaceKey,
+        );
+      } else {
+        // FORM or TEXT mode: text-to-image
+        await fal.submitTextToImage(
+          {
+            model,
+            prompt,
+            seed: outputSeed,
+            num_outputs: 1,
+            image_size: '1024x1024',
+            form_data: options.form_data,
+          },
+          workspaceKey,
+        );
+      }
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
       console.error(`fal.ai submission error for output ${output.id}:`, err);

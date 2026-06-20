@@ -10,6 +10,10 @@ export interface FalGenerateParams {
   image_url?: string;
   /** For image-to-image: strength of the original image */
   strength?: number;
+  /** FORM mode: structured input data for generation */
+  form_data?: Record<string, unknown>;
+  /** REFERENCE mode: array of reference image URLs */
+  reference_images?: string[];
 }
 
 export interface FalJobResult {

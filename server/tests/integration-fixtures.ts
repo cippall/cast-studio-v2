@@ -42,6 +42,7 @@ vi.mock('../src/db/pool.js', () => {
 // Mock external services
 vi.mock('../src/services/fal-service.js', () => ({
   submitTextToImage: vi.fn().mockResolvedValue({ request_id: 'fal-test-123' }),
+  getWorkspaceApiKey: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('../src/services/stripe-service.js', () => ({

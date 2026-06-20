@@ -2,7 +2,7 @@ import type { FalGenerateParams, FalJobResult } from './types.js';
 
 const FAL_API_BASE = 'https://queue.fal.run/fal-ai';
 
-function getApiKey(): string | undefined {
+function getEnvKey(): string | undefined {
   return process.env.FAL_KEY;
 }
 
@@ -48,11 +48,14 @@ async function postJson(url: string, apiKey: string, body: unknown): Promise<unk
 
 // --- Public API ---
 
-export async function submitTextToImage(params: FalGenerateParams): Promise<{
+export async function submitTextToImage(
+  params: FalGenerateParams,
+  apiKey?: string,
+): Promise<{
   jobId: string;
   status: string;
 }> {
-  const apiKey = getApiKey();
+  const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(params.model);
 
   const body: Record<string, unknown> = {
@@ -64,19 +67,24 @@ export async function submitTextToImage(params: FalGenerateParams): Promise<{
   if (params.guidance_scale !== undefined) body['guidance_scale'] = params.guidance_scale;
   if (params.num_inference_steps !== undefined)
     body['num_inference_steps'] = params.num_inference_steps;
+  if (params.form_data) body['form_data'] = params.form_data;
+  if (params.reference_images) body['reference_images'] = params.reference_images;
 
-  if (apiKey) {
-    const data = (await postJson(endpoint, apiKey, body)) as { request_id: string };
+  if (key) {
+    const data = (await postJson(endpoint, key, body)) as { request_id: string };
     return { jobId: data.request_id, status: 'PENDING' };
   }
   return { jobId: simJobId(), status: 'PENDING' };
 }
 
-export async function submitImageToImage(params: FalGenerateParams): Promise<{
+export async function submitImageToImage(
+  params: FalGenerateParams,
+  apiKey?: string,
+): Promise<{
   jobId: string;
   status: string;
 }> {
-  const apiKey = getApiKey();
+  const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(params.model);
 
   const body: Record<string, unknown> = {
@@ -87,21 +95,25 @@ export async function submitImageToImage(params: FalGenerateParams): Promise<{
   };
   if (params.strength !== undefined) body['strength'] = params.strength;
 
-  if (apiKey) {
-    const data = (await postJson(endpoint, apiKey, body)) as { request_id: string };
+  if (key) {
+    const data = (await postJson(endpoint, key, body)) as { request_id: string };
     return { jobId: data.request_id, status: 'PENDING' };
   }
   return { jobId: simJobId(), status: 'PENDING' };
 }
 
-export async function pollJob(jobId: string, model: string): Promise<FalJobResult> {
-  const apiKey = getApiKey();
+export async function pollJob(
+  jobId: string,
+  model: string,
+  apiKey?: string,
+): Promise<FalJobResult> {
+  const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(model);
 
-  if (apiKey) {
+  if (key) {
     const response = await fetch(`${endpoint}/requests/${jobId}`, {
       headers: {
-        Authorization: `Key ${apiKey}`,
+        Authorization: `Key ${key}`,
         'Content-Type': 'application/json',
       },
     });
@@ -145,24 +157,28 @@ export async function pollJob(jobId: string, model: string): Promise<FalJobResul
   };
 }
 
-export async function cancelJob(jobId: string, model: string): Promise<void> {
-  const apiKey = getApiKey();
-  if (apiKey) {
+export async function cancelJob(jobId: string, model: string, apiKey?: string): Promise<void> {
+  const key = apiKey ?? getEnvKey();
+  if (key) {
     const endpoint = getModelEndpoint(model);
     await fetch(`${endpoint}/requests/${jobId}/cancel`, {
       method: 'POST',
       headers: {
-        Authorization: `Key ${apiKey}`,
+        Authorization: `Key ${key}`,
         'Content-Type': 'application/json',
       },
     });
   }
 }
 
-export async function imageToText(imageUrl: string, prompt: string): Promise<string> {
-  const apiKey = getApiKey();
-  if (apiKey) {
-    const data = (await postJson(`${FAL_API_BASE}/flux-pro/v1/image-to-text`, apiKey, {
+export async function imageToText(
+  imageUrl: string,
+  prompt: string,
+  apiKey?: string,
+): Promise<string> {
+  const key = apiKey ?? getEnvKey();
+  if (key) {
+    const data = (await postJson(`${FAL_API_BASE}/flux-pro/v1/image-to-text`, key, {
       image_url: imageUrl,
       prompt,
     })) as { output: string };

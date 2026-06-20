@@ -156,6 +156,8 @@ function createDuplicateApp(accountOverride?: Record<string, unknown>) {
 /** Reset mock to pristine state */
 function resetMock() {
   mockQuery.mockReset();
+  // Default: no workspace fal.ai key configured — getApiKey falls back to FAL_KEY env
+  mockQuery.mockResolvedValue({ rows: [] });
 }
 
 // ================================================================
@@ -1107,24 +1109,55 @@ describe('POST /api/actors/:id/generate', () => {
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-003', balance_credits: 9.85 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-003' }] } as any);
-    // createAssetOutput x3
-    for (let i = 0; i < 3; i++) {
-      mockQuery.mockResolvedValueOnce({
-        rows: [
-          {
-            id: `g0000000-0000-4000-8000-00000000001${i}`,
-            asset_id: ACTOR_UUID,
-            layout_type: 'headshot',
-            model: 'flux-pro',
-            status: 'PENDING',
-            cost_credits: 0.05,
-            version: 1,
-            generation_params: {},
-            created_at: '2026-06-19T12:00:00.000Z',
-          },
-        ],
-      } as any);
-    }
+    // Per iteration: createAssetOutput, then getWorkspaceApiKey (no key)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: `g0000000-0000-4000-8000-000000000010`,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {},
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: `g0000000-0000-4000-8000-000000000011`,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {},
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: `g0000000-0000-4000-8000-000000000012`,
+          asset_id: ACTOR_UUID,
+          layout_type: 'headshot',
+          model: 'flux-pro',
+          status: 'PENDING',
+          cost_credits: 0.05,
+          version: 1,
+          generation_params: {},
+          created_at: '2026-06-19T12:00:00.000Z',
+        },
+      ],
+    } as any);
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     const res = await request(createRouteApp(artist))
       .post(`/api/actors/${ACTOR_UUID}/generate`)

@@ -2,13 +2,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-// Mock pool before importing modules that use it
-vi.mock('../src/db/pool.js', () => ({
-  query: vi.fn(),
-  getClient: vi.fn(),
-  default: {},
-}));
-
 // Mock fetch globally
 const mockFetch = vi.fn();
 global.fetch = mockFetch;
@@ -22,179 +15,227 @@ import {
 
 const FAL_API_BASE = 'https://queue.fal.run/fal-ai';
 
-describe('fal-api dynamic model endpoints', () => {
+// ================================================================
+// API key resolution (apiKey parameter takes precedence over FAL_KEY env)
+// ================================================================
+describe('fal.ai API key resolution', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Default: no FAL_KEY env
     delete process.env.FAL_KEY;
   });
 
-  describe('getModelEndpoint via submitTextToImage', () => {
-    it('uses hardcoded endpoint for flux-pro', async () => {
-      process.env.FAL_KEY = 'test-key';
+  describe('submitTextToImage with explicit apiKey', () => {
+    it('uses provided apiKey instead of FAL_KEY env', async () => {
+      process.env.FAL_KEY = 'env-key';
       mockFetch.mockResolvedValueOnce({
         ok: true,
-        json: async () => ({ request_id: 'test-123' }),
+        json: async () => ({ request_id: 'explicit-job-123' }),
       });
 
-      await submitTextToImage({
+      const result = await submitTextToImage(
+        { model: 'flux-pro', prompt: 'test', seed: 42 },
+        'explicit-key',
+      );
+
+      expect(result.jobId).toBe('explicit-job-123');
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${FAL_API_BASE}/flux-pro`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Key explicit-key',
+          }),
+        }),
+      );
+    });
+
+    it('falls back to FAL_KEY env when no apiKey provided', async () => {
+      process.env.FAL_KEY = 'fallback-key';
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({ request_id: 'fallback-job-123' }),
+      });
+
+      const result = await submitTextToImage({ model: 'flux-pro', prompt: 'test', seed: 42 });
+
+      expect(result.jobId).toBe('fallback-job-123');
+      expect(mockFetch).toHaveBeenCalledWith(
+        `${FAL_API_BASE}/flux-pro`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Key fallback-key',
+          }),
+        }),
+      );
+    });
+
+    it('returns sim job when no apiKey and no FAL_KEY', async () => {
+      const result = await submitTextToImage({
         model: 'flux-pro',
         prompt: 'test',
         seed: 42,
       });
 
-      expect(mockFetch).toHaveBeenCalledWith(`${FAL_API_BASE}/flux-pro`, expect.any(Object));
-    });
-
-    it('uses hardcoded endpoint for flux-realism', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ request_id: 'test-456' }),
-      });
-
-      await submitTextToImage({
-        model: 'flux-realism',
-        prompt: 'test',
-        seed: 42,
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(`${FAL_API_BASE}/flux-realism`, expect.any(Object));
-    });
-
-    it('uses dynamic endpoint for non-hardcoded model ID', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ request_id: 'test-789' }),
-      });
-
-      await submitTextToImage({
-        model: 'fal-ai/flux/dev',
-        prompt: 'test',
-        seed: 42,
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://queue.fal.run/fal-ai/flux/dev',
-        expect.any(Object),
-      );
-    });
-
-    it('uses dynamic endpoint for custom model path', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ request_id: 'test-abc' }),
-      });
-
-      await submitTextToImage({
-        model: 'fal-ai/sdxl-turbo/v1',
-        prompt: 'test',
-        seed: 42,
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://queue.fal.run/fal-ai/sdxl-turbo/v1',
-        expect.any(Object),
-      );
+      expect(result.jobId).toMatch(/^sim_/);
+      expect(mockFetch).not.toHaveBeenCalled();
     });
   });
 
-  describe('getModelEndpoint via submitImageToImage', () => {
-    it('uses dynamic endpoint for non-hardcoded model', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ request_id: 'img-123' }),
-      });
-
-      await submitImageToImage({
-        model: 'fal-ai/flux-canny/v1',
-        prompt: 'test',
-        seed: 42,
-        image_url: 'https://example.com/img.png',
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://queue.fal.run/fal-ai/flux-canny/v1',
-        expect.any(Object),
-      );
-    });
-
-    it('uses hardcoded endpoint for sdxl-turbo', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ request_id: 'img-456' }),
-      });
-
-      await submitImageToImage({
-        model: 'sdxl-turbo',
-        prompt: 'test',
-        seed: 42,
-        image_url: 'https://example.com/img.png',
-      });
-
-      expect(mockFetch).toHaveBeenCalledWith(`${FAL_API_BASE}/sdxl-turbo`, expect.any(Object));
-    });
-  });
-
-  describe('getModelEndpoint via pollJob', () => {
-    it('uses dynamic endpoint for non-hardcoded model', async () => {
-      process.env.FAL_KEY = 'test-key';
+  describe('pollJob with explicit apiKey', () => {
+    it('uses provided apiKey for polling', async () => {
       mockFetch.mockResolvedValueOnce({
         ok: true,
         json: async () => ({
           status: 'COMPLETED',
-          output: { images: [{ url: 'https://example.com/result.png' }] },
+          output: { images: [{ url: 'https://example.com/img.png' }] },
         }),
       });
 
-      await pollJob('job-123', 'fal-ai/flux/dev');
+      await pollJob('job-123', 'flux-pro', 'poll-key');
 
       expect(mockFetch).toHaveBeenCalledWith(
-        'https://queue.fal.run/fal-ai/flux/dev/requests/job-123',
-        expect.any(Object),
+        `${FAL_API_BASE}/flux-pro/requests/job-123`,
+        expect.objectContaining({
+          headers: expect.objectContaining({
+            Authorization: 'Key poll-key',
+          }),
+        }),
       );
     });
   });
+});
 
-  describe('getModelEndpoint via cancelJob', () => {
-    it('uses dynamic endpoint for non-hardcoded model', async () => {
-      process.env.FAL_KEY = 'test-key';
-      mockFetch.mockResolvedValueOnce({ ok: true });
-
-      await cancelJob('job-456', 'fal-ai/custom-model/v2');
-
-      expect(mockFetch).toHaveBeenCalledWith(
-        'https://queue.fal.run/fal-ai/custom-model/v2/requests/job-456/cancel',
-        expect.objectContaining({ method: 'POST' }),
-      );
-    });
+// ================================================================
+// form_data and reference_images passing
+// ================================================================
+describe('form_data and reference_images in submitTextToImage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.FAL_KEY;
   });
 
-  describe('simulated mode (no FAL_KEY)', () => {
-    it('returns simulated job ID without calling fetch', async () => {
-      // No FAL_KEY set
-      const result = await submitTextToImage({
-        model: 'fal-ai/flux/dev',
-        prompt: 'test',
+  it('includes form_data in fal.ai body when provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ request_id: 'form-job-123' }),
+    });
+
+    await submitTextToImage(
+      {
+        model: 'flux-pro',
+        prompt: 'test prompt',
         seed: 42,
-      });
+        form_data: { gender: 'female', age: '25-35', ethnicity: 'asian' },
+      },
+      'test-key',
+    );
 
-      expect(result.jobId).toMatch(/^sim_/);
-      expect(result.status).toBe('PENDING');
-      expect(mockFetch).not.toHaveBeenCalled();
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(requestBody).toMatchObject({
+      prompt: 'test prompt',
+      form_data: { gender: 'female', age: '25-35', ethnicity: 'asian' },
+    });
+  });
+
+  it('does not include form_data key when not provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ request_id: 'no-form-job-123' }),
     });
 
-    it('pollJob returns a data URI placeholder in simulated mode', async () => {
-      // No FAL_KEY set
-      const result = await pollJob('sim_1234567890_abcdefg', 'flux-pro');
+    await submitTextToImage({ model: 'flux-pro', prompt: 'test', seed: 42 }, 'test-key');
 
-      expect(result.status).toBe('SUCCESS');
-      expect(result.image_url).toMatch(/^data:image\/png;base64,/);
-      expect(mockFetch).not.toHaveBeenCalled();
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(requestBody).not.toHaveProperty('form_data');
+  });
+
+  it('includes reference_images in fal.ai body when provided', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ request_id: 'ref-job-123' }),
     });
+
+    await submitTextToImage(
+      {
+        model: 'flux-pro',
+        prompt: 'test with reference',
+        seed: 42,
+        reference_images: ['https://example.com/ref1.png', 'https://example.com/ref2.png'],
+      },
+      'test-key',
+    );
+
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(requestBody).toMatchObject({
+      prompt: 'test with reference',
+      reference_images: ['https://example.com/ref1.png', 'https://example.com/ref2.png'],
+    });
+  });
+});
+
+// ================================================================
+// submitImageToImage with apiKey (REFERENCE mode)
+// ================================================================
+describe('submitImageToImage with apiKey (REFERENCE mode)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    delete process.env.FAL_KEY;
+  });
+
+  it('uses provided apiKey for image-to-image submission', async () => {
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ request_id: 'img2img-job-123' }),
+    });
+
+    await submitImageToImage(
+      {
+        model: 'flux-canny',
+        prompt: 'transform this',
+        seed: 42,
+        image_url: 'https://example.com/input.png',
+        strength: 0.8,
+      },
+      'img2img-key',
+    );
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      'https://queue.fal.run/fal-ai/flux-canny',
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Key img2img-key',
+        }),
+      }),
+    );
+
+    const requestBody = JSON.parse(mockFetch.mock.calls[0][1].body);
+    expect(requestBody).toMatchObject({
+      image_url: 'https://example.com/input.png',
+      prompt: 'transform this',
+      strength: 0.8,
+    });
+  });
+
+  it('falls back to FAL_KEY for image-to-image when no apiKey', async () => {
+    process.env.FAL_KEY = 'env-fallback';
+    mockFetch.mockResolvedValueOnce({
+      ok: true,
+      json: async () => ({ request_id: 'img2img-fallback-123' }),
+    });
+
+    await submitImageToImage({
+      model: 'flux-canny',
+      prompt: 'transform',
+      seed: 1,
+      image_url: 'https://example.com/in.png',
+    });
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      expect.any(String),
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Authorization: 'Key env-fallback',
+        }),
+      }),
+    );
   });
 });
