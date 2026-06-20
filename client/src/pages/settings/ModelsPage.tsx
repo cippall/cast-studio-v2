@@ -77,7 +77,7 @@ export default function ModelsPage() {
           description="Browse fal.ai models and configure active models for each task"
         >
           <div className="flex items-center gap-3">
-            <span className="flex items-center gap-1.5 text-sm text-green-600">
+            <span className="flex items-center gap-1.5 text-sm text-success">
               <CheckCircle2 className="size-4" /> fal.ai connected
             </span>
             <Button variant="outline" size="sm" onClick={handleDisconnect}>
