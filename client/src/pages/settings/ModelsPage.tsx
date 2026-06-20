@@ -29,15 +29,37 @@ export default function ModelsPage() {
 
   const isConnected = falStatus?.connected ?? false;
 
+  const extractDefaultParams = (
+    schema: Record<
+      string,
+      { title: string; type: string; description?: string; default?: unknown }
+    >,
+  ): Record<string, unknown> => {
+    const defaults: Record<string, unknown> = {};
+    for (const [key, prop] of Object.entries(schema)) {
+      if (prop.default !== undefined) {
+        defaults[key] = prop.default;
+      }
+    }
+    return defaults;
+  };
+
   const handleImportModel = async (model: FalModel) => {
     setImportingId(model.id);
     try {
+      const inputSchema = model.inputSchema ?? {};
       await importModel.mutateAsync({
         fal_model_id: model.id,
         name: model.name,
         description: model.description,
         category: model.category,
-        parameters: model.inputSchema ?? {},
+        input_schema: inputSchema,
+        default_parameters: extractDefaultParams(
+          inputSchema as Record<
+            string,
+            { title: string; type: string; description?: string; default?: unknown }
+          >,
+        ),
       });
       toast.success(`Imported ${model.name}`);
     } catch (err: unknown) {

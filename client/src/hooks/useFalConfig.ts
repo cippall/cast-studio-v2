@@ -83,9 +83,10 @@ export function useImportFalModel() {
     mutationFn: async (input: {
       fal_model_id: string;
       name: string;
-      description: string;
+      description?: string;
       category: string;
-      parameters?: Record<string, unknown>;
+      input_schema?: Record<string, unknown>;
+      default_parameters?: Record<string, unknown>;
     }) => {
       const { data } = await apiClient.post('/admin/models/import', input);
       return data;
