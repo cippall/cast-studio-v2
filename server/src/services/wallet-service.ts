@@ -79,7 +79,12 @@ export async function applyStripeTopUp(
   const normalizedAmount = Number(amount.toFixed(4));
   const newBalance = Number((currentBalance + normalizedAmount).toFixed(4));
 
-  const updatedWallet = await walletRepo.updateWalletBalance(wallet.id, newBalance);
+  const updatedWallet = await walletRepo.updateWalletBalance(
+    wallet.id,
+    newBalance,
+    workspaceId,
+    accountId,
+  );
 
   const ledger = await walletRepo.createLedgerEntry({
     workspaceId,

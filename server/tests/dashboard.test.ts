@@ -83,7 +83,7 @@ describe('GET /api/dashboard', () => {
   });
 
   describe('ADMIN role', () => {
-    it('returns global stats', async () => {
+    it('returns workspace-scoped stats', async () => {
       const account = makeAccountRow(ADMIN_UUID, 'ADMIN');
       seedSession(account);
       mockQuery.mockResolvedValueOnce({ rows: [{ count: 42 }] } as any);
@@ -102,6 +102,12 @@ describe('GET /api/dashboard', () => {
         activeMembers: 25,
         pendingCommissions: 3,
       });
+
+      // Verify all admin queries include workspace_id filter
+      const adminQueryCalls = mockQuery.mock.calls.slice(2); // skip session + workspace
+      for (const call of adminQueryCalls) {
+        expect(call[1]).toEqual([WORKSPACE_UUID]);
+      }
     });
 
     it('returns zeros when tables are empty', async () => {

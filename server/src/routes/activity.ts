@@ -14,6 +14,7 @@ router.get('/activity', requireSession, async (req: Request, res: Response) => {
   try {
     const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 10, 1), 50);
     const accountId = req.account?.id;
+    const workspaceId = req.account?.workspace_id;
 
     // Recent assets created by or shared with this user
     const assetsResult = await query(
@@ -30,10 +31,10 @@ router.get('/activity', requireSession, async (req: Request, res: Response) => {
            NULL
          ) AS thumbnail_url
        FROM assets a
-       WHERE a.creator_id = $1 AND a.deleted_at IS NULL
+       WHERE a.creator_id = $1 AND a.workspace_id = $2 AND a.deleted_at IS NULL
        ORDER BY a.created_at DESC
-       LIMIT $2`,
-      [accountId, limit],
+       LIMIT $3`,
+      [accountId, workspaceId, limit],
     );
 
     // Recent successful generations (outputs) for this user's assets
@@ -47,10 +48,10 @@ router.get('/activity', requireSession, async (req: Request, res: Response) => {
          ao.image_url AS thumbnail_url
        FROM asset_outputs ao
        JOIN assets a ON a.id = ao.asset_id
-       WHERE a.creator_id = $1 AND ao.status = 'SUCCESS' AND a.deleted_at IS NULL
+       WHERE a.creator_id = $1 AND a.workspace_id = $2 AND ao.status = 'SUCCESS' AND a.deleted_at IS NULL
        ORDER BY ao.created_at DESC
-       LIMIT $2`,
-      [accountId, limit],
+       LIMIT $3`,
+      [accountId, workspaceId, limit],
     );
 
     // Recent shares where this user is the grantee
@@ -69,10 +70,10 @@ router.get('/activity', requireSession, async (req: Request, res: Response) => {
          ) AS thumbnail_url
        FROM asset_permissions ap
        JOIN assets a ON a.id = ap.asset_id
-       WHERE ap.grantee_id = $1 AND ap.revoked_at IS NULL AND a.deleted_at IS NULL
+       WHERE ap.grantee_id = $1 AND a.workspace_id = $2 AND ap.revoked_at IS NULL AND a.deleted_at IS NULL
        ORDER BY ap.granted_at DESC
-       LIMIT $2`,
-      [accountId, limit],
+       LIMIT $3`,
+      [accountId, workspaceId, limit],
     );
 
     // Merge, sort by created_at desc, and cap at limit

@@ -9,19 +9,24 @@ router.get('/dashboard', requireSession, async (req: Request, res: Response) => 
     const role = req.account?.role;
 
     if (role === 'ADMIN') {
+      const workspaceId = req.account!.workspace_id;
       const [actors, looks, items, members, pendingCommissions] = await Promise.all([
         query(
-          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'ACTOR' AND deleted_at IS NULL",
+          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'ACTOR' AND workspace_id = $1 AND deleted_at IS NULL",
+          [workspaceId],
         ),
         query(
-          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'LOOK' AND deleted_at IS NULL",
+          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'LOOK' AND workspace_id = $1 AND deleted_at IS NULL",
+          [workspaceId],
         ),
         query(
-          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'FASHION_ITEM' AND deleted_at IS NULL",
+          "SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'FASHION_ITEM' AND workspace_id = $1 AND deleted_at IS NULL",
+          [workspaceId],
         ),
-        query('SELECT COUNT(*)::int AS count FROM accounts'),
+        query('SELECT COUNT(*)::int AS count FROM accounts WHERE workspace_id = $1', [workspaceId]),
         query(
-          "SELECT COUNT(*)::int AS count FROM commissions WHERE status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')",
+          "SELECT COUNT(*)::int AS count FROM commissions WHERE workspace_id = $1 AND status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')",
+          [workspaceId],
         ),
       ]);
       res.json({

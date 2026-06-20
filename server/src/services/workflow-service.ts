@@ -92,7 +92,7 @@ export async function startWorkflow(
 
   // Hold escrow: deduct from wallet balance
   const newBalance = Number((wallet.balance_credits - totalEscrow).toFixed(4));
-  await walletRepo.updateWalletBalance(wallet.id, newBalance);
+  await walletRepo.updateWalletBalance(wallet.id, newBalance, workspace.id, account.id);
 
   // Create ESCROW_HOLD ledger entry
   await walletRepo.createLedgerEntry({
@@ -185,7 +185,12 @@ export async function cancelWorkflow(
 
     if (wallet) {
       const newBalance = Number((wallet.balance_credits + refundAmount).toFixed(4));
-      await walletRepo.updateWalletBalance(wallet.id, newBalance);
+      await walletRepo.updateWalletBalance(
+        wallet.id,
+        newBalance,
+        workflow.workspace_id,
+        account.id,
+      );
 
       // Create ESCROW_REFUND ledger entry
       await walletRepo.createLedgerEntry({

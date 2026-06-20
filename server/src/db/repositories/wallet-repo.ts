@@ -27,9 +27,9 @@ function setCachedWallet(workspaceId: string, accountId: string, row: WalletRow)
   });
 }
 
-/** Invalidate all wallet cache entries. Called after balance updates. */
-export function invalidateWalletCache(): void {
-  walletCache.clear();
+/** Invalidate a specific wallet cache entry. Called after balance updates. */
+export function invalidateWalletCacheEntry(workspaceId: string, accountId: string): void {
+  walletCache.delete(walletCacheKey(workspaceId, accountId));
 }
 
 export interface WalletRow {
@@ -151,15 +151,19 @@ export async function createLedgerEntry(input: CreateLedgerInput): Promise<Ledge
   return asLedgerRow(result.rows[0] as Record<string, unknown>);
 }
 
-export async function updateWalletBalance(walletId: string, balance: number): Promise<WalletRow> {
+export async function updateWalletBalance(
+  walletId: string,
+  balance: number,
+  workspaceId: string,
+  accountId: string,
+): Promise<WalletRow> {
   const result = await query(
     `UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2 RETURNING *`,
     [Number(balance.toFixed(4)), walletId],
   );
 
-  // Invalidate all cache entries — short TTL means this is safe,
-  // and avoids needing workspace_id/account_id context here
-  walletCache.clear();
+  // Invalidate only the specific wallet's cache entry
+  invalidateWalletCacheEntry(workspaceId, accountId);
 
   return asWalletRow(result.rows[0] as Record<string, unknown>);
 }
@@ -225,7 +229,7 @@ export async function reserveCreditsForGeneration(
   }
 
   const newBalance = Number((currentBalance - amount).toFixed(4));
-  const updatedWallet = await updateWalletBalance(wallet.id, newBalance);
+  const updatedWallet = await updateWalletBalance(wallet.id, newBalance, workspaceId, account.id);
   const ledger = await createLedgerEntry({
     workspaceId,
     walletId: wallet.id,
@@ -249,7 +253,7 @@ export async function refundCredits(
 
   const currentBalance = wallet.balance_credits;
   const newBalance = Number((currentBalance + amount).toFixed(4));
-  const updatedWallet = await updateWalletBalance(wallet.id, newBalance);
+  const updatedWallet = await updateWalletBalance(wallet.id, newBalance, workspaceId, accountId);
   const ledger = await createLedgerEntry({
     workspaceId,
     walletId: wallet.id,
