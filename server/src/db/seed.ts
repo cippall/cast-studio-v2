@@ -960,7 +960,13 @@ async function seed() {
     // -------------------------------------------------------------------
     // 7. ASSETS — Actors (25)
     // -------------------------------------------------------------------
-    const actorLayoutsFull = [
+    const actorLayoutsFull: Array<{
+      layout: string;
+      status?: string;
+      obsolete?: boolean;
+      obsoleteReason?: string;
+      errorMsg?: string;
+    }> = [
       { layout: 'headshot' },
       { layout: 'fullshot' },
       { layout: 'expressions_3x4' },
