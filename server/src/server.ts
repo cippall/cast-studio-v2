@@ -34,6 +34,21 @@ import { startWorker } from './workers/generation-worker.js';
 const app = express();
 const PORT = 3001;
 
+// Enforce SESSION_SECRET in production
+const sessionSecret = process.env.SESSION_SECRET;
+if (process.env.NODE_ENV === 'production' && !sessionSecret) {
+  throw new Error(
+    'SESSION_SECRET environment variable is required in production. ' +
+      'Set it before starting the server.',
+  );
+}
+if (!sessionSecret) {
+  console.warn(
+    '[WARN] SESSION_SECRET not set — using insecure dev fallback. ' +
+      'Do NOT run in production without SESSION_SECRET.',
+  );
+}
+
 const PgSession = connectPgSimple(session);
 
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
@@ -46,7 +61,7 @@ app.use(
       pool,
       tableName: 'session',
     }),
-    secret: process.env.SESSION_SECRET || 'cast-studio-dev-secret-change-in-production',
+    secret: sessionSecret || 'cast-studio-dev-secret-change-in-production',
     resave: false,
     saveUninitialized: false,
     cookie: {

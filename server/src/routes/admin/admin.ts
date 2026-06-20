@@ -10,7 +10,7 @@
  *
  * All routes require admin session.
  */
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import { requireSession } from '../../middleware/requireSession.js';
 import falKeyRoutes from './fal-key-routes.js';
 import falModelsRoutes from './fal-models-routes.js';
@@ -24,7 +24,16 @@ const router = Router();
 // All admin routes require authentication
 router.use(requireSession);
 
-// Mount sub-routers (each handles its own admin role check via middleware)
+// All admin routes require ADMIN role
+router.use((req: Request, res: Response, next: NextFunction) => {
+  if (req.account?.role !== 'ADMIN') {
+    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
+    return;
+  }
+  next();
+});
+
+// Mount sub-routers (admin role already enforced above)
 router.use(falKeyRoutes);
 router.use(falModelsRoutes);
 router.use(modelRoutes);

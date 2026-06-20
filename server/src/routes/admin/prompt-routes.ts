@@ -2,18 +2,9 @@
  * System prompt routes (placeholder — not yet implemented).
  * GET/POST/PATCH/DELETE /api/admin/prompts — stub endpoints
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 
 const router = Router();
-
-// All prompt routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // GET /api/admin/prompts — list system prompts

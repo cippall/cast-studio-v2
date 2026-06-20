@@ -2,19 +2,10 @@
  * Model schema routes.
  * GET /api/admin/models/:id/schema — fetch parameter schema from fal.ai
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { query } from '../../db/pool.js';
 
 const router = Router();
-
-// All model schema routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // GET /api/admin/models/:id/schema — fetch parameter schema from fal.ai

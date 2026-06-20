@@ -2,18 +2,9 @@
  * fal.ai model browsing routes.
  * GET /api/admin/fal-models — browse available models from fal.ai
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 
 const router = Router();
-
-// All fal-models routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // GET /api/admin/fal-models — browse available models from fal.ai

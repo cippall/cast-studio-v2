@@ -6,21 +6,12 @@
  * PATCH /api/admin/models/:id — update a model
  * DELETE /api/admin/models/:id — delete a model
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { query } from '../../db/pool.js';
 import { randomUUID } from 'node:crypto';
 import { importModelSchema, createModelSchema, updateModelSchema } from './validation.js';
 
 const router = Router();
-
-// All model routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // POST /api/admin/models/import — import a fal.ai model into local DB

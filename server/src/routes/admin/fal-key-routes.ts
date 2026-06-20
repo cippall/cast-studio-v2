@@ -4,21 +4,12 @@
  * POST /api/admin/fal-key/test — test connection
  * GET /api/admin/fal-key/status — check if key is configured
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { query } from '../../db/pool.js';
 import { encrypt } from '../../utils/encryption.js';
 import { saveFalKeySchema, testFalKeySchema } from './validation.js';
 
 const router = Router();
-
-// All fal-key routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // POST /api/admin/fal-key — save encrypted key

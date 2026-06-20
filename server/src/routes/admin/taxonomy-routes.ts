@@ -5,21 +5,12 @@
  * PATCH /api/admin/taxonomy/:id — update taxonomy entry
  * DELETE /api/admin/taxonomy/:id — delete taxonomy entry
  */
-import { Router, Request, Response } from 'express';
+import { Router } from 'express';
 import { query } from '../../db/pool.js';
 import { randomUUID } from 'node:crypto';
 import { createTaxonomySchema, updateTaxonomySchema } from './validation.js';
 
 const router = Router();
-
-// All taxonomy routes require admin role
-router.use((req: Request, res: Response, next) => {
-  if (req.account?.role !== 'ADMIN') {
-    res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-    return;
-  }
-  next();
-});
 
 // -------------------------------------------------------------------
 // GET /api/admin/taxonomy — list taxonomy entries, optionally filtered by category
