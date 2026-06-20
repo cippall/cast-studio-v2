@@ -107,6 +107,12 @@ router.get('/:id/items', requireSession, requireWorkspace, async (req: Request, 
       req.account!.id,
       req.account!.workspace_id,
     );
+    if (items === null) {
+      res.status(404).json({
+        error: { code: 'NOT_FOUND', message: 'Collection not found' },
+      });
+      return;
+    }
     res.json(items);
   } catch (err) {
     console.error('Get collection items error:', err);

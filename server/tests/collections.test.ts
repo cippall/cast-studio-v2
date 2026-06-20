@@ -552,7 +552,7 @@ describe('GET /api/collections/:id/items', () => {
     expect(res.body[0].asset.image_url).toBe('https://cdn.example.com/black-suit.jpg');
   });
 
-  it('returns empty array when collection not found', async () => {
+  it('returns 404 when collection not found', async () => {
     const user = makeUserA();
     const ws = makeWorkspaceA();
     seedAuthQueries(user, ws);
@@ -561,8 +561,8 @@ describe('GET /api/collections/:id/items', () => {
     const res = await request(createRouteApp(user)).get(
       `/api/collections/${COLLECTION_B_UUID}/items`,
     );
-    expect(res.status).toBe(200);
-    expect(res.body).toEqual([]);
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
   });
 });
 
@@ -647,6 +647,20 @@ describe('workspace isolation', () => {
     expect(res.status).toBe(200);
     expect(res.body.data).toEqual([]);
     expect(res.body.pagination.totalItems).toBe(0);
+  });
+
+  it('User B cannot GET ITEMS from User A collection', async () => {
+    const userB = makeUserB();
+    const wsB = makeWorkspaceB();
+    seedAuthQueries(userB, wsB);
+    // findCollectionById with userB's id returns empty (not their collection)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createRouteApp(userB)).get(
+      `/api/collections/${COLLECTION_UUID}/items`,
+    );
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
   });
 });
 

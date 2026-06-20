@@ -241,11 +241,11 @@ export async function getCollectionItems(
   collectionId: string,
   userId: string,
   workspaceId: string,
-): Promise<CollectionItemRow[]> {
+): Promise<CollectionItemRow[] | null> {
   // Verify the collection belongs to the user
   const collection = await findCollectionById(collectionId, userId, workspaceId);
   if (!collection) {
-    return [];
+    return null;
   }
 
   const result = await query(
@@ -262,11 +262,11 @@ export async function getCollectionItemsWithAssets(
   collectionId: string,
   userId: string,
   workspaceId: string,
-): Promise<CollectionItemDetail[]> {
+): Promise<CollectionItemDetail[] | null> {
   // Verify the collection belongs to the user
   const collection = await findCollectionById(collectionId, userId, workspaceId);
   if (!collection) {
-    return [];
+    return null;
   }
 
   const result = await query(
