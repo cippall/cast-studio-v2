@@ -126,9 +126,7 @@ function makeOutputRow(
 
 function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
   mockQuery.mockResolvedValueOnce({ rows: [accountRow] } as any);
-  mockQuery.mockResolvedValueOnce({
-    rows: [makeWorkspaceRow({ id: accountRow.workspace_id })],
-  } as any);
+  mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);
 }
 
 function createMarketplaceApp(accountOverride?: Record<string, unknown>) {

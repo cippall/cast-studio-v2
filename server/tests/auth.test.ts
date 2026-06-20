@@ -47,10 +47,9 @@ function makeWorkspaceRow() {
   };
 }
 
-/** Seed mockQuery so requireSession succeeds (consumes 2 calls) */
+/** Seed mockQuery so requireSession succeeds (consumes 1 call) */
 function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
   mockQuery.mockResolvedValueOnce({ rows: [accountRow] } as any);
-  mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);
 }
 
 /** Build app with fake session injected on every request */
@@ -112,18 +111,16 @@ describe('requireSession middleware', () => {
     expect(dm).toHaveBeenCalled();
   });
 
-  it('sets req.account + req.workspace and calls next', async () => {
+  it('sets req.account and calls next', async () => {
     const { requireSession } = await import('../src/middleware/requireSession.js');
     const acct = makeAccountRow();
-    const ws = makeWorkspaceRow();
     mockQuery.mockResolvedValueOnce({ rows: [acct] } as any);
-    mockQuery.mockResolvedValueOnce({ rows: [ws] } as any);
     const req = { session: { accountId: acct.id, destroy: vi.fn() } } as any;
     const res = { status: vi.fn().mockReturnThis(), json: vi.fn() } as any;
     const next = vi.fn();
     await requireSession(req, res, next);
     expect(req.account).toEqual(acct);
-    expect(req.workspace).toEqual(ws);
+    expect(req.workspace).toBeUndefined();
     expect(next).toHaveBeenCalledTimes(1);
   });
 

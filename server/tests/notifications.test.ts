@@ -65,7 +65,6 @@ function makeNotificationRow(overrides: Record<string, unknown> = {}) {
 
 function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
   mockQuery.mockResolvedValueOnce({ rows: [accountRow] } as any);
-  mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);
 }
 
 function createRouteApp(accountOverride?: Record<string, unknown>) {

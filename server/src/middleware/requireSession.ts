@@ -14,18 +14,12 @@ export interface AccountRow {
   created_at: string;
 }
 
-export interface WorkspaceRow {
-  id: string;
-  name: string;
-  slug: string;
-  workspace_type: string;
-  created_at: string;
-}
-
 /**
- * Middleware that resolves a session cookie to an account and workspace.
- * Attaches req.account and req.workspace on success.
+ * Middleware that resolves a session cookie to an account.
+ * Attaches req.account on success.
  * Returns 401 if no session, account not found, or DB error.
+ * Workspace loading is handled by requireWorkspace — compose it after
+ * this middleware if the route needs req.workspace.
  */
 export async function requireSession(
   req: Request,
@@ -42,9 +36,7 @@ export async function requireSession(
       return;
     }
 
-    const result = await query('SELECT * FROM accounts WHERE id = $1', [
-      accountId,
-    ]);
+    const result = await query('SELECT * FROM accounts WHERE id = $1', [accountId]);
 
     if (result.rows.length === 0) {
       req.session.destroy(() => {});
@@ -55,14 +47,6 @@ export async function requireSession(
     }
 
     req.account = result.rows[0] as AccountRow;
-
-    // Load workspace
-    const wsResult = await query('SELECT * FROM workspaces WHERE id = $1', [
-      req.account.workspace_id,
-    ]);
-    if (wsResult.rows.length > 0) {
-      req.workspace = wsResult.rows[0] as WorkspaceRow;
-    }
 
     next();
   } catch (err) {

@@ -48,7 +48,7 @@ export async function generateCharacterSheet(
   }
 
   // Resolve model: validate against active models or use default
-  const resolvedModel = await resolveModel(model);
+  const resolvedModel = await resolveModel(model, account.workspace_id);
   const prompt = (asset.prompt_recipe?.identity as Record<string, unknown>)
     ? JSON.stringify(asset.prompt_recipe.identity)
     : '';

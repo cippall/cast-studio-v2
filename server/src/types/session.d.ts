@@ -12,7 +12,7 @@ declare global {
   namespace Express {
     interface Request {
       account?: import('../middleware/requireSession.js').AccountRow;
-      workspace?: import('../middleware/requireSession.js').WorkspaceRow;
+      workspace?: import('../middleware/requireWorkspace.js').WorkspaceRow;
     }
   }
 }

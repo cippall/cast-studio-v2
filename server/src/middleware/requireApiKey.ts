@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import bcrypt from 'bcryptjs';
 import { query } from '../db/pool.js';
-import type { AccountRow, WorkspaceRow } from './requireSession.js';
+import type { AccountRow } from './requireSession.js';
+import type { WorkspaceRow } from './requireWorkspace.js';
 
 /**
  * Middleware that resolves a Bearer API key to an account and workspace.
@@ -60,10 +61,9 @@ export async function requireApiKey(
     }
 
     // Load account
-    const accountResult = await query(
-      'SELECT * FROM accounts WHERE id = $1 ',
-      [matchedKey.account_id],
-    );
+    const accountResult = await query('SELECT * FROM accounts WHERE id = $1 ', [
+      matchedKey.account_id,
+    ]);
 
     if (accountResult.rows.length === 0) {
       res.status(401).json({

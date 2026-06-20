@@ -21,8 +21,12 @@ export class InvalidModelError extends Error {
  *   or DEFAULT_MODEL if no active models are configured.
  * - If model specified: validates it against the active models list.
  *   If found, returns it. If not found, throws InvalidModelError (422).
+ *
+ * @param requestedModel - Model ID from the client request (optional).
+ * @param workspaceId - Workspace context for future workspace-scoped models.
+ *   Currently models are global; this parameter is forward-compatible.
  */
-export async function resolveModel(requestedModel?: string): Promise<string> {
+export async function resolveModel(requestedModel?: string, workspaceId?: string): Promise<string> {
   const activeModels = await listActiveModels();
   const activeModelIds = activeModels.map((m) => m.model_id);
 

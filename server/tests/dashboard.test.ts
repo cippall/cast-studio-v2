@@ -54,7 +54,6 @@ function makeWorkspaceRow() {
 
 function seedSession(account: ReturnType<typeof makeAccountRow>) {
   mockQuery.mockResolvedValueOnce({ rows: [account] } as any);
-  mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);
 }
 
 function resetMock() {

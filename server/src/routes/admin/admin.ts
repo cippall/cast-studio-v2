@@ -12,6 +12,7 @@
  */
 import { Router, Request, Response, NextFunction } from 'express';
 import { requireSession } from '../../middleware/requireSession.js';
+import { requireWorkspace } from '../../middleware/requireWorkspace.js';
 import falKeyRoutes from './fal-key-routes.js';
 import falModelsRoutes from './fal-models-routes.js';
 import modelRoutes from './model-routes.js';
@@ -21,8 +22,8 @@ import taxonomyRoutes from './taxonomy-routes.js';
 
 const router = Router();
 
-// All admin routes require authentication
-router.use(requireSession);
+// All admin routes require authentication + workspace
+router.use(requireSession, requireWorkspace);
 
 // All admin routes require ADMIN role
 router.use((req: Request, res: Response, next: NextFunction) => {

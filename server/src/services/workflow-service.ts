@@ -1,6 +1,7 @@
 import * as walletRepo from '../db/repositories/wallet-repo.js';
 import * as workflowRepo from '../db/repositories/workflow-repo.js';
-import type { AccountRow, WorkspaceRow } from '../middleware/requireSession.js';
+import type { AccountRow } from '../middleware/requireSession.js';
+import type { WorkspaceRow } from '../middleware/requireWorkspace.js';
 import type { WorkflowStep } from '../db/repositories/workflow-repo.js';
 
 export type { WorkflowStep };

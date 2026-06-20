@@ -121,7 +121,7 @@ function makeCommissionAssetRow(overrides: Record<string, unknown> = {}) {
 
 // --- Test setup helpers ---
 
-/** Seed mockQuery so requireSession succeeds (consumes 2 calls) */
+/** Seed mockQuery so requireSession succeeds (consumes 1 call) */
 function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
   mockQuery.mockResolvedValueOnce({ rows: [accountRow] } as any);
   mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);

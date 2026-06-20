@@ -40,7 +40,7 @@ export async function generateActorOutput(
   }
 
   // Resolve model: validate against active models or use default
-  const model = await resolveModel(options.model);
+  const model = await resolveModel(options.model, account.workspace_id);
   const numOutputs = options.num_outputs ?? 1;
   const prompt =
     (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))

@@ -43,7 +43,7 @@ function makeWorkspaceRow() {
   };
 }
 
-/** Seed mockQuery so requireSession succeeds (consumes 2 calls) */
+/** Seed mockQuery so requireSession succeeds (consumes 1 call) */
 function seedRequireSessionQueries() {
   mockQuery.mockResolvedValueOnce({ rows: [makeAdminRow()] } as any);
   mockQuery.mockResolvedValueOnce({ rows: [makeWorkspaceRow()] } as any);

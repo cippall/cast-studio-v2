@@ -1,4 +1,5 @@
-import type { AccountRow, WorkspaceRow } from '../middleware/requireSession.js';
+import type { AccountRow } from '../middleware/requireSession.js';
+import type { WorkspaceRow } from '../middleware/requireWorkspace.js';
 import * as walletRepo from '../db/repositories/wallet-repo.js';
 import * as stripeService from './stripe-service.js';
 
