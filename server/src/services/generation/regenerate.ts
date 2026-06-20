@@ -42,7 +42,7 @@ export async function regenerateActorOutput(
   }
 
   // Resolve model: validate against active models or use default
-  const model = await resolveModel(options.model, account.workspace_id);
+  const model = await resolveModel(options.model, account.workspace_id, options.task);
   const prompt =
     (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))
       ? JSON.stringify(asset.prompt_recipe.identity)

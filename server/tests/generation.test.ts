@@ -619,8 +619,9 @@ describe('POST /api/actors/:id/character-sheet', () => {
 
     const look = makeLookRow();
     mockQuery.mockResolvedValueOnce({ rows: [look] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    // resolveModel: no active models, no task model → falls back to DEFAULT_MODEL
     seedNoActiveModels();
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
@@ -984,5 +985,66 @@ describe('Model resolution in generation', () => {
 
     expect(res.status).toBe(202);
     expect(res.body.outputs[0].model).toBe('fal-ai/flux-pro');
+  });
+
+  // --- Task-based model resolution (unit test for resolveModel) ---
+
+  it('resolveModel: uses task-based lookup when no model and task provided', async () => {
+    const { resolveModel } = await import('../src/services/generation/resolve-model.js');
+    // listActiveModels: empty
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // findModelByTask: returns a model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-anime',
+          name: 'Flux Anime',
+          model_type: 'image',
+          task: 'actor_generation',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-18T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const result = await resolveModel(undefined, 'workspace-uuid', 'actor_generation');
+    expect(result).toBe('fal-ai/flux-anime');
+  });
+
+  it('resolveModel: task lookup misses falls through to first active model', async () => {
+    const { resolveModel } = await import('../src/services/generation/resolve-model.js');
+    // listActiveModels: returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // findModelByTask: returns null
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await resolveModel(undefined, 'workspace-uuid', 'unconfigured_task');
+    expect(result).toBe('fal-ai/flux-pro');
+  });
+
+  it('resolveModel: task lookup misses + no active models → DEFAULT_MODEL', async () => {
+    const { resolveModel } = await import('../src/services/generation/resolve-model.js');
+    // listActiveModels: empty
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // findModelByTask: returns null
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const result = await resolveModel(undefined, 'workspace-uuid', 'unconfigured_task');
+    expect(result).toBe('flux-pro'); // DEFAULT_MODEL
   });
 });

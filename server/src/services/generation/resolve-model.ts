@@ -1,4 +1,8 @@
-import { listActiveModels, findActiveModel } from '../../db/repositories/model-repo.js';
+import {
+  listActiveModels,
+  findActiveModel,
+  findModelByTask,
+} from '../../db/repositories/model-repo.js';
 import { DEFAULT_MODEL } from './generation-constants.js';
 
 /**
@@ -17,35 +21,42 @@ export class InvalidModelError extends Error {
 /**
  * Resolve the model for a generation request.
  *
- * - If no model specified: returns the first active model's model_id,
- *   or DEFAULT_MODEL if no active models are configured.
- * - If model specified: validates it against the active models list.
- *   If found, returns it. If not found, throws InvalidModelError (422).
- *
- * @param requestedModel - Model ID from the client request (optional).
- * @param workspaceId - Workspace context for future workspace-scoped models.
- *   Currently models are global; this parameter is forward-compatible.
+ * Resolution order:
+ * 1. If a specific model is requested, validate it against active models.
+ * 2. If a task is provided, look up the model assigned to that task.
+ * 3. Fall back to the first active model.
+ * 4. Fall back to DEFAULT_MODEL if nothing is configured.
  */
-export async function resolveModel(requestedModel?: string, workspaceId?: string): Promise<string> {
+export async function resolveModel(
+  requestedModel?: string,
+  workspaceId?: string,
+  task?: string,
+): Promise<string> {
   const activeModels = await listActiveModels();
   const activeModelIds = activeModels.map((m) => m.model_id);
 
-  // No model specified — use default active model
-  if (!requestedModel) {
-    // If there are active models, use the first one (most recently created)
-    if (activeModels.length > 0) {
-      return activeModels[0].model_id;
+  // 1. Specific model requested — validate it
+  if (requestedModel) {
+    const found = await findActiveModel(requestedModel);
+    if (found) {
+      return found.model_id;
     }
-    // Fallback to hardcoded default if no models configured
-    return DEFAULT_MODEL;
+    throw new InvalidModelError(requestedModel, activeModelIds);
   }
 
-  // Model specified — validate against active models
-  const found = await findActiveModel(requestedModel);
-  if (found) {
-    return found.model_id;
+  // 2. Task-based lookup — find model assigned to this task
+  if (task) {
+    const taskModel = await findModelByTask(task);
+    if (taskModel) {
+      return taskModel.model_id;
+    }
   }
 
-  // Model not in active list — reject with 422
-  throw new InvalidModelError(requestedModel, activeModelIds);
+  // 3. First active model
+  if (activeModels.length > 0) {
+    return activeModels[0].model_id;
+  }
+
+  // 4. Hardcoded fallback
+  return DEFAULT_MODEL;
 }

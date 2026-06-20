@@ -3,6 +3,7 @@
 export interface GenerateOptions {
   layout_type: string;
   model?: string;
+  task?: string; // Cast Studio task for model resolution + prompt selection
   num_outputs?: number;
   prompt?: string;
   form_data?: Record<string, unknown>;
