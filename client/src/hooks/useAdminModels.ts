@@ -11,6 +11,7 @@ export interface ModelConfig {
   model_type: string;
   task: string;
   parameters: Record<string, unknown>;
+  input_schema: Record<string, unknown> | null;
   is_active: boolean;
 }
 
@@ -121,4 +122,33 @@ export function useAssignModelTask() {
       queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
     },
   });
+}
+
+/**
+ * Read model schema from local DB first (models.input_schema),
+ * falling back to fal.ai API if no local schema is stored.
+ *
+ * The local schema is stored when a model is imported from fal.ai
+ * or when an admin saves it via the model configuration UI.
+ * If input_schema is null/empty, we fall back to the fal.ai REST API
+ * endpoint (/admin/models/:id/schema) which requires an API key.
+ */
+export function useLocalModelSchema(model: ModelConfig | null) {
+  const localSchema = model?.input_schema;
+  const hasLocalSchema =
+    localSchema != null && typeof localSchema === 'object' && Object.keys(localSchema).length > 0;
+
+  // If we have a local schema, use it directly (no API call needed).
+  // Otherwise fall back to the fal.ai API endpoint.
+  const fallback = useModelSchema(hasLocalSchema ? null : (model?.id ?? null));
+
+  if (hasLocalSchema) {
+    return {
+      data: { input: localSchema as Record<string, unknown>, output: {} } as ModelParameterSchema,
+      isLoading: false,
+      isError: false,
+    };
+  }
+
+  return fallback;
 }

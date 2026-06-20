@@ -3,7 +3,7 @@ import {
   useAdminModels,
   useDeleteModel,
   useUpdateModel,
-  useModelSchema,
+  useLocalModelSchema,
   useSaveModelParameters,
   useAssignModelTask,
   type ModelConfig,
@@ -58,8 +58,8 @@ export default function ConfiguredModels({
   const [assigningModel, setAssigningModel] = useState<ModelConfig | null>(null);
   const [selectedTask, setSelectedTask] = useState('');
 
-  const { data: modelSchema, isLoading: schemaLoading } = useModelSchema(
-    configuringModel?.id ?? null,
+  const { data: modelSchema, isLoading: schemaLoading } = useLocalModelSchema(
+    configuringModel ?? null,
   );
 
   const handleToggleActive = async (id: string, currentActive: boolean) => {
