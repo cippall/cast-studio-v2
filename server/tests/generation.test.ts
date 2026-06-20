@@ -519,6 +519,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
     seedNoActiveModels();
+    // resolveModel: findModelByTask returns empty (task-based lookup misses)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
@@ -559,6 +561,67 @@ describe('POST /api/actors/:id/regenerate', () => {
     expect(res.status).toBe(202);
     expect(res.body.outputs).toHaveLength(1);
     expect(res.body.outputs[0].status).toBe('PENDING');
+  });
+
+  it('202 stores fal_job_id in generation_params after regeneration', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
+    // resolveModel: findModelByTask returns empty (task-based lookup misses)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // reserveCreditsForGeneration
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    // getAssetOutputs returns current headshot v1
+    const oldHeadshot = makeOutputRow({
+      layout_type: 'headshot',
+      status: 'SUCCESS',
+      version: 1,
+      image_url: 'https://fal.ai/old.png',
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [oldHeadshot] } as any);
+
+    // archiveAssetOutput: SELECT + INSERT
+    mockQuery.mockResolvedValueOnce({ rows: [oldHeadshot] } as any);
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+    // markDownstreamObsolete
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // createAssetOutput: new output v2
+    const newOutput = makeOutputRow({ version: 2 });
+    mockQuery.mockResolvedValueOnce({ rows: [newOutput] } as any);
+
+    // fal.ai submission returns a job ID
+    mockSubmitTextToImage.mockResolvedValueOnce({
+      jobId: 'regen-job-abc123',
+      status: 'PENDING',
+    });
+
+    // UPDATE generation_params with fal_job_id
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/regenerate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+
+    // Verify the UPDATE query stored the fal_job_id in generation_params
+    const updateCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('UPDATE asset_outputs') &&
+        call[0].includes('generation_params'),
+    );
+    expect(updateCall).toBeDefined();
+
+    // The first argument to the UPDATE should be a JSON string containing fal_job_id
+    const paramsJson = JSON.parse(updateCall![1][0] as string);
+    expect(paramsJson).toHaveProperty('fal_job_id', 'regen-job-abc123');
   });
 });
 
@@ -970,6 +1033,8 @@ describe('Model resolution in generation', () => {
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: listActiveModels
     seedActiveModels([{ model_id: 'fal-ai/flux-pro', name: 'Flux Pro' }]);
+    // resolveModel: findModelByTask returns empty (task-based lookup misses, falls through to first active)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     seedWalletCreditMocks(ARTIST_UUID);
 
     // getAssetOutputs for regenerate

@@ -388,6 +388,7 @@ router.post(
         {
           layout_type: parsed.data.layout_type,
           model: parsed.data.model,
+          task: inferTaskFromLayout(parsed.data.layout_type),
           prompt: parsed.data.options?.prompt,
           form_data: parsed.data.form_data,
           reference_images: parsed.data.reference_images,

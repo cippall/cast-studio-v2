@@ -1222,6 +1222,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: findModelByTask returns empty (task-based lookup misses)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1279,6 +1281,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: findModelByTask returns empty (task-based lookup misses)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1334,8 +1338,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     expect(res.body.outputs).toHaveLength(1);
 
     // Verify generation_params were passed through to the INSERT
-    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=modelResolve, [4]=findWallet, [5]=updateWallet, [6]=ledger, [7]=getAssetOutputs, [8]=markObsolete, [9]=createAssetOutput
-    const insertCall = mockQuery.mock.calls[9] as [string, unknown[]];
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=listActiveModels, [4]=findModelByTask, [5]=findWallet, [6]=updateWallet, [7]=ledger, [8]=getAssetOutputs, [9]=markObsolete, [10]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[10] as [string, unknown[]];
     const genParamsRaw = insertCall[1][6];
     const genParams =
       typeof genParamsRaw === 'string'
@@ -1361,6 +1365,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
@@ -1412,8 +1418,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     expect(res.body.outputs[0].status).toBe('PENDING');
 
     // Verify the new output has version 3
-    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=modelResolve, [4]=findWallet, [5]=updateWallet, [6]=ledger, [7]=getAssetOutputs, [8]=archiveSELECT, [9]=archiveINSERT, [10]=markObsolete, [11]=createAssetOutput
-    const insertCall = mockQuery.mock.calls[11] as [string, unknown[]];
+    // calls: [0]=session, [1]=workspace, [2]=findAsset, [3]=listActiveModels, [4]=findModelByTask, [5]=findWallet, [6]=updateWallet, [7]=ledger, [8]=getAssetOutputs, [9]=archiveSELECT, [10]=archiveINSERT, [11]=markObsolete, [12]=createAssetOutput
+    const insertCall = mockQuery.mock.calls[12] as [string, unknown[]];
     expect(insertCall[1]).toContain(3); // version param
   });
 });
