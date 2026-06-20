@@ -20,7 +20,6 @@ import {
   MessageSquare,
   Users,
   Layers,
-  ShirtIcon,
   ClipboardList,
   Inbox,
   Folder,
@@ -106,7 +105,7 @@ export default function Dashboard() {
                 isLoading={statsLoading}
               />
               <StatCard
-                icon={ShirtIcon}
+                icon={Shirt}
                 label="Looks"
                 value={stats?.totalLooks ?? 0}
                 isLoading={statsLoading}
