@@ -15,6 +15,12 @@ function getEncryptionKey(): Buffer {
     return Buffer.from(envKey, 'hex');
   }
   // Derive a 32-byte key from SESSION_SECRET for development
+  if (!envKey) {
+    console.warn(
+      '[WARN] FAL_KEY_ENCRYPTION_KEY not set — deriving encryption key from SESSION_SECRET. ' +
+        'Changing SESSION_SECRET will invalidate all encrypted fal.ai keys.',
+    );
+  }
   const secret = process.env.SESSION_SECRET || 'cast-studio-dev-secret';
   return crypto.scryptSync(secret, 'fal-key-salt', KEY_LENGTH);
 }

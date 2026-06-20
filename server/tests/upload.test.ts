@@ -294,6 +294,8 @@ describe('POST /api/upload', () => {
   it('file exists on disk after upload at expected path pattern', async () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
+    // Mock asset lookup for asset_id validation
+    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'asset-123' }] } as any);
     app = createApp(artist);
 
     const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
@@ -357,5 +359,24 @@ describe('POST /api/upload', () => {
 
     // URL should end with the key
     expect(res.body.url).toContain(res.body.key);
+  });
+
+  it('404 when asset_id is provided but does not exist in DB', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+    // Mock asset lookup returning empty (asset not found)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    app = createApp(artist);
+
+    const pngBuffer = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+
+    const res = await request(app)
+      .post('/api/upload')
+      .field('asset_id', 'nonexistent-asset-id')
+      .attach('image', pngBuffer, 'portrait.png');
+
+    expect(res.status).toBe(404);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toContain('nonexistent-asset-id');
   });
 });

@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import { LocalStorageProvider } from '../services/storage/local-storage.js';
+import { query } from '../db/pool.js';
 import type { Request, Response } from 'express';
 
 const router = Router();
@@ -123,6 +124,23 @@ router.post('/', requireSession, requireWorkspace, (req: Request, res: Response)
       const assetId = req.body?.asset_id as string | undefined;
       const versionStr = req.body?.version as string | undefined;
       const version = versionStr ? parseInt(versionStr, 10) : undefined;
+
+      // Validate asset_id exists if provided
+      if (assetId) {
+        const assetCheck = await query(
+          'SELECT id FROM assets WHERE id = $1 AND deleted_at IS NULL',
+          [assetId],
+        );
+        if (assetCheck.rows.length === 0) {
+          res.status(404).json({
+            error: {
+              code: 'NOT_FOUND',
+              message: `Asset not found: ${assetId}`,
+            },
+          });
+          return;
+        }
+      }
 
       // Extract extension from original filename
       const originalName = req.file.originalname || 'image.png';

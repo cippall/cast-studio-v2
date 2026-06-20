@@ -49,6 +49,13 @@ if (!sessionSecret) {
   );
 }
 
+if (!process.env.FAL_KEY) {
+  console.warn(
+    '[WARN] fal.ai running in simulated mode — FAL_KEY not set. ' +
+      'Generations will return placeholder images. Set FAL_KEY for real generation.',
+  );
+}
+
 const PgSession = connectPgSimple(session);
 
 app.use(cors({ origin: 'http://localhost:5173', credentials: true }));
