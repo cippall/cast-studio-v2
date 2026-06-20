@@ -137,7 +137,11 @@ router.patch('/models/:id', async (req, res) => {
 // -------------------------------------------------------------------
 router.delete('/models/:id', async (req, res) => {
   try {
-    await query('DELETE FROM models WHERE id = $1', [req.params.id]);
+    const result = await query('DELETE FROM models WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Model not found' } });
+      return;
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Delete model error:', err);

@@ -140,7 +140,11 @@ router.patch('/taxonomy/:id', async (req, res) => {
 // -------------------------------------------------------------------
 router.delete('/taxonomy/:id', async (req, res) => {
   try {
-    await query('DELETE FROM taxonomy WHERE id = $1', [req.params.id]);
+    const result = await query('DELETE FROM taxonomy WHERE id = $1', [req.params.id]);
+    if (result.rowCount === 0) {
+      res.status(404).json({ error: { code: 'NOT_FOUND', message: 'Taxonomy entry not found' } });
+      return;
+    }
     res.json({ success: true });
   } catch (err) {
     console.error('Delete taxonomy error:', err);
