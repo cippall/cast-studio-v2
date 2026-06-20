@@ -51,7 +51,7 @@ export interface LedgerRow {
   created_at: string;
 }
 
-export type LedgerType = 'CHARGE' | 'TOP_UP' | 'ESCROW_HOLD' | 'ESCROW_REFUND';
+export type LedgerType = 'CHARGE' | 'TOP_UP' | 'ESCROW_HOLD' | 'ESCROW_REFUND' | 'REFUND';
 
 export interface FindWalletInput {
   workspaceId: string;
@@ -231,6 +231,30 @@ export async function reserveCreditsForGeneration(
     walletId: wallet.id,
     amount: Number((-amount).toFixed(4)),
     type: 'CHARGE',
+  });
+
+  return { wallet: updatedWallet, ledger };
+}
+
+export async function refundCredits(
+  workspaceId: string,
+  accountId: string,
+  amount: number,
+): Promise<{ wallet: WalletRow; ledger: LedgerRow }> {
+  const wallet = await findWallet({ workspaceId, accountId, allowCreate: true });
+
+  if (!wallet) {
+    throw Object.assign(new Error('Wallet not found'), { statusCode: 404 });
+  }
+
+  const currentBalance = wallet.balance_credits;
+  const newBalance = Number((currentBalance + amount).toFixed(4));
+  const updatedWallet = await updateWalletBalance(wallet.id, newBalance);
+  const ledger = await createLedgerEntry({
+    workspaceId,
+    walletId: wallet.id,
+    amount: Number(amount.toFixed(4)),
+    type: 'REFUND',
   });
 
   return { wallet: updatedWallet, ledger };

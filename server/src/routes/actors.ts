@@ -335,7 +335,13 @@ router.post(
       if (err instanceof Error && 'statusCode' in err) {
         const statusCode = (err as Error & { statusCode: number }).statusCode;
         const code =
-          statusCode === 404 ? 'NOT_FOUND' : statusCode === 422 ? 'VALIDATION_ERROR' : 'CONFLICT';
+          statusCode === 404
+            ? 'NOT_FOUND'
+            : statusCode === 422
+              ? 'VALIDATION_ERROR'
+              : statusCode === 502
+                ? 'BAD_GATEWAY'
+                : 'CONFLICT';
         res.status(statusCode).json({
           error: {
             code,

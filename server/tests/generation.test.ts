@@ -12,11 +12,23 @@ vi.mock('../src/db/pool.js', () => ({
   default: {},
 }));
 
+// Mock fal-service to control submitTextToImage behavior
+vi.mock('../src/services/fal-service.js', () => ({
+  submitTextToImage: vi.fn().mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' }),
+  submitImageToImage: vi.fn(),
+  pollJob: vi.fn(),
+  cancelJob: vi.fn(),
+  imageToText: vi.fn(),
+  getWorkspaceApiKey: vi.fn(),
+}));
+
 import * as poolModule from '../src/db/pool.js';
 import actorsRouter from '../src/routes/actors.js';
 import generationJobsRouter from '../src/routes/generation-jobs.js';
+import * as falService from '../src/services/fal-service.js';
 
 const mockQuery = vi.mocked(poolModule.query);
+const mockSubmitTextToImage = vi.mocked(falService.submitTextToImage);
 
 // Valid v4 UUIDs
 const WORKSPACE_UUID = 'a0000000-0000-4000-8000-000000000001';
@@ -183,6 +195,7 @@ function seedWalletCreditMocks(accountId: string) {
 
 function resetMock() {
   mockQuery.mockReset();
+  mockSubmitTextToImage.mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' });
 }
 
 /** Mock listActiveModels returning empty (so resolveModel falls back to DEFAULT_MODEL) */
@@ -299,6 +312,94 @@ describe('POST /api/actors/:id/generate', () => {
       model: 'flux-pro',
       cost_credits: 0.05,
     });
+  });
+
+  it('502 when fal.ai submission fails, output marked FAILED and credits refunded', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    // findAssetById returns actor
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
+    // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
+    seedWalletCreditMocks(ARTIST_UUID);
+    // createAssetOutput returns PENDING output
+    const output = makeOutputRow();
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+
+    // Make fal.ai throw
+    mockSubmitTextToImage.mockRejectedValueOnce(new Error('fal.ai API error (500): internal'));
+
+    // updateAssetOutputError: UPDATE asset_outputs SET status = 'FAILED'
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // refundCredits: findWallet (returns wallet with reduced balance)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '999.9500',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '1000.0000',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: createLedgerEntry (REFUND type)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'ledger-refund-uuid',
+          workspace_id: WORKSPACE_UUID,
+          wallet_id: 'wallet-uuid',
+          workflow_id: null,
+          api_key_id: null,
+          amount: 0.05,
+          type: 'REFUND',
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe('BAD_GATEWAY');
+
+    // Verify updateAssetOutputError was called with the output ID and error message
+    const updateErrorCall = mockQuery.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].includes("status = 'FAILED'"),
+    );
+    expect(updateErrorCall).toBeDefined();
+    expect(updateErrorCall![1][0]).toBe('fal.ai API error (500): internal');
+    expect(updateErrorCall![1][1]).toBe(OUTPUT_UUID);
+
+    // Verify refund ledger entry was created with REFUND type
+    const refundLedgerCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('INSERT INTO ledger') &&
+        call[1] &&
+        Array.isArray(call[1]) &&
+        call[1].includes('REFUND'),
+    );
+    expect(refundLedgerCall).toBeDefined();
   });
 
   it('202 creates multiple outputs when num_outputs is specified', async () => {

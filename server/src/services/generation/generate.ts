@@ -1,10 +1,15 @@
-import { findAssetById, createAssetOutput } from '../../db/repositories/asset-repo.js';
+import {
+  findAssetById,
+  createAssetOutput,
+  updateAssetOutputError,
+} from '../../db/repositories/asset-repo.js';
 import type { CreateAssetOutputInput } from '../../db/repositories/asset-repo.js';
 import type { AccountRow } from '../../middleware/requireSession.js';
 import type { WorkspaceRow } from '../../middleware/requireWorkspace.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
+import { refundCredits } from '../../db/repositories/wallet-repo.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
@@ -134,7 +139,17 @@ export async function generateActorOutput(
         image_size: '1024x1024',
       });
     } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
       console.error(`fal.ai submission error for output ${output.id}:`, err);
+
+      // Update output row to FAILED
+      await updateAssetOutputError(output.id, errorMessage);
+
+      // Refund credits
+      await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
+
+      // Propagate error to route handler
+      throw Object.assign(new Error(errorMessage), { statusCode: 502 });
     }
   }
 

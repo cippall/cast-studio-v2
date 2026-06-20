@@ -565,6 +565,19 @@ export async function updateOutputsStatus(
 }
 
 /**
+ * Update a single asset output to FAILED status with an error message.
+ */
+export async function updateAssetOutputError(
+  outputId: string,
+  errorMessage: string,
+): Promise<void> {
+  await query(`UPDATE asset_outputs SET status = 'FAILED', error_message = $1 WHERE id = $2`, [
+    errorMessage,
+    outputId,
+  ]);
+}
+
+/**
  * Bulk-set client_id and source_type on multiple assets (commission premium unlock).
  * Single query using WHERE id = ANY(...).
  */
