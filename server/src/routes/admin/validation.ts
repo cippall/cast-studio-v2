@@ -71,6 +71,25 @@ export const updateTaxonomySchema = z.object({
 });
 
 // -------------------------------------------------------------------
+// Prompt endpoints
+// -------------------------------------------------------------------
+
+export const createPromptSchema = z.object({
+  task: z.string().min(1, { message: 'task is required' }),
+  template: z.string().min(1, { message: 'template is required' }),
+  variables: z.array(z.string()).min(1, { message: 'variables must be a non-empty array' }),
+});
+
+export const updatePromptSchema = z
+  .object({
+    template: z.string().min(1, { message: 'template must not be empty' }).optional(),
+    variables: z.array(z.string()).optional(),
+  })
+  .refine((data) => data.template !== undefined || data.variables !== undefined, {
+    message: 'At least one of template or variables is required',
+  });
+
+// -------------------------------------------------------------------
 // Inferred types
 // -------------------------------------------------------------------
 
@@ -81,3 +100,5 @@ export type CreateModelInput = z.infer<typeof createModelSchema>;
 export type UpdateModelInput = z.infer<typeof updateModelSchema>;
 export type CreateTaxonomyInput = z.infer<typeof createTaxonomySchema>;
 export type UpdateTaxonomyInput = z.infer<typeof updateTaxonomySchema>;
+export type CreatePromptInput = z.infer<typeof createPromptSchema>;
+export type UpdatePromptInput = z.infer<typeof updatePromptSchema>;
