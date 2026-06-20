@@ -138,7 +138,8 @@ export async function pollJob(jobId: string, model: string): Promise<FalJobResul
   return {
     id: jobId,
     status: 'SUCCESS',
-    image_url: `https://fal.ai/sim/${jobId}.png`,
+    image_url:
+      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
     error_message: null,
     cost_credits: 0.05,
   };

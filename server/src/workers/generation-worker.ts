@@ -98,7 +98,8 @@ async function processSingleOutput(output: {
     // No fal.ai job ID — this is a simulated/dev scenario.
     // Mark as SUCCESS immediately with a placeholder URL.
     await updateOutputsStatus(output.asset_id, [output.id], 'SUCCESS', {
-      image_url: `https://fal.ai/sim/${output.id}.png`,
+      image_url:
+        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
       cost_credits: 0.05,
     } as Record<string, unknown>);
   }

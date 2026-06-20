@@ -187,5 +187,14 @@ describe('fal-api dynamic model endpoints', () => {
       expect(result.status).toBe('PENDING');
       expect(mockFetch).not.toHaveBeenCalled();
     });
+
+    it('pollJob returns a data URI placeholder in simulated mode', async () => {
+      // No FAL_KEY set
+      const result = await pollJob('sim_1234567890_abcdefg', 'flux-pro');
+
+      expect(result.status).toBe('SUCCESS');
+      expect(result.image_url).toMatch(/^data:image\/png;base64,/);
+      expect(mockFetch).not.toHaveBeenCalled();
+    });
   });
 });
