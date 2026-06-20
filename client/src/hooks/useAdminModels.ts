@@ -106,3 +106,19 @@ export function useSaveModelParameters() {
     },
   });
 }
+
+export function useAssignModelTask() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: { id: string; task: string }) => {
+      const { data } = await apiClient.patch(`/admin/models/${input.id}`, {
+        task: input.task,
+      });
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['admin', 'models'] });
+    },
+  });
+}
