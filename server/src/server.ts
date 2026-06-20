@@ -4,7 +4,6 @@ import cors from 'cors';
 import session from 'express-session';
 import connectPgSimple from 'connect-pg-simple';
 import pool from './db/pool.js';
-import { query } from './db/pool.js';
 import { requireSession } from './middleware/requireSession.js';
 import healthRouter from './routes/health.js';
 import authRouter from './routes/auth.js';
@@ -29,6 +28,7 @@ import adminRouter from './routes/admin/admin.js';
 import agentMarketplaceRouter from './routes/agent/marketplace.js';
 import activityRouter from './routes/activity.js';
 import collectionsRouter from './routes/collections.js';
+import dashboardRouter from './routes/dashboard.js';
 import { startWorker } from './workers/generation-worker.js';
 
 const app = express();
@@ -94,37 +94,7 @@ app.use('/api/admin', adminRouter);
 app.use('/api/agent/marketplace', agentMarketplaceRouter);
 app.use('/api', activityRouter);
 app.use('/api/collections', collectionsRouter);
-
-// Dashboard stats (admin only)
-app.get('/api/dashboard', requireSession, async (req, res) => {
-  try {
-    if (req.account?.role !== 'ADMIN') {
-      res.status(403).json({ error: { code: 'FORBIDDEN', message: 'Admin access required' } });
-      return;
-    }
-    const [actors, looks, items, members, pendingCommissions] = await Promise.all([
-      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'ACTOR'"),
-      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'LOOK'"),
-      query("SELECT COUNT(*)::int AS count FROM assets WHERE asset_type = 'FASHION_ITEM'"),
-      query('SELECT COUNT(*)::int AS count FROM accounts'),
-      query(
-        "SELECT COUNT(*)::int AS count FROM commissions WHERE status IN ('REQUESTED','IN_PROGRESS','SUBMITTED')",
-      ),
-    ]);
-    res.json({
-      totalActors: actors.rows[0]?.count ?? 0,
-      totalLooks: looks.rows[0]?.count ?? 0,
-      totalFashionItems: items.rows[0]?.count ?? 0,
-      activeMembers: members.rows[0]?.count ?? 0,
-      pendingCommissions: pendingCommissions.rows[0]?.count ?? 0,
-    });
-  } catch (err) {
-    console.error('Dashboard error:', err);
-    res
-      .status(500)
-      .json({ error: { code: 'INTERNAL_ERROR', message: 'Failed to load dashboard' } });
-  }
-});
+app.use('/api', dashboardRouter);
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

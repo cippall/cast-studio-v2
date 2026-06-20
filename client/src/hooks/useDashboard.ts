@@ -3,7 +3,7 @@
  */
 import { useQuery } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
-import type { WalletBalance, DashboardStats } from '@cast/types';
+import type { WalletBalance, DashboardStats, ArtistDashboard, ClientDashboard } from '@cast/types';
 
 export function useWalletBalance() {
   return useQuery<WalletBalance>({
@@ -15,8 +15,10 @@ export function useWalletBalance() {
   });
 }
 
+export type DashboardData = DashboardStats | ArtistDashboard | ClientDashboard;
+
 export function useDashboardStats() {
-  return useQuery<DashboardStats>({
+  return useQuery<DashboardData>({
     queryKey: ['dashboard'],
     queryFn: async () => {
       const { data } = await apiClient.get('/dashboard');

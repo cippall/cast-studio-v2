@@ -13,6 +13,7 @@ import StatCard from '@/components/StatCard';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import LoadingState from '@/components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
+import type { DashboardStats, ArtistDashboard, ClientDashboard } from '@cast/types';
 import {
   User,
   Shirt,
@@ -38,6 +39,11 @@ export default function Dashboard() {
   const { data: wallet, isLoading: walletLoading, isError: walletError } = useWalletBalance();
   const { data: stats, isLoading: statsLoading } = useDashboardStats();
   const { data: activities, isLoading: activitiesLoading } = useActivityFeed(8);
+
+  const adminStats = isAdmin && stats && 'totalActors' in stats ? (stats as DashboardStats) : null;
+  const artistStats = isArtist && stats && 'myActors' in stats ? (stats as ArtistDashboard) : null;
+  const clientStats =
+    isClient && stats && 'walletBalance' in stats ? (stats as ClientDashboard) : null;
 
   const quickActions = [
     { label: 'New Actor', icon: User, path: '/actors/new' },
@@ -94,38 +100,96 @@ export default function Dashboard() {
           </div>
         )}
 
-        {isAdmin && (
+        {adminStats && (
           <div>
             <h2 className="mb-3 font-heading text-lg font-semibold">Overview</h2>
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
               <StatCard
                 icon={User}
                 label="Actors"
-                value={stats?.totalActors ?? 0}
+                value={adminStats.totalActors}
                 isLoading={statsLoading}
               />
               <StatCard
                 icon={Shirt}
                 label="Looks"
-                value={stats?.totalLooks ?? 0}
+                value={adminStats.totalLooks}
                 isLoading={statsLoading}
               />
               <StatCard
                 icon={Layers}
                 label="Items"
-                value={stats?.totalItems ?? 0}
+                value={adminStats.totalItems}
                 isLoading={statsLoading}
               />
               <StatCard
                 icon={Users}
                 label="Members"
-                value={stats?.activeMembers ?? 0}
+                value={adminStats.activeMembers}
                 isLoading={statsLoading}
               />
               <StatCard
                 icon={ClipboardList}
                 label="Commissions"
-                value={stats?.pendingCommissions ?? 0}
+                value={adminStats.pendingCommissions}
+                isLoading={statsLoading}
+              />
+            </div>
+          </div>
+        )}
+
+        {artistStats && (
+          <div>
+            <h2 className="mb-3 font-heading text-lg font-semibold">My Work</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+              <StatCard
+                icon={User}
+                label="My Actors"
+                value={artistStats.myActors}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={Shirt}
+                label="My Looks"
+                value={artistStats.myLooks}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={Layers}
+                label="My Items"
+                value={artistStats.myItems}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={ClipboardList}
+                label="Submissions"
+                value={artistStats.recentSubmissions?.length ?? 0}
+                isLoading={statsLoading}
+              />
+            </div>
+          </div>
+        )}
+
+        {clientStats && (
+          <div>
+            <h2 className="mb-3 font-heading text-lg font-semibold">My Account</h2>
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+              <StatCard
+                icon={Layers}
+                label="Wallet Balance"
+                value={clientStats.walletBalance}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={ClipboardList}
+                label="Active Commissions"
+                value={clientStats.activeCommissions}
+                isLoading={statsLoading}
+              />
+              <StatCard
+                icon={Inbox}
+                label="Recent Purchases"
+                value={clientStats.recentPurchases?.length ?? 0}
                 isLoading={statsLoading}
               />
             </div>

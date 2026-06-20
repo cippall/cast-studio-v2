@@ -174,6 +174,19 @@ export interface DashboardStats {
   pendingCommissions: number;
 }
 
+export interface ArtistDashboard {
+  myActors: number;
+  myLooks: number;
+  myItems: number;
+  recentSubmissions: ActivityFeedItem[];
+}
+
+export interface ClientDashboard {
+  walletBalance: number;
+  activeCommissions: number;
+  recentPurchases: ActivityFeedItem[];
+}
+
 // --- Collection types ---
 
 export interface Collection {
