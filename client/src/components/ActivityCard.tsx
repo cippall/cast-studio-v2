@@ -1,4 +1,3 @@
-import { Badge } from '@/components/ui/badge';
 import { Image } from 'lucide-react';
 import type { ActivityFeedItem } from '@cast/types';
 
@@ -16,38 +15,43 @@ export function formatRelativeTime(dateStr: string): string {
   return date.toLocaleDateString();
 }
 
-const actionBadgeVariant: Record<string, 'default' | 'secondary' | 'outline'> = {
-  Created: 'default',
-  Generated: 'secondary',
-  Shared: 'outline',
+const actionLabelVariant: Record<string, string> = {
+  Generated: 'bg-surface-container text-foreground',
+  Updated: 'bg-surface-container-low text-foreground',
+  Approved: 'bg-surface-container text-foreground',
+  Created: 'bg-surface-container text-foreground',
 };
 
 export default function ActivityCard({ item }: { item: ActivityFeedItem }) {
   return (
-    <div className="overflow-hidden border border-border bg-card">
-      <div className="aspect-square w-full bg-surface">
+    <div className="flex-none w-64 snap-start group">
+      <div className="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-border">
         {item.thumbnail_url ? (
           <img
             src={item.thumbnail_url}
             alt={item.asset_name}
-            className="h-full w-full object-cover"
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 ease-out"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center">
-            <Image className="size-8 text-muted-foreground" />
+            <Image className="size-12 text-muted-foreground" />
           </div>
         )}
       </div>
-      <div className="p-2">
-        <p className="truncate text-sm font-medium text-foreground">{item.asset_name}</p>
-        <div className="mt-1 flex items-center gap-2">
-          <Badge variant={actionBadgeVariant[item.action] ?? 'default'} className="text-[10px]">
-            {item.action}
-          </Badge>
-          <span className="text-[11px] text-muted-foreground">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-[17px] leading-[30.6px] text-foreground truncate pr-2">
+            {item.asset_name}
+          </p>
+          <p className="text-[13px] leading-[19.5px] text-muted-foreground mt-1">
             {formatRelativeTime(item.created_at)}
-          </span>
+          </p>
         </div>
+        <span
+          className={`text-[11px] font-semibold uppercase tracking-wider px-2 py-1 border border-border ${actionLabelVariant[item.action] ?? 'bg-surface-container text-foreground'}`}
+        >
+          {item.action}
+        </span>
       </div>
     </div>
   );

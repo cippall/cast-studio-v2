@@ -1,52 +1,36 @@
-import { type LucideIcon } from 'lucide-react';
-import { Card, CardContent, CardHeader } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
 
 interface StatCardProps {
-  icon: LucideIcon;
   label: string;
   value: string | number;
   isLoading?: boolean;
-  trend?: {
-    value: string;
-    positive: boolean;
-  };
+  variant?: 'default' | 'highlight';
 }
 
 export default function StatCard({
-  icon: Icon,
   label,
   value,
   isLoading = false,
-  trend,
+  variant = 'default',
 }: StatCardProps) {
   return (
-    <Card>
-      <CardHeader className="flex flex-row items-center gap-2 pb-2">
-        <Icon className="size-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">{label}</span>
-      </CardHeader>
-      <CardContent>
-        {isLoading ? (
-          <Skeleton className="h-7 w-16" />
-        ) : (
-          <div className="flex items-baseline gap-2">
-            <span className="text-2xl font-bold text-foreground">{value}</span>
-            {trend && (
-              <span
-                className={cn(
-                  'text-xs font-medium',
-                  trend.positive ? 'text-success' : 'text-error',
-                )}
-              >
-                {trend.positive ? '+' : ''}
-                {trend.value}
-              </span>
-            )}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+    <div className="flex flex-col justify-center items-start p-6">
+      <span className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground mb-2">
+        {label}
+      </span>
+      {isLoading ? (
+        <Skeleton className="h-8 w-16" />
+      ) : (
+        <span
+          className={cn(
+            'font-heading text-[30px] font-bold leading-[39px] tracking-[-0.015em]',
+            variant === 'highlight' ? 'text-primary' : 'text-foreground',
+          )}
+        >
+          {value}
+        </span>
+      )}
+    </div>
   );
 }

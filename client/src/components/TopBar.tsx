@@ -17,16 +17,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { LogOut, Settings, Sun, Moon, User, Menu } from 'lucide-react';
+import { LogOut, Settings, User, Menu, Sun, Moon } from 'lucide-react';
 import { useTheme } from '@/hooks/useTheme';
 import NotificationDropdown from '@/components/NotificationDropdown';
-
-function workspaceDisplayName(workspaceId: string): string {
-  if (!workspaceId) return 'Studio';
-  // Use first segment before any dash/underscore, or first 8 chars
-  const segment = workspaceId.split(/[-_]/)[0];
-  return segment.slice(0, 12);
-}
 
 export default function TopBar() {
   const { data: user } = useCurrentUser();
@@ -50,10 +43,9 @@ export default function TopBar() {
   };
 
   return (
-    <header className="flex h-14 items-center justify-between border-b bg-background px-4">
-      {/* Left: hamburger (mobile) + workspace info */}
+    <header className="flex h-14 items-center justify-between border-b border-border bg-background px-4">
+      {/* Left: hamburger (mobile) */}
       <div className="flex items-center gap-3">
-        {/* Hamburger — mobile only */}
         <Button
           variant="ghost"
           size="sm"
@@ -63,18 +55,13 @@ export default function TopBar() {
         >
           <Menu className="size-5" />
         </Button>
-
-        {/* Workspace name */}
-        <span className="text-sm font-medium text-foreground">
-          {user?.workspace_id ? workspaceDisplayName(user.workspace_id) : 'Cast Studio'}
-        </span>
       </div>
 
       {/* Right: theme toggle + notifications + user menu */}
       <div className="flex items-center gap-2">
         <Button
           variant="ghost"
-          size="sm"
+          size="icon-sm"
           onClick={toggleTheme}
           aria-label={theme === 'light' ? 'Switch to dark mode' : 'Switch to light mode'}
         >

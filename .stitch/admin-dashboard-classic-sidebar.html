@@ -1,0 +1,438 @@
+<!DOCTYPE html><html class="light" lang="en" style=""><head>
+<meta charset="utf-8">
+<meta content="width=device-width, initial-scale=1.0" name="viewport">
+<title>Cast Studio Admin Dashboard</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com" rel="preconnect">
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&amp;family=Libre+Baskerville:wght@400;700&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet">
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-tint": "#645d58",
+                        "background": "#f9f9f8",
+                        "tertiary-fixed": "#e9e1dd",
+                        "surface-container-highest": "#e2e2e2",
+                        "primary-fixed": "#eae1da",
+                        "tertiary": "#5d5956",
+                        "on-surface": "#1a1c1c",
+                        "on-primary-fixed": "#1f1b17",
+                        "surface-container": "#eeeeed",
+                        "inverse-on-surface": "#f1f1f0",
+                        "outline-variant": "#cfc4bd",
+                        "surface-dim": "#dadad9",
+                        "primary-container": "#78716c",
+                        "outline": "#7e756f",
+                        "tertiary-fixed-dim": "#ccc5c2",
+                        "on-tertiary-fixed-variant": "#4a4643",
+                        "on-secondary-container": "#66625e",
+                        "on-secondary": "#ffffff",
+                        "on-surface-variant": "#4d4540",
+                        "surface-bright": "#f9f9f8",
+                        "error": "#ba1a1a",
+                        "on-secondary-fixed-variant": "#4a4643",
+                        "on-primary-fixed-variant": "#4b4641",
+                        "surface-container-low": "#f3f4f3",
+                        "primary": "#5f5954",
+                        "on-background": "#1a1c1c",
+                        "on-tertiary-container": "#fff7f3",
+                        "inverse-surface": "#2f3130",
+                        "surface-container-lowest": "#ffffff",
+                        "on-tertiary": "#ffffff",
+                        "on-primary-container": "#fff7f3",
+                        "secondary-fixed": "#e8e1dd",
+                        "primary-fixed-dim": "#cec5bf",
+                        "on-secondary-fixed": "#1e1b19",
+                        "secondary": "#625d5a",
+                        "on-primary": "#ffffff",
+                        "on-error-container": "#93000a",
+                        "surface-container-high": "#e8e8e7",
+                        "surface": "#f9f9f8",
+                        "inverse-primary": "#cec5bf",
+                        "surface-variant": "#e2e2e2",
+                        "secondary-container": "#e6deda",
+                        "on-tertiary-fixed": "#1e1b19",
+                        "secondary-fixed-dim": "#ccc5c1",
+                        "tertiary-container": "#76716e",
+                        "on-error": "#ffffff",
+                        "error-container": "#ffdad6"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0rem",
+                        "lg": "0rem",
+                        "xl": "0rem",
+                        "full": "0rem"
+                    },
+                    "spacing": {
+                        "xl": "72px",
+                        "section-tablet": "84px",
+                        "md": "24px",
+                        "section-mobile": "60px",
+                        "base": "12px",
+                        "section-desktop": "120px",
+                        "sm": "12px",
+                        "lg": "48px",
+                        "max-content-width": "680px"
+                    },
+                    "fontFamily": {
+                        "body-sm": ["Inter"],
+                        "headline": ["Libre Baskerville"],
+                        "subhead": ["Libre Baskerville"],
+                        "caption": ["Inter"],
+                        "body-lg": ["Inter"],
+                        "display-mobile": ["Libre Baskerville"],
+                        "body": ["Inter"],
+                        "label": ["Inter"],
+                        "display": ["Libre Baskerville"]
+                    },
+                    "fontSize": {
+                        "body-sm": ["15px", {"lineHeight": "25.5px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "headline": ["30px", {"lineHeight": "39px", "letterSpacing": "-0.015em", "fontWeight": "700"}],
+                        "subhead": ["22px", {"lineHeight": "30px", "letterSpacing": "-0.01em", "fontWeight": "400"}],
+                        "caption": ["13px", {"lineHeight": "19.5px", "letterSpacing": "0.01em", "fontWeight": "400"}],
+                        "body-lg": ["20px", {"lineHeight": "35px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "display-mobile": ["32px", {"lineHeight": "38px", "letterSpacing": "-0.02em", "fontWeight": "700"}],
+                        "body": ["17px", {"lineHeight": "30.6px", "letterSpacing": "0", "fontWeight": "400"}],
+                        "label": ["11px", {"lineHeight": "15.4px", "letterSpacing": "0.08em", "fontWeight": "600"}],
+                        "display": ["40px", {"lineHeight": "48px", "letterSpacing": "-0.02em", "fontWeight": "700"}]
+                    }
+                }
+            }
+        }
+    </script>
+<style>
+        body {
+            background-color: theme('colors.background');
+            color: theme('colors.on-background');
+        }
+        /* Custom scrollbar for horizontal lists */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        
+        /* Focus ring for flat design */
+        *:focus-visible {
+            outline: 2px solid white;
+            box-shadow: 0 0 0 6px theme('colors.primary-container');
+        }
+        
+        /* Interactive button shifts */
+        .btn-primary:hover {
+            background-color: theme('colors.tertiary');
+        }
+        .btn-secondary:hover {
+            background-color: theme('colors.surface-container-highest');
+        }
+    </style>
+</head>
+<body class="flex bg-background min-h-screen antialiased selection:bg-surface-variant">
+<!-- SideNavBar (WEB) -->
+<nav class="hidden md:flex flex-col fixed left-0 top-0 h-full w-64 pt-xl z-40 bg-surface-container-low border-r border-outline-variant duration-150 ease-in-out">
+<div class="px-md mb-xl">
+<h1 class="font-subhead text-subhead font-bold text-on-surface">Cast Studio</h1>
+<p class="font-caption text-caption text-on-surface-variant mt-1">Admin Dashboard</p>
+</div>
+<div class="flex-1 overflow-y-auto pb-8">
+<!-- Dashboard Group -->
+<div class="border-b border-outline-variant">
+<a class="flex items-center px-md py-3 bg-surface-container-highest text-on-surface transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: &quot;FILL&quot; 1;">dashboard</span>
+<span class="font-label text-label uppercase tracking-widest">Dashboard</span>
+</a>
+</div>
+<!-- Tools Group -->
+<div class="border-b border-outline-variant py-2">
+<div class="flex items-center px-md py-2 text-on-surface-variant">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: &quot;FILL&quot; 0;">handyman</span>
+<span class="font-label text-label uppercase tracking-widest">Tools</span>
+</div>
+<ul class="flex flex-col mt-1">
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Actor Designer</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Look Designer</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Fashion Item Creator</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Library Group -->
+<div class="border-b border-outline-variant py-2">
+<div class="flex items-center px-md py-2 text-on-surface-variant">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: &quot;FILL&quot; 0;">photo_library</span>
+<span class="font-label text-label uppercase tracking-widest">Library</span>
+</div>
+<ul class="flex flex-col mt-1">
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Actors</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Looks</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Fashion Items</span>
+</a>
+</li>
+</ul>
+</div>
+<!-- Commissions Group -->
+<div class="border-b border-outline-variant">
+<a class="flex items-center px-md py-3 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: &quot;FILL&quot; 0;">receipt_long</span>
+<span class="font-label text-label uppercase tracking-widest">Commissions</span>
+</a>
+</div>
+<!-- Settings Group -->
+<div class="border-b border-outline-variant py-2">
+<div class="flex items-center px-md py-2 text-on-surface-variant">
+<span class="material-symbols-outlined mr-3" style="font-variation-settings: &quot;FILL&quot; 0;">settings</span>
+<span class="font-label text-label uppercase tracking-widest">Settings</span>
+</div>
+<ul class="flex flex-col mt-1">
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Users &amp; Roles</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Models</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">System Prompts</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Actor Properties</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Look Taxonomy</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Fashion Item Taxonomy</span>
+</a>
+</li>
+<li>
+<a class="flex items-center pl-[52px] pr-md py-2 text-on-surface-variant hover:bg-surface-container-highest transition-all duration-150 group" href="#">
+<span class="font-label text-label uppercase tracking-widest">Commission Forms</span>
+</a>
+</li>
+</ul>
+</div>
+</div>
+</nav>
+<!-- TopNavBar (MOBILE) -->
+<header class="md:hidden fixed top-0 left-0 w-full z-50 flex justify-between items-center px-md h-xl bg-surface border-b border-outline-variant">
+<div class="font-headline text-headline text-primary uppercase tracking-widest">Cast Studio</div>
+<div class="flex items-center space-x-4">
+<button class="text-primary hover:bg-surface-container-high transition-colors p-2 cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">notifications</span>
+</button>
+<button class="text-primary hover:bg-surface-container-high transition-colors p-2 cursor-pointer active:opacity-80">
+<span class="material-symbols-outlined" style="font-variation-settings: &quot;FILL&quot; 0;">help</span>
+</button>
+<img alt="User avatar" class="w-8 h-8 rounded-full border border-outline-variant object-cover" data-alt="A small, circular avatar portrait of a modern admin user, minimalist vector style, neutral background, simple lighting, ensuring a clean and professional appearance suitable for a high-end application interface." src="https://lh3.googleusercontent.com/aida-public/AB6AXuA9lO5jMPtbecrZn-MAB_lJVFjJmmOs3v34oN8QTLEDYdS6lKF0xgiEPLtu5F-V8X0XzE4hkZ5lVzgS9GnULxL9WQtcVxjBK3-Ya_-Nm_cXXc8sZFrgN7_9JkeDgPzZwOpSgFLBqTCiJ1bNgmpC3I6L20ZAvgZt8wYwoON0KuF2XnrUSKZclMlvPpFqoV3K_Yddqin1FvR3JdmIHIuok3_hXK13evC6gKZGju1cugqr3XVATZGyXKaLE9RUhTRf_5FyM7GVMowF_Gc">
+</div>
+</header>
+<!-- Main Content Canvas -->
+<main class="flex-1 md:ml-64 pt-xl md:pt-0 pb-section-desktop px-md md:px-lg lg:px-xl">
+<div class="max-w-[1200px] mx-auto mt-section-desktop">
+<header class="mb-section-tablet">
+<h2 class="font-display text-display text-on-background mb-2">Dashboard Overview</h2>
+<p class="font-body-lg text-body-lg text-on-surface-variant max-w-[max-content-width]">A high-level summary of your studio's activity and asset generation metrics.</p>
+</header>
+<!-- Section 1: Stats Row -->
+<section class="mb-section-desktop">
+<div class="grid grid-cols-2 md:grid-cols-5 gap-0 border-y border-outline-variant">
+<div class="p-6 border-b md:border-b-0 md:border-r border-outline-variant flex flex-col justify-center items-start">
+<span class="font-label text-label uppercase text-on-surface-variant tracking-widest mb-2">Total Actors</span>
+<span class="font-headline text-headline text-on-surface">1,248</span>
+</div>
+<div class="p-6 border-b md:border-b-0 md:border-r border-outline-variant flex flex-col justify-center items-start">
+<span class="font-label text-label uppercase text-on-surface-variant tracking-widest mb-2">Total Looks</span>
+<span class="font-headline text-headline text-on-surface">3,892</span>
+</div>
+<div class="p-6 border-b md:border-b-0 md:border-r border-outline-variant flex flex-col justify-center items-start">
+<span class="font-label text-label uppercase text-on-surface-variant tracking-widest mb-2">Total Items</span>
+<span class="font-headline text-headline text-on-surface">14.5k</span>
+</div>
+<div class="p-6 border-r border-outline-variant flex flex-col justify-center items-start">
+<span class="font-label text-label uppercase text-on-surface-variant tracking-widest mb-2">Active Members</span>
+<span class="font-headline text-headline text-on-surface">412</span>
+</div>
+<div class="p-6 flex flex-col justify-center items-start bg-surface-container-low">
+<span class="font-label text-label uppercase text-on-surface-variant tracking-widest mb-2">Pending Commissions</span>
+<span class="font-headline text-headline text-primary">28</span>
+</div>
+</div>
+</section>
+<!-- Section 2: Quick Actions -->
+<section class="mb-section-desktop">
+<div class="flex items-center justify-between mb-8 border-b border-outline-variant pb-4">
+<h3 class="font-subhead text-subhead text-on-background">Quick Actions</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+<!-- Action Card 1 -->
+<div class="border border-outline-variant p-6 flex flex-col justify-between h-48 bg-surface-bright hover:bg-surface-container-low transition-colors duration-200">
+<div>
+<span class="material-symbols-outlined text-primary mb-4" style="font-variation-settings: &quot;FILL&quot; 0; font-size: 32px;">face</span>
+<h4 class="font-body-lg text-body-lg text-on-surface">New Actor</h4>
+</div>
+<button aria-label="Create New Actor" class="self-start mt-auto flex items-center justify-center w-10 h-10 bg-primary text-on-primary btn-primary transition-colors duration-150">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Action Card 2 -->
+<div class="border border-outline-variant p-6 flex flex-col justify-between h-48 bg-surface-bright hover:bg-surface-container-low transition-colors duration-200">
+<div>
+<span class="material-symbols-outlined text-primary mb-4" style="font-variation-settings: &quot;FILL&quot; 0; font-size: 32px;">style</span>
+<h4 class="font-body-lg text-body-lg text-on-surface">New Look</h4>
+</div>
+<button aria-label="Create New Look" class="self-start mt-auto flex items-center justify-center w-10 h-10 bg-primary text-on-primary btn-primary transition-colors duration-150">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+<!-- Action Card 3 -->
+<div class="border border-outline-variant p-6 flex flex-col justify-between h-48 bg-surface-bright hover:bg-surface-container-low transition-colors duration-200">
+<div>
+<span class="material-symbols-outlined text-primary mb-4" style="font-variation-settings: &quot;FILL&quot; 0; font-size: 32px;">checkroom</span>
+<h4 class="font-body-lg text-body-lg text-on-surface">New Item</h4>
+</div>
+<button aria-label="Create New Item" class="self-start mt-auto flex items-center justify-center w-10 h-10 bg-primary text-on-primary btn-primary transition-colors duration-150">
+<span class="material-symbols-outlined">add</span>
+</button>
+</div>
+</div>
+</section>
+<!-- Section 3: Recent Activity (Horizontal Scroll) -->
+<section class="mb-section-desktop">
+<div class="flex items-center justify-between mb-8 border-b border-outline-variant pb-4">
+<h3 class="font-subhead text-subhead text-on-background">Recent Activity</h3>
+<button class="font-label text-label uppercase tracking-widest text-on-surface-variant hover:text-on-surface transition-colors">View All</button>
+</div>
+<div class="flex overflow-x-auto gap-6 pb-6 hide-scrollbar cursor-grab active:cursor-grabbing snap-x" id="activity-scroll">
+<!-- Item 1 -->
+<div class="flex-none w-64 snap-start group">
+<div class="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-outline-variant">
+<img alt="Asset thumbnail" class="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" data-alt="A high fashion portrait of a cyberpunk woman, neon accents, dark gritty background, striking minimalist lighting emphasizing the futuristic aesthetics, crisp focus, studio quality, light mode rendering." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCBEdTCG2zeArebYPzt1nBU9iCWr8Q2WiLl38Ydv3lL7tpUvdYXyLM9U0rmmPtFeItDn422nlHG5XIfBIYo_gHy4UIOnNIl7WH9V5yzqAbsoTXtjHvVX6_3k45xl5eKxu_-qheQkn89wyyoXoDTt4FNhO2lViPRuy_nc6h0RzMIP-BwyWmCOaF0B7qzxcBbGPs0hZ9RkMP_gcK6AHfvSPx8c-D6NB7AONpztMU_Zz_XapttkKkSBxYtKcXziQtR06VYJeG_B7rmVKc">
+</div>
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-body text-body text-on-surface truncate pr-2">Cyberpunk Woman</h4>
+<p class="font-caption text-caption text-on-surface-variant mt-1">2h ago</p>
+</div>
+<span class="bg-surface-container text-on-surface font-label text-label px-2 py-1 uppercase tracking-wider border border-outline-variant">Generated</span>
+</div>
+</div>
+<!-- Item 2 -->
+<div class="flex-none w-64 snap-start group">
+<div class="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-outline-variant">
+<img alt="Asset thumbnail" class="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" data-alt="A minimalist techwear jacket, flat lay composition, isolated on a stark white background, high contrast lighting highlighting the fabric textures and structural seams, sharp shadows, high-end editorial style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuCIoOCr3s4_q9yTKYxD4qj_8Wmv9okgZ4ZdeGcMi8xs6hcn9FlOQ-_RqCChz6LR85LF8dgc6X05dv_E0lr-p-Eq-56nNs5aNDBvRSCB_av21XFmAu-QFxqqW4ww5sobCJaSiRDRTc1YSfiz6KWgzcY5A5qRuOEywX8_FafI1wKC1lTDVyG2OL53Q5cUa_IaQRx2g1QQ_9ieGP4Q01zlNHy-KIj8HmYLCZbnHWi4hBp6SnreW4x57UPYKaQ3McVFdpG7wqCTI5fhdts">
+</div>
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-body text-body text-on-surface truncate pr-2">Techwear Shell</h4>
+<p class="font-caption text-caption text-on-surface-variant mt-1">3h ago</p>
+</div>
+<span class="bg-surface-container-low text-on-surface font-label text-label px-2 py-1 uppercase tracking-wider border border-outline-variant">Updated</span>
+</div>
+</div>
+<!-- Item 3 -->
+<div class="flex-none w-64 snap-start group">
+<div class="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-outline-variant">
+<img alt="Asset thumbnail" class="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" data-alt="A sleek, modern avatar representing a male fashion model, neutral expression, soft natural lighting, minimalist beige background, refined and sophisticated portrait photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuC2okihgMuXrJHbOI29Todtc81BfijjQswxzAnEtWDL7uTLerOj3S8mHwWbBKdwyZ_r1HXdBd2QmrLZZLUB2428TypCZD2YApf5BQAmsJA__22hkGyFcGL0iOf-B_amtv_-mF8-SVSYBMUCsN8cW5Xey3aWElnpECKQ2yWvpuBLTTdhANsRI2LSjDPbxnR6FFkcbGRQSKAQquU0T-lQncHTEQfulmXnkRBiAwI-3SFwws-xUzFIU3qypsQyG255qlf34rKPF1mDD94">
+</div>
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-body text-body text-on-surface truncate pr-2">Classic Male Model</h4>
+<p class="font-caption text-caption text-on-surface-variant mt-1">5h ago</p>
+</div>
+<span class="bg-surface-container text-on-surface font-label text-label px-2 py-1 uppercase tracking-wider border border-outline-variant">Generated</span>
+</div>
+</div>
+<!-- Item 4 -->
+<div class="flex-none w-64 snap-start group">
+<div class="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-outline-variant flex items-center justify-center">
+<span class="material-symbols-outlined text-outline-variant" style="font-size: 48px;">receipt_long</span>
+</div>
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-body text-body text-on-surface truncate pr-2">Summer Catalog '24</h4>
+<p class="font-caption text-caption text-on-surface-variant mt-1">1d ago</p>
+</div>
+<span class="bg-surface-container text-on-surface font-label text-label px-2 py-1 uppercase tracking-wider border border-outline-variant">Approved</span>
+</div>
+</div>
+<!-- Item 5 -->
+<div class="flex-none w-64 snap-start group">
+<div class="w-full h-40 bg-surface-container-highest mb-4 relative overflow-hidden border border-outline-variant flex items-center justify-center">
+<img alt="Asset thumbnail" class="w-full h-full object-cover mix-blend-multiply group-hover:scale-105 transition-transform duration-500 ease-out" data-alt="A pair of futuristic minimalist sneakers, off-white and grey color palette, architectural shapes, stark studio lighting, isolated against a bright light background, product photography style." src="https://lh3.googleusercontent.com/aida-public/AB6AXuDeP6LCQD3hCZ1XCKNpY8sM1Rp-jD6kGKNNXqMCn8Xw1xHMcKqiRyYbjkdHTGB7-YEUflvLA-NghBpv2LJIu0vDVl4xQe9MtK3rA0GZgGW5PcfRVp85WuMYwPA8YgLp_uv6PiM7f2SN2es_EabBx2Cd3pyBh_gdP4f7ZvwqW4EMwpaPnPg73QeWM8hi4f4KbYQSNpgNEAvGSkXrzmz6K7Awx2AvSYfcaCQX9wz_yD5vAfXjzSDTh6NGerNE_mAft1BQoQuav8Ur528">
+</div>
+<div class="flex items-start justify-between">
+<div>
+<h4 class="font-body text-body text-on-surface truncate pr-2">Aero Sneakers V2</h4>
+<p class="font-caption text-caption text-on-surface-variant mt-1">1d ago</p>
+</div>
+<span class="bg-surface-container text-on-surface font-label text-label px-2 py-1 uppercase tracking-wider border border-outline-variant">Generated</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+</main>
+<script>
+        // Simple drag-to-scroll implementation for the activity horizontal list
+        const slider = document.getElementById('activity-scroll');
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        slider.addEventListener('mousedown', (e) => {
+            isDown = true;
+            startX = e.pageX - slider.offsetLeft;
+            scrollLeft = slider.scrollLeft;
+        });
+        slider.addEventListener('mouseleave', () => {
+            isDown = false;
+        });
+        slider.addEventListener('mouseup', () => {
+            isDown = false;
+        });
+        slider.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - slider.offsetLeft;
+            const walk = (x - startX) * 2; // scroll-fast
+            slider.scrollLeft = scrollLeft - walk;
+        });
+    </script>
+</body></html>

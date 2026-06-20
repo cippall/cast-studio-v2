@@ -1,31 +1,19 @@
 /**
- * Dashboard — quick actions + recent activity + role-specific sections.
- */
+ /**
+  * Dashboard — stats row + quick actions + recent activity.
+  * Matches Stitch reference: Admin Dashboard - Classic Sidebar Variant.
+  */
 import { useNavigate } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useWalletBalance, useDashboardStats } from '@/hooks/useDashboard';
 import { useActivityFeed } from '@/hooks/useActivityFeed';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import PageContainer from '@/components/layout/PageContainer';
-import PageHeader from '@/components/layout/PageHeader';
 import StatCard from '@/components/StatCard';
 import EmptyStateV2 from '@/components/EmptyStateV2';
-import LoadingState from '@/components/LoadingState';
 import { Skeleton } from '@/components/ui/skeleton';
 import type { DashboardStats, ArtistDashboard, ClientDashboard } from '@cast/types';
-import {
-  User,
-  Shirt,
-  Image,
-  MessageSquare,
-  Users,
-  Layers,
-  ClipboardList,
-  Inbox,
-  Folder,
-  Store,
-} from 'lucide-react';
+import { User, Shirt, Image, MessageSquare, Inbox, Folder, Store, Plus } from 'lucide-react';
 import ActivityCard from '@/components/ActivityCard';
 import WalletBalanceCard from '@/components/WalletBalanceCard';
 
@@ -62,167 +50,186 @@ export default function Dashboard() {
 
   return (
     <PageContainer>
-      <PageHeader title="Dashboard" description={`Welcome back, ${user?.name ?? 'User'}`} />
+      {/* Page header */}
+      <header className="mb-12">
+        <h2 className="font-heading text-[40px] font-bold leading-[48px] tracking-[-0.02em] text-foreground mb-2">
+          Dashboard Overview
+        </h2>
+        <p className="font-body text-[20px] leading-[35px] text-muted-foreground max-w-[680px]">
+          Welcome back, {user?.name ?? 'User'}
+        </p>
+      </header>
 
-      <div className="mt-6 flex flex-col gap-6">
-        <div>
-          <h2 className="mb-3 font-heading text-lg font-semibold">Quick Actions</h2>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fit,minmax(200px,1fr))]">
-            {quickActions.map((action) => (
-              <Card
-                key={action.path}
-                className="cursor-pointer transition-colors hover:border-border"
-                onClick={() => navigate(action.path)}
-              >
-                <CardHeader className="flex flex-row items-center gap-3 pb-2">
-                  <div className="flex size-10 items-center justify-center bg-primary/10">
-                    <action.icon className="size-5 text-primary" />
-                  </div>
-                  <CardTitle className="text-base">{action.label}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <CardDescription>Create a new {action.label.toLowerCase()}</CardDescription>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {isClient && (
-          <div>
-            <h2 className="mb-3 font-heading text-lg font-semibold">Wallet</h2>
-            <WalletBalanceCard
-              balance={wallet?.balance}
-              isLoading={walletLoading}
-              isError={walletError}
-              onTopUp={() => navigate('/settings/wallet')}
+      {/* Admin Stats Row */}
+      {adminStats && (
+        <section className="mb-12">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-0 border-y border-border">
+            <StatCard
+              label="Total Actors"
+              value={adminStats.totalActors}
+              isLoading={statsLoading}
             />
-          </div>
-        )}
-
-        {adminStats && (
-          <div>
-            <h2 className="mb-3 font-heading text-lg font-semibold">Overview</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-5">
+            <div className="border-r border-border">
               <StatCard
-                icon={User}
-                label="Actors"
-                value={adminStats.totalActors}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Shirt}
-                label="Looks"
+                label="Total Looks"
                 value={adminStats.totalLooks}
                 isLoading={statsLoading}
               />
+            </div>
+            <div className="border-r border-border">
               <StatCard
-                icon={Layers}
-                label="Items"
+                label="Total Items"
                 value={adminStats.totalItems}
                 isLoading={statsLoading}
               />
+            </div>
+            <div className="border-r border-border">
               <StatCard
-                icon={Users}
-                label="Members"
+                label="Active Members"
                 value={adminStats.activeMembers}
                 isLoading={statsLoading}
               />
+            </div>
+            <div className="bg-surface-container-low">
               <StatCard
-                icon={ClipboardList}
-                label="Commissions"
+                label="Pending Commissions"
                 value={adminStats.pendingCommissions}
                 isLoading={statsLoading}
+                variant="highlight"
               />
             </div>
           </div>
-        )}
+        </section>
+      )}
 
-        {artistStats && (
-          <div>
-            <h2 className="mb-3 font-heading text-lg font-semibold">My Work</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-              <StatCard
-                icon={User}
-                label="My Actors"
-                value={artistStats.myActors}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Shirt}
-                label="My Looks"
-                value={artistStats.myLooks}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Layers}
-                label="My Items"
-                value={artistStats.myItems}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={ClipboardList}
-                label="Submissions"
-                value={artistStats.recentSubmissions?.length ?? 0}
-                isLoading={statsLoading}
-              />
-            </div>
+      {/* Artist Stats */}
+      {artistStats && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+            <h3 className="font-heading text-[22px] font-normal leading-[30px] tracking-[-0.01em] text-foreground">
+              My Work
+            </h3>
           </div>
-        )}
-
-        {clientStats && (
-          <div>
-            <h2 className="mb-3 font-heading text-lg font-semibold">My Account</h2>
-            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
-              <StatCard
-                icon={Layers}
-                label="Wallet Balance"
-                value={clientStats.walletBalance}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={ClipboardList}
-                label="Active Commissions"
-                value={clientStats.activeCommissions}
-                isLoading={statsLoading}
-              />
-              <StatCard
-                icon={Inbox}
-                label="Recent Purchases"
-                value={clientStats.recentPurchases?.length ?? 0}
-                isLoading={statsLoading}
-              />
-            </div>
-          </div>
-        )}
-
-        <div>
-          <h2 className="mb-3 font-heading text-lg font-semibold">Recent Activity</h2>
-          {activitiesLoading ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 8 }).map((_, i) => (
-                <div key={i} className="space-y-2">
-                  <Skeleton className="aspect-square w-full" />
-                  <Skeleton className="h-3 w-3/4" />
-                  <Skeleton className="h-3 w-1/2" />
-                </div>
-              ))}
-            </div>
-          ) : activities && activities.length > 0 ? (
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-              {activities.map((item) => (
-                <ActivityCard key={item.id + item.action} item={item} />
-              ))}
-            </div>
-          ) : (
-            <EmptyStateV2
-              icon={<Inbox className="size-8 text-muted-foreground" />}
-              title="No recent activity"
-              description="Your recent activity will appear here as you create and manage assets."
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            <StatCard label="My Actors" value={artistStats.myActors} isLoading={statsLoading} />
+            <StatCard label="My Looks" value={artistStats.myLooks} isLoading={statsLoading} />
+            <StatCard label="My Items" value={artistStats.myItems} isLoading={statsLoading} />
+            <StatCard
+              label="Submissions"
+              value={artistStats.recentSubmissions?.length ?? 0}
+              isLoading={statsLoading}
             />
-          )}
+          </div>
+        </section>
+      )}
+
+      {/* Client Stats */}
+      {clientStats && (
+        <section className="mb-12">
+          <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+            <h3 className="font-heading text-[22px] font-normal leading-[30px] tracking-[-0.01em] text-foreground">
+              My Account
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+            <StatCard
+              label="Wallet Balance"
+              value={clientStats.walletBalance}
+              isLoading={statsLoading}
+            />
+            <StatCard
+              label="Active Commissions"
+              value={clientStats.activeCommissions}
+              isLoading={statsLoading}
+            />
+            <StatCard
+              label="Recent Purchases"
+              value={clientStats.recentPurchases?.length ?? 0}
+              isLoading={statsLoading}
+            />
+          </div>
+        </section>
+      )}
+
+      {/* Client Wallet */}
+      {isClient && (
+        <section className="mb-12">
+          <WalletBalanceCard
+            balance={wallet?.balance}
+            isLoading={walletLoading}
+            isError={walletError}
+            onTopUp={() => navigate('/settings/wallet')}
+          />
+        </section>
+      )}
+
+      {/* Quick Actions */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+          <h3 className="font-heading text-[22px] font-normal leading-[30px] tracking-[-0.01em] text-foreground">
+            Quick Actions
+          </h3>
         </div>
-      </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {quickActions.slice(0, 3).map((action) => (
+            <div
+              key={action.path}
+              className="border border-border p-6 flex flex-col justify-between h-48 bg-surface-bright hover:bg-surface-container-low transition-colors duration-200 cursor-pointer"
+              onClick={() => navigate(action.path)}
+            >
+              <div>
+                <action.icon className="size-8 text-primary mb-4" />
+                <h4 className="font-body text-[20px] leading-[35px] text-foreground">
+                  {action.label}
+                </h4>
+              </div>
+              <Button
+                variant="default"
+                size="icon"
+                className="self-start"
+                aria-label={`Create ${action.label}`}
+              >
+                <Plus className="size-4" />
+              </Button>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Recent Activity */}
+      <section className="mb-12">
+        <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+          <h3 className="font-heading text-[22px] font-normal leading-[30px] tracking-[-0.01em] text-foreground">
+            Recent Activity
+          </h3>
+          <button className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors">
+            View All
+          </button>
+        </div>
+        {activitiesLoading ? (
+          <div className="flex overflow-x-auto gap-6 pb-6">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="flex-none w-64 space-y-2">
+                <Skeleton className="w-full h-40" />
+                <Skeleton className="h-4 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            ))}
+          </div>
+        ) : activities && activities.length > 0 ? (
+          <div className="flex overflow-x-auto gap-6 pb-6 cursor-grab active:cursor-grabbing snap-x">
+            {activities.map((item) => (
+              <ActivityCard key={item.id + item.action} item={item} />
+            ))}
+          </div>
+        ) : (
+          <EmptyStateV2
+            icon={<Inbox className="size-8 text-muted-foreground" />}
+            title="No recent activity"
+            description="Your recent activity will appear here as you create and manage assets."
+          />
+        )}
+      </section>
     </PageContainer>
   );
 }
