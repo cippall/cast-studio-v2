@@ -16,7 +16,8 @@ export async function listPrompts(): Promise<SystemPromptRow[]> {
 
 export async function findPromptByTask(task: string): Promise<SystemPromptRow | null> {
   const result = await query('SELECT * FROM system_prompts WHERE task = $1', [task]);
-  return (result.rows[0] as SystemPromptRow) ?? null;
+  if (!result?.rows?.length) return null;
+  return result.rows[0] as SystemPromptRow;
 }
 
 export async function createPrompt(

@@ -22,6 +22,13 @@ vi.mock('../src/services/fal-service.js', () => ({
   getWorkspaceApiKey: vi.fn(),
 }));
 
+// Mock prompt-service to return a fixed fallback prompt (avoids consuming pool mock seeds)
+vi.mock('../src/services/prompt-service.js', () => ({
+  resolvePrompt: vi
+    .fn()
+    .mockResolvedValue('Professional headshot of test actor. Clean background, studio lighting.'),
+}));
+
 import * as poolModule from '../src/db/pool.js';
 import actorsRouter from '../src/routes/actors.js';
 import generationJobsRouter from '../src/routes/generation-jobs.js';
@@ -418,7 +425,11 @@ describe('POST /api/actors/:id/generate', () => {
     const output1 = makeOutputRow({ id: OUTPUT_UUID });
     const output2 = makeOutputRow({ id: SECOND_OUTPUT_UUID });
     mockQuery.mockResolvedValueOnce({ rows: [output1] } as any);
+    // UPDATE fal_job_id for output 1 (called after fal submission, before next output)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
     mockQuery.mockResolvedValueOnce({ rows: [output2] } as any);
+    // UPDATE fal_job_id for output 2
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
 
     const res = await request(createActorsApp(artist))
       .post(`/api/actors/${ACTOR_UUID}/generate`)

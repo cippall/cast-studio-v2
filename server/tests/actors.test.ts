@@ -12,6 +12,23 @@ vi.mock('../src/db/pool.js', () => ({
   default: {},
 }));
 
+// Mock prompt-service to return a fixed fallback prompt (avoids consuming pool mock seeds)
+vi.mock('../src/services/prompt-service.js', () => ({
+  resolvePrompt: vi
+    .fn()
+    .mockResolvedValue('Professional headshot of test actor. Clean background, studio lighting.'),
+}));
+
+// Mock fal-service to control submitTextToImage behavior
+vi.mock('../src/services/fal-service.js', () => ({
+  submitTextToImage: vi.fn().mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' }),
+  submitImageToImage: vi.fn().mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' }),
+  pollJob: vi.fn(),
+  cancelJob: vi.fn(),
+  imageToText: vi.fn(),
+  getWorkspaceApiKey: vi.fn(),
+}));
+
 import * as poolModule from '../src/db/pool.js';
 import actorsRouter from '../src/routes/actors.js';
 import assetVersionsRouter from '../src/routes/asset-versions.js';

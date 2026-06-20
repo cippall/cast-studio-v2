@@ -13,7 +13,7 @@ export async function resolvePrompt(
   variables: Record<string, unknown>,
 ): Promise<string> {
   const prompt = await findPromptByTask(task);
-  if (!prompt) {
+  if (!prompt || !prompt.template) {
     return buildFallbackPrompt(task, variables);
   }
 

@@ -6,12 +6,15 @@ import {
 import type { CreateAssetOutputInput } from '../../db/repositories/asset-repo.js';
 import type { AccountRow } from '../../middleware/requireSession.js';
 import type { WorkspaceRow } from '../../middleware/requireWorkspace.js';
+import { query } from '../../db/pool.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
+import { getWorkspaceApiKey } from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
+import { resolvePrompt } from '../prompt-service.js';
 import type { CharacterSheetResponse } from './generation-types.js';
 
 /**
@@ -47,15 +50,24 @@ export async function generateCharacterSheet(
     );
   }
 
-  // Resolve model: validate against active models or use default
+  // Resolve model with character_sheet_composition task
   const resolvedModel = await resolveModel(
     model,
     account.workspace_id,
     'character_sheet_composition',
   );
-  const prompt = (asset.prompt_recipe?.identity as Record<string, unknown>)
-    ? JSON.stringify(asset.prompt_recipe.identity)
-    : '';
+
+  // Build the prompt: use character_sheet_composition system prompt
+  const identityData = (asset.prompt_recipe?.identity as Record<string, unknown>) ?? {};
+  const lookData = (lookAsset.prompt_recipe as Record<string, unknown>) ?? {};
+  const promptVariables = {
+    ...identityData,
+    look_description: lookData['description'] ?? lookData['prompt'] ?? '',
+  };
+  const prompt = await resolvePrompt('character_sheet_composition', promptVariables);
+
+  // Resolve workspace-specific fal.ai key
+  const workspaceKey = await getWorkspaceApiKey(account.workspace_id);
 
   // Reserve credits before generation
   const workspaceRow = {
@@ -137,15 +149,25 @@ export async function generateCharacterSheet(
 
   const output = await createAssetOutput(input);
 
-  // Submit to fal.ai (non-blocking)
+  // Submit to fal.ai and store the job ID
   try {
-    await fal.submitTextToImage({
-      model: resolvedModel,
-      prompt,
-      seed,
-      num_outputs: 1,
-      image_size: '1024x1024',
-    });
+    const result = await fal.submitTextToImage(
+      {
+        model: resolvedModel,
+        prompt,
+        seed,
+        num_outputs: 1,
+        image_size: '1024x1024',
+      },
+      workspaceKey,
+    );
+
+    // Store fal job ID in generation_params for worker polling
+    generationParams['fal_job_id'] = result.jobId;
+    await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+      JSON.stringify(generationParams),
+      output.id,
+    ]);
   } catch (err) {
     console.error(`fal.ai submission error for character sheet ${output.id}:`, err);
   }

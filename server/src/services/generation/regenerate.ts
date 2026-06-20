@@ -8,13 +8,36 @@ import {
 import type { CreateAssetOutputInput } from '../../db/repositories/asset-repo.js';
 import type { AccountRow } from '../../middleware/requireSession.js';
 import type { WorkspaceRow } from '../../middleware/requireWorkspace.js';
+import { query } from '../../db/pool.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
+import { getWorkspaceApiKey } from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
+import { resolvePrompt } from '../prompt-service.js';
 import type { GenerateOptions, GenerateResponse } from './generation-types.js';
+
+/**
+ * Infer the Cast Studio task from the layout_type when no explicit task is provided.
+ */
+function inferTaskFromLayout(layoutType: string): string {
+  switch (layoutType) {
+    case 'headshot':
+      return 'actor_headshot';
+    case 'fullshot':
+      return 'actor_fullshot';
+    case 'expressions_3x4':
+      return 'actor_expressions';
+    case 'editorial':
+      return 'actor_editorial';
+    case 'character_sheet':
+      return 'actor_character_sheet';
+    default:
+      return 'actor_headshot';
+  }
+}
 
 /**
  * Regenerate an existing actor layout.
@@ -43,13 +66,22 @@ export async function regenerateActorOutput(
 
   // Resolve model: validate against active models or use default
   const model = await resolveModel(options.model, account.workspace_id, options.task);
-  const prompt =
-    (options.prompt ?? (asset.prompt_recipe?.identity as Record<string, unknown>))
-      ? JSON.stringify(asset.prompt_recipe.identity)
-      : '';
+
+  // Build the prompt: use system prompt template if no explicit prompt provided
+  let prompt: string;
+  if (options.prompt) {
+    prompt = options.prompt;
+  } else {
+    const promptTask = options.task ?? inferTaskFromLayout(layoutType);
+    const identityData = (asset.prompt_recipe?.identity as Record<string, unknown>) ?? {};
+    prompt = await resolvePrompt(promptTask, identityData);
+  }
 
   // Determine seed: randomize generates a fresh random seed
   const seed = options.randomize ? generateSeed() : (asset.seed ?? generateSeed());
+
+  // Resolve workspace-specific fal.ai key
+  const workspaceKey = await getWorkspaceApiKey(account.workspace_id);
 
   // Reserve credits before regeneration
   const workspaceRow = {
@@ -125,15 +157,43 @@ export async function regenerateActorOutput(
 
   const output = await createAssetOutput(input);
 
-  // Submit to fal.ai (non-blocking)
+  // Submit to fal.ai and store the job ID
   try {
-    await fal.submitTextToImage({
-      model,
-      prompt,
-      seed,
-      num_outputs: 1,
-      image_size: '1024x1024',
-    });
+    let jobId: string;
+    if (options.reference_images && options.reference_images.length > 0) {
+      const result = await fal.submitImageToImage(
+        {
+          model,
+          prompt,
+          seed,
+          num_outputs: 1,
+          image_url: options.reference_images[0],
+          strength: 0.7,
+          reference_images: options.reference_images,
+        },
+        workspaceKey,
+      );
+      jobId = result.jobId;
+    } else {
+      const result = await fal.submitTextToImage(
+        {
+          model,
+          prompt,
+          seed,
+          num_outputs: 1,
+          image_size: '1024x1024',
+        },
+        workspaceKey,
+      );
+      jobId = result.jobId;
+    }
+
+    // Store fal job ID in generation_params for worker polling
+    generationParams['fal_job_id'] = jobId;
+    await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+      JSON.stringify(generationParams),
+      output.id,
+    ]);
   } catch (err) {
     console.error(`fal.ai submission error for regenerated output ${output.id}:`, err);
   }

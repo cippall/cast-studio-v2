@@ -321,6 +321,7 @@ router.post(
         {
           layout_type: parsed.data.layout_type,
           model: parsed.data.model,
+          task: inferTaskFromLayout(parsed.data.layout_type),
           num_outputs: parsed.data.options?.num_outputs,
           prompt: parsed.data.options?.prompt,
           form_data: parsed.data.form_data,
@@ -470,3 +471,23 @@ router.post(
 );
 
 export default router;
+
+/**
+ * Infer the Cast Studio task from the layout_type for prompt resolution.
+ */
+function inferTaskFromLayout(layoutType: string): string {
+  switch (layoutType) {
+    case 'headshot':
+      return 'actor_headshot';
+    case 'fullshot':
+      return 'actor_fullshot';
+    case 'expressions_3x4':
+      return 'actor_expressions';
+    case 'editorial':
+      return 'actor_editorial';
+    case 'character_sheet':
+      return 'actor_character_sheet';
+    default:
+      return 'actor_headshot';
+  }
+}
