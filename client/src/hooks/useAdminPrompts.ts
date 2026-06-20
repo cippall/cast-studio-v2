@@ -8,6 +8,7 @@ export interface SystemPrompt {
   id: string;
   task: string;
   template: string;
+  variables: string[];
   updated_at?: string;
 }
 

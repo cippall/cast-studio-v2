@@ -5,6 +5,7 @@
 import { useState } from 'react';
 import {
   useAdminPrompts,
+  useCreatePrompt,
   useUpdatePrompt,
   useDeletePrompt,
   type SystemPrompt,
@@ -25,19 +26,55 @@ import { Label } from '@/components/ui/label';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
-import { FileText, Loader2, Pencil, Trash2 } from 'lucide-react';
+import { FileText, Loader2, Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function PromptsPage() {
   const { data: prompts, isLoading } = useAdminPrompts();
+  const createPrompt = useCreatePrompt();
   const updatePrompt = useUpdatePrompt();
   const deletePrompt = useDeletePrompt();
 
   const [editId, setEditId] = useState<string | null>(null);
   const [editTemplate, setEditTemplate] = useState('');
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createTask, setCreateTask] = useState('');
+  const [createTemplate, setCreateTemplate] = useState('');
+  const [createVariables, setCreateVariables] = useState('');
 
   const editPrompt = prompts?.find((p) => p.id === editId);
+
+  const handleOpenCreate = () => {
+    setCreateTask('');
+    setCreateTemplate('');
+    setCreateVariables('');
+    setCreateOpen(true);
+  };
+
+  const handleCreate = async () => {
+    if (!createTask.trim() || !createTemplate.trim()) return;
+    const variables = createVariables
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    if (variables.length === 0) {
+      toast.error('At least one variable is required');
+      return;
+    }
+    try {
+      await createPrompt.mutateAsync({
+        task: createTask.trim(),
+        template: createTemplate.trim(),
+        variables,
+      });
+      toast.success('Prompt created');
+      setCreateOpen(false);
+    } catch (err: unknown) {
+      const error = err as { message?: string };
+      toast.error(error.message ?? 'Failed to create prompt');
+    }
+  };
 
   const handleOpenEdit = (id: string) => {
     const prompt = prompts?.find((p) => p.id === id);
@@ -73,10 +110,12 @@ export default function PromptsPage() {
   return (
     <PageContainer>
       <div className="flex flex-col gap-6">
-        <PageHeader
-          title="System Prompts"
-          description="Edit prompt templates used for generation"
-        />
+        <PageHeader title="System Prompts" description="Edit prompt templates used for generation">
+          <Button onClick={handleOpenCreate} size="sm">
+            <Plus className="mr-2 size-4" />
+            New Prompt
+          </Button>
+        </PageHeader>
 
         {isLoading ? (
           <div className="space-y-3">
@@ -175,6 +214,61 @@ export default function PromptsPage() {
                   <Loader2 className="mr-2 size-4 animate-spin" />
                 ) : (
                   'Delete'
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create dialog */}
+        <Dialog open={createOpen} onOpenChange={() => setCreateOpen(false)}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Create Prompt Template</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="create-task">Task</Label>
+                <Input
+                  id="create-task"
+                  value={createTask}
+                  onChange={(e) => setCreateTask(e.target.value)}
+                  placeholder="e.g. generate_character"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-template">Template</Label>
+                <Textarea
+                  id="create-template"
+                  value={createTemplate}
+                  onChange={(e) => setCreateTemplate(e.target.value)}
+                  rows={8}
+                  className="font-mono text-sm"
+                  placeholder="Prompt template with {{variable}} placeholders..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="create-variables">Variables</Label>
+                <Input
+                  id="create-variables"
+                  value={createVariables}
+                  onChange={(e) => setCreateVariables(e.target.value)}
+                  placeholder="name, age, style (comma-separated)"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Comma-separated list of variable names used in the template.
+                </p>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setCreateOpen(false)}>
+                Cancel
+              </Button>
+              <Button onClick={handleCreate} disabled={createPrompt.isPending}>
+                {createPrompt.isPending ? (
+                  <Loader2 className="mr-2 size-4 animate-spin" />
+                ) : (
+                  'Create'
                 )}
               </Button>
             </DialogFooter>
