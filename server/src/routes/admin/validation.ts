@@ -25,7 +25,9 @@ export const importModelSchema = z.object({
   name: z.string().min(1, { message: 'name is required' }),
   description: z.string().optional(),
   category: z.string().min(1, { message: 'category is required' }),
-  parameters: z.record(z.string(), z.unknown()).optional(),
+  task: z.string().optional(),
+  input_schema: z.record(z.string(), z.unknown()).optional(),
+  default_parameters: z.record(z.string(), z.unknown()).optional(),
 });
 
 export const createModelSchema = z.object({

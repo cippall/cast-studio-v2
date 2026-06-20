@@ -29,13 +29,33 @@ router.post('/models/import', async (req, res) => {
       });
       return;
     }
-    const { fal_model_id, name, category, parameters } = parse.data;
+    const { fal_model_id, name, category, task, input_schema, default_parameters } = parse.data;
+
+    // Check for duplicate model_id
+    const existing = await query('SELECT id FROM models WHERE model_id = $1', [fal_model_id]);
+    if (existing.rows.length > 0) {
+      res.status(409).json({
+        error: {
+          code: 'CONFLICT',
+          message: 'Model with this fal_model_id already exists',
+        },
+      });
+      return;
+    }
 
     const id = randomUUID();
     const result = await query(
-      `INSERT INTO models (id, model_id, name, model_type, task, parameters, is_active, created_at)
-       VALUES ($1,$2,$3,$4,$5,true,NOW()) RETURNING *`,
-      [id, fal_model_id, name, category, category, JSON.stringify(parameters ?? {})],
+      `INSERT INTO models (id, model_id, name, model_type, task, input_schema, parameters, is_active, created_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,true,NOW()) RETURNING *`,
+      [
+        id,
+        fal_model_id,
+        name,
+        category,
+        task ?? null,
+        input_schema ? JSON.stringify(input_schema) : null,
+        default_parameters ? JSON.stringify(default_parameters) : '{}',
+      ],
     );
     res.status(201).json(result.rows[0]);
   } catch (err) {
