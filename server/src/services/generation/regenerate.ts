@@ -196,7 +196,17 @@ export async function regenerateActorOutput(
       output.id,
     ]);
   } catch (err) {
+    const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
     console.error(`fal.ai submission error for regenerated output ${output.id}:`, err);
+
+    // Update output row to FAILED
+    await updateAssetOutputError(output.id, errorMessage);
+
+    // Refund credits
+    await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
+
+    // Propagate error to route handler
+    throw Object.assign(new Error(errorMessage), { statusCode: 502 });
   }
 
   return {

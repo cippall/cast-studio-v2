@@ -119,7 +119,7 @@ export function useActorDesignerState(): ActorDesignerState {
     setStepSessions((prev) => {
       const next = { ...prev };
       let changed = false;
-      for (const lt of ['headshot', 'fullshot', 'expressions'] as LayoutStep[]) {
+      for (const lt of ['headshot', 'fullshot', 'expressions_3x4'] as LayoutStep[]) {
         const serverOutput = actorDetail.outputs[lt];
         if (!serverOutput) continue;
         const sessions = next[lt];
@@ -255,10 +255,14 @@ export function useActorDesignerState(): ActorDesignerState {
       return data.outputs ?? [];
     },
     onSuccess: (outputs) => {
+      setGenerateError(null);
       const lt = LAYOUT_STEPS[currentStepIndex].key;
       createSessionFromOutputs(lt, outputs);
       setSelectedOptions((p) => ({ ...p, [lt]: null }));
       if (entryMethod === 'TEXT') setStepPrompts((p) => ({ ...p, [lt]: prompt }));
+    },
+    onError: (err: unknown) => {
+      setGenerateError((err as { message?: string }).message ?? 'Regeneration failed');
     },
   });
 
@@ -403,6 +407,7 @@ export function useActorDesignerState(): ActorDesignerState {
     actorName,
     taxonomyValues,
     createError,
+    generateError,
     referenceValidationError,
     isCreating: createActorMutation.isPending,
     isSaving: saveActorMutation.isPending,

@@ -20,6 +20,7 @@ export interface Stage2Props {
   randomize: boolean;
   referenceImages: string[];
   formValues: Record<string, string>;
+  generateError: string | null;
   referenceValidationError: string | null;
   onSelectOption: (id: string) => void;
   onConfirmStep: () => void;

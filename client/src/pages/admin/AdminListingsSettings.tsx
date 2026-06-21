@@ -28,7 +28,7 @@ import { toast } from 'sonner';
 const ACTOR_OUTPUT_OPTIONS = [
   { key: 'headshot', label: 'Headshot' },
   { key: 'fullshot', label: 'Fullshot' },
-  { key: 'expressions', label: 'Expression Sheet' },
+  { key: 'expressions_3x4', label: 'Expression Sheet' },
   { key: 'character_sheet', label: 'Character Sheet' },
   { key: 'editorial', label: 'Editorial Shots' },
 ];

@@ -815,6 +815,23 @@ async function seed() {
     }
 
     // -------------------------------------------------------------------
+    // 5.5 SYSTEM PROMPTS (9 task templates)
+    // -------------------------------------------------------------------
+    await client.query('DELETE FROM system_prompts');
+    await client.query(
+      `INSERT INTO system_prompts (id, task, template, variables) VALUES
+        (gen_random_uuid(), 'actor_headshot', 'Professional headshot of {{identity_description}}. Clean background, studio lighting, sharp focus on face.', '{}'),
+        (gen_random_uuid(), 'actor_fullshot', 'Full body shot of {{identity_description}}. Standing pose, clean background, studio lighting.', '{}'),
+        (gen_random_uuid(), 'actor_expressions', 'Expression sheet of {{identity_description}}. Multiple expressions: happy, sad, angry, surprised, neutral. Grid layout.', '{}'),
+        (gen_random_uuid(), 'actor_editorial', 'Editorial fashion photograph of {{identity_description}}. Dramatic lighting, magazine quality.', '{}'),
+        (gen_random_uuid(), 'actor_character_sheet', 'Character reference sheet of {{identity_description}}. Multiple angles: front, side, back. Character design sheet layout.', '{}'),
+        (gen_random_uuid(), 'look_generation', 'Fashion photograph of a model wearing {{identity_description}}. Clean white background, studio lighting.', '{}'),
+        (gen_random_uuid(), 'fashion_item', 'Product photograph of {{identity_description}}. Clean white background, studio lighting, centered composition.', '{}'),
+        (gen_random_uuid(), 'reference_extraction', 'Analyze this image and identify all clothing items, accessories, and fashion elements. For each item, provide: type, color, material, style, and position. Return as structured JSON.', '{}'),
+        (gen_random_uuid(), 'character_sheet_composition', 'Character sheet combining {{identity_description}}. Multiple angles, clean reference sheet layout.', '{}')`,
+    );
+
+    // -------------------------------------------------------------------
     // 6. MODELS (10 entries, mix of active/inactive)
     // -------------------------------------------------------------------
     const modelDefs = [

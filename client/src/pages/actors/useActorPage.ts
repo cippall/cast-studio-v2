@@ -84,7 +84,7 @@ export function useActorPage() {
     characterSheetLookIdRef.current = characterSheetLookId;
   }, [characterSheetLookId]);
   const [openSections, setOpenSections] = useState<Set<string>>(
-    () => new Set(['headshot', 'fullshot', 'expressions', 'character_sheet', 'editorial']),
+    () => new Set(['headshot', 'fullshot', 'expressions_3x4', 'character_sheet', 'editorial']),
   );
 
   const toggleSection = (key: string) => {
