@@ -1085,7 +1085,7 @@ describe('Model resolution in generation', () => {
       ],
     } as any);
 
-    const result = await resolveModel(undefined, 'workspace-uuid', 'actor_generation');
+    const result = await resolveModel(undefined, 'actor_generation');
     expect(result).toBe('fal-ai/flux-anime');
   });
 
@@ -1109,7 +1109,7 @@ describe('Model resolution in generation', () => {
     // findModelByTask: returns null
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
-    const result = await resolveModel(undefined, 'workspace-uuid', 'unconfigured_task');
+    const result = await resolveModel(undefined, 'unconfigured_task');
     expect(result).toBe('fal-ai/flux-pro');
   });
 
@@ -1120,7 +1120,7 @@ describe('Model resolution in generation', () => {
     // findModelByTask: returns null
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
-    const result = await resolveModel(undefined, 'workspace-uuid', 'unconfigured_task');
-    expect(result).toBe('flux-pro'); // DEFAULT_MODEL
+    const result = await resolveModel(undefined, 'unconfigured_task');
+    expect(result).toBe('fal-ai/flux-pro'); // DEFAULT_MODEL
   });
 });

@@ -27,11 +27,7 @@ export class InvalidModelError extends Error {
  * 3. Fall back to the first active model.
  * 4. Fall back to DEFAULT_MODEL if nothing is configured.
  */
-export async function resolveModel(
-  requestedModel?: string,
-  workspaceId?: string,
-  task?: string,
-): Promise<string> {
+export async function resolveModel(requestedModel?: string, task?: string): Promise<string> {
   const activeModels = await listActiveModels();
   const activeModelIds = activeModels.map((m) => m.model_id);
 

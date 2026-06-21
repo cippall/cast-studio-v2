@@ -51,11 +51,7 @@ export async function generateCharacterSheet(
   }
 
   // Resolve model with character_sheet_composition task
-  const resolvedModel = await resolveModel(
-    model,
-    account.workspace_id,
-    'character_sheet_composition',
-  );
+  const resolvedModel = await resolveModel(model, 'character_sheet_composition');
 
   // Build the prompt: use character_sheet_composition system prompt
   const identityData = (asset.prompt_recipe?.identity as Record<string, unknown>) ?? {};

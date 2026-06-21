@@ -62,7 +62,7 @@ export async function generateActorOutput(
   }
 
   // Resolve model
-  const model = await resolveModel(options.model, account.workspace_id);
+  const model = await resolveModel(options.model);
   const numOutputs = options.num_outputs ?? 1;
 
   // Determine seed: randomize generates a fresh random seed

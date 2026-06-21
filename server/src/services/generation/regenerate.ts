@@ -66,7 +66,7 @@ export async function regenerateActorOutput(
   }
 
   // Resolve model: validate against active models or use default
-  const model = await resolveModel(options.model, account.workspace_id, options.task);
+  const model = await resolveModel(options.model, options.task);
 
   // Build the prompt: use system prompt template if no explicit prompt provided
   let prompt: string;
