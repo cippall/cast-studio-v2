@@ -22,12 +22,13 @@ apiClient.interceptors.response.use(
   (error) => {
     if (error.response) {
       const apiError = error.response.data as ApiError;
-      return Promise.reject(
-        apiError.error ?? {
+      return Promise.reject({
+        ...(apiError.error ?? {
           code: 'UNKNOWN_ERROR',
           message: error.response.statusText ?? 'An unknown error occurred',
-        },
-      );
+        }),
+        status: error.response.status,
+      });
     }
     if (error.request) {
       return Promise.reject({

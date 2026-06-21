@@ -29,7 +29,20 @@ export function useActorPage() {
       return data;
     },
     enabled: !!id,
+    retry: (failureCount, err: unknown) => {
+      // Don't retry on 404 — the actor doesn't exist
+      const status = (err as { status?: number } | null)?.status;
+      if (status === 404) return false;
+      return failureCount < 3;
+    },
   });
+
+  // Redirect to actor list when the actor is not found (404)
+  useEffect(() => {
+    if (isError && (error as { status?: number } | null)?.status === 404) {
+      navigate('/actors');
+    }
+  }, [isError, error, navigate]);
 
   const isFrozen = actor?.is_marketplace_frozen === true;
   const marketplaceStatus = actor?.marketplace_status as MarketplaceStatus | null;
