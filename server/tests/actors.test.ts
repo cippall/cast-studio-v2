@@ -177,6 +177,28 @@ function resetMock() {
   mockQuery.mockResolvedValue({ rows: [] });
 }
 
+/** Mock the 2 wallet queries for reserveCreditsForGeneration (atomic UPDATE + createLedgerEntry) */
+function seedWalletMocks(
+  workspaceId: string,
+  accountId: string,
+  walletId: string,
+  balance: number,
+  txId: string,
+) {
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: walletId,
+        workspace_id: workspaceId,
+        account_id: accountId,
+        balance_credits: balance,
+        updated_at: '2026-06-19T12:00:00.000Z',
+      },
+    ],
+  } as any);
+  mockQuery.mockResolvedValueOnce({ rows: [{ id: txId }] } as any);
+}
+
 // ================================================================
 // POST /api/actors
 // ================================================================
@@ -981,8 +1003,21 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // reserveCreditsForGeneration: findWallet (SELECT)
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -995,8 +1030,6 @@ describe('POST /api/actors/:id/generate', () => {
         },
       ],
     } as any);
-    // reserveCreditsForGeneration: updateWalletBalance (UPDATE)
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-001', balance_credits: 9.95 }] } as any);
     // reserveCreditsForGeneration: createLedgerEntry (INSERT)
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-001' }] } as any);
     // createAssetOutput
@@ -1034,8 +1067,21 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1048,8 +1094,6 @@ describe('POST /api/actors/:id/generate', () => {
         },
       ],
     } as any);
-    // reserveCredits: updateWalletBalance
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-002', balance_credits: 9.95 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-002' }] } as any);
     // createAssetOutput
@@ -1108,8 +1152,21 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // reserveCredits: findWallet
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1122,8 +1179,6 @@ describe('POST /api/actors/:id/generate', () => {
         },
       ],
     } as any);
-    // reserveCredits: updateWalletBalance
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-003', balance_credits: 9.85 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-003' }] } as any);
     // Per iteration: createAssetOutput, then getWorkspaceApiKey (no key)
@@ -1220,8 +1275,21 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
@@ -1236,8 +1304,6 @@ describe('POST /api/actors/:id/regenerate', () => {
         },
       ],
     } as any);
-    // reserveCredits: updateWalletBalance
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-004', balance_credits: 9.95 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-004' }] } as any);
     // getAssetOutputs (find current outputs)
@@ -1279,8 +1345,21 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
@@ -1295,8 +1374,6 @@ describe('POST /api/actors/:id/regenerate', () => {
         },
       ],
     } as any);
-    // reserveCredits: updateWalletBalance
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-005', balance_credits: 9.95 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-005' }] } as any);
     // getAssetOutputs (find current outputs)
@@ -1364,8 +1441,21 @@ describe('POST /api/actors/:id/regenerate', () => {
 
     // findAssetById
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: no active models → falls back to DEFAULT_MODEL
-    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+    // resolveModel: listActiveModels returns one model
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
     // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCredits: findWallet
@@ -1380,8 +1470,6 @@ describe('POST /api/actors/:id/regenerate', () => {
         },
       ],
     } as any);
-    // reserveCredits: updateWalletBalance
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 'w-006', balance_credits: 9.95 }] } as any);
     // reserveCredits: createLedgerEntry
     mockQuery.mockResolvedValueOnce({ rows: [{ id: 'tx-006' }] } as any);
     // getAssetOutputs (returns existing output)

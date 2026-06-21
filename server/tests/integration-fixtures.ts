@@ -61,7 +61,19 @@ vi.mock('../src/services/email-service.js', () => ({
 
 // Mock model-repo to avoid real DB queries for model resolution
 vi.mock('../src/db/repositories/model-repo.js', () => ({
-  listActiveModels: vi.fn().mockResolvedValue([]),
+  listActiveModels: vi
+    .fn()
+    .mockResolvedValue([
+      {
+        model_id: 'fal-ai/flux-pro',
+        name: 'Flux Pro',
+        model_type: 'image',
+        task: 'text-to-image',
+        parameters: {},
+        is_active: true,
+        created_at: '2026-06-17T10:00:00.000Z',
+      },
+    ]),
   findActiveModel: vi.fn().mockResolvedValue(null),
 }));
 

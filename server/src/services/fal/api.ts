@@ -22,7 +22,7 @@ function getModelEndpoint(model: string): string {
     case 'sdxl-turbo':
       return `${FAL_API_BASE}/sdxl-turbo`;
     default:
-      return `${FAL_API_BASE}/flux-pro`;
+      return `${FAL_API_BASE}/${model}`;
   }
 }
 

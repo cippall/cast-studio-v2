@@ -163,17 +163,7 @@ function seedRequireSessionQueries(accountRow: Record<string, unknown>) {
 
 /** Mock the 3 wallet queries for reserveCreditsForGeneration (findWallet, updateWalletBalance, createLedgerEntry) */
 function seedWalletCreditMocks(accountId: string) {
-  mockQuery.mockResolvedValueOnce({
-    rows: [
-      {
-        id: 'wallet-uuid',
-        workspace_id: WORKSPACE_UUID,
-        account_id: accountId,
-        balance_credits: '1000.0000',
-        updated_at: '2026-06-17T10:00:00.000Z',
-      },
-    ],
-  } as any);
+  // reserveCreditsForGeneration: atomic UPDATE ... RETURNING *
   mockQuery.mockResolvedValueOnce({
     rows: [
       {
@@ -185,6 +175,7 @@ function seedWalletCreditMocks(accountId: string) {
       },
     ],
   } as any);
+  // createLedgerEntry: INSERT INTO ledger ... RETURNING *
   mockQuery.mockResolvedValueOnce({
     rows: [
       {
@@ -210,6 +201,24 @@ function resetMock() {
 /** Mock listActiveModels returning empty (so resolveModel falls back to DEFAULT_MODEL) */
 function seedNoActiveModels() {
   mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+}
+
+/** Helper: seed a default active model for tests that need model resolution to succeed */
+function seedDefaultActiveModel() {
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: 'model-uuid',
+        model_id: 'fal-ai/flux-pro',
+        name: 'Flux Pro',
+        model_type: 'image',
+        task: 'text-to-image',
+        parameters: {},
+        is_active: true,
+        created_at: '2026-06-17T10:00:00.000Z',
+      },
+    ],
+  } as any);
 }
 
 /** Build express app with actors routes and fake session */
@@ -300,7 +309,7 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
     // createAssetOutput returns PENDING output
@@ -331,7 +340,7 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
     // createAssetOutput returns PENDING output
@@ -418,7 +427,7 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
 
     // reserveCreditsForGeneration for output 1
     seedWalletCreditMocks(ARTIST_UUID);
@@ -448,7 +457,7 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
 
     // reserveCreditsForGeneration for all 3 outputs (3 × 0.05 = 0.15)
     seedWalletCreditMocks(ARTIST_UUID);
@@ -584,7 +593,7 @@ describe('POST /api/actors/:id/generate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
     seedWalletCreditMocks(ARTIST_UUID);
     const output = makeOutputRow({ layout_type: 'editorial' });
@@ -641,7 +650,7 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
@@ -676,6 +685,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     // createAssetOutput: INSERT new output
     const newHeadshot = makeOutputRow({ version: 2 });
     mockQuery.mockResolvedValueOnce({ rows: [newHeadshot] } as any);
+    // UPDATE generation_params (fal job ID)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     const res = await request(createActorsApp(artist))
       .post(`/api/actors/${ACTOR_UUID}/regenerate`)
@@ -693,7 +704,7 @@ describe('POST /api/actors/:id/regenerate', () => {
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
     // resolveModel: no active models → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     // resolveModel: findModelByTask returns empty (task-based lookup misses)
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // reserveCreditsForGeneration
@@ -717,6 +728,8 @@ describe('POST /api/actors/:id/regenerate', () => {
     // createAssetOutput: new output v2
     const newOutput = makeOutputRow({ version: 2 });
     mockQuery.mockResolvedValueOnce({ rows: [newOutput] } as any);
+    // UPDATE generation_params (fal job ID)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     // fal.ai submission returns a job ID
     mockSubmitTextToImage.mockResolvedValueOnce({
@@ -817,7 +830,7 @@ describe('POST /api/actors/:id/character-sheet', () => {
     const look = makeLookRow();
     mockQuery.mockResolvedValueOnce({ rows: [look] } as any);
     // resolveModel: no active models, no task model → falls back to DEFAULT_MODEL
-    seedNoActiveModels();
+    seedDefaultActiveModel();
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     // reserveCreditsForGeneration: findWallet, updateWalletBalance, createLedgerEntry
@@ -1051,26 +1064,23 @@ describe('Model resolution in generation', () => {
     expect(res.body.outputs[0].model).toBe('fal-ai/flux-pro');
   });
 
-  it('uses DEFAULT_MODEL when no active models and no model specified', async () => {
+  it('500 when no active models and no model specified', async () => {
     const artist = makeAccountRow();
     seedRequireSessionQueries(artist);
 
     // findAssetById returns actor
     const actor = makeActorRow();
     mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
-    // resolveModel: listActiveModels returns empty
+    // resolveModel: listActiveModels returns empty → throws
     seedActiveModels([]);
-    seedWalletCreditMocks(ARTIST_UUID);
-
-    const output = makeOutputRow({ model: 'flux-pro' });
-    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
 
     const res = await request(createActorsApp(artist))
       .post(`/api/actors/${ACTOR_UUID}/generate`)
       .send({ layout_type: 'headshot' });
 
-    expect(res.status).toBe(202);
-    expect(res.body.outputs[0].model).toBe('flux-pro');
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+    expect(res.body.error.message).toBe('Failed to generate actor output');
   });
 
   // --- Model specified and valid → uses it ---
@@ -1177,6 +1187,8 @@ describe('Model resolution in generation', () => {
     // createAssetOutput
     const newOutput = makeOutputRow({ model: 'fal-ai/flux-pro', version: 2 });
     mockQuery.mockResolvedValueOnce({ rows: [newOutput] } as any);
+    // UPDATE generation_params (fal job ID)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     const res = await request(createActorsApp(artist))
       .post(`/api/actors/${ACTOR_UUID}/regenerate`)
@@ -1236,14 +1248,15 @@ describe('Model resolution in generation', () => {
     expect(result).toBe('fal-ai/flux-pro');
   });
 
-  it('resolveModel: task lookup misses + no active models → DEFAULT_MODEL', async () => {
+  it('resolveModel: task lookup misses + no active models → throws', async () => {
     const { resolveModel } = await import('../src/services/generation/resolve-model.js');
     // listActiveModels: empty
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
     // findModelByTask: returns null
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
-    const result = await resolveModel(undefined, 'unconfigured_task');
-    expect(result).toBe('fal-ai/flux-pro'); // DEFAULT_MODEL
+    await expect(resolveModel(undefined, 'unconfigured_task')).rejects.toThrow(
+      'No models configured. Please add models in Settings → Models.',
+    );
   });
 });

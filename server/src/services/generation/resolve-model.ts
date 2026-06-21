@@ -3,7 +3,6 @@ import {
   findActiveModel,
   findModelByTask,
 } from '../../db/repositories/model-repo.js';
-import { DEFAULT_MODEL } from './generation-constants.js';
 
 /**
  * Error thrown when a requested model is not in the workspace's active list.
@@ -25,7 +24,7 @@ export class InvalidModelError extends Error {
  * 1. If a specific model is requested, validate it against active models.
  * 2. If a task is provided, look up the model assigned to that task.
  * 3. Fall back to the first active model.
- * 4. Fall back to DEFAULT_MODEL if nothing is configured.
+ * 4. Throw if no models are configured — forces explicit configuration.
  */
 export async function resolveModel(requestedModel?: string, task?: string): Promise<string> {
   const activeModels = await listActiveModels();
@@ -53,6 +52,6 @@ export async function resolveModel(requestedModel?: string, task?: string): Prom
     return activeModels[0].model_id;
   }
 
-  // 4. Hardcoded fallback
-  return DEFAULT_MODEL;
+  // 4. No models configured — fail fast
+  throw new Error('No models configured. Please add models in Settings → Models.');
 }
