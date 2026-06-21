@@ -1,6 +1,6 @@
 import type { FalModel, FalModelSchema } from './types.js';
 
-const FAL_API_BASE = 'https://api.fal.ai/v1';
+const FAL_API_BASE = 'https://rest.alpha.fal.ai/v1';
 
 export async function fetchFalModels(apiKey: string): Promise<FalModel[]> {
   const categories = ['text-to-image', 'image-to-image', 'image-to-text'];
@@ -45,7 +45,7 @@ export async function fetchFalModels(apiKey: string): Promise<FalModel[]> {
             description: meta.description ?? '',
             category: categoryMap[meta.category ?? category] ?? 'text_to_image',
             endpoint: modelId,
-            // Schema endpoint no longer available on api.fal.ai
+            // Schema endpoint no longer available on rest.alpha.fal.ai
           });
         }
       }
