@@ -1,10 +1,11 @@
-# Fix Plan: Actor Studio — Real fal.ai Generation Workflow
+# Fix Plan: Actor Studio — Real fal.ai Generation Workflow + Runtime Errors
 
 ## Overview
 
 The Actor Studio wizard is broken end-to-end. Users cannot generate a single
-real image using fal.ai models. This plan fixes every issue that blocks the
-generation pipeline, from model selection to actual image delivery.
+real image using fal.ai models. Additionally, the running app has several
+React/runtime errors that must be fixed. This plan fixes every issue that
+blocks the generation pipeline plus all reported runtime errors.
 
 The root problems are:
 
@@ -51,6 +52,9 @@ The root problems are:
 | 8   | Important | FE    | Structured form empty — no `ACTOR_PROPERTY` taxonomy seeded                      |
 | 9   | Important | BE    | `pollJob` falls back to `FAL_KEY` env even when workspace key exists             |
 | 10  | Nit       | FE    | `Stage2` doesn't reset `generateError` on model change                           |
+| 11  | Important | FE    | `Button` not wrapped in `forwardRef` — base-ui Popover warning                   |
+| 12  | Important | FE    | `<button>` nested in `<button>` — Sidebar user menu DOM nesting warning          |
+| 13  | Important | FE    | 404 on `/api/actors/:id` for non-existent actors not handled gracefully          |
 
 ---
 
@@ -388,9 +392,158 @@ form has no values, just empty values."
 
 ---
 
-## Phase 5: End-to-End Verification
+## Phase 5: Runtime Errors (React Warnings + 404)
 
-### Task 9: Integration test — full actor generation flow
+These are errors reported from the running app. They are not blocking
+generation but degrade the user experience and indicate bugs.
+
+### Task 9: Fix Popover `forwardRef` warning in NotificationDropdown
+
+**Files:**
+
+- `client/src/components/NotificationDropdown.tsx`
+- `client/src/components/ui/popover.tsx` (already correct — issue is usage)
+
+**Problem:** `NotificationDropdown` passes a `<Button>` to `PopoverTrigger`'s
+`render` prop. `<Button>` wraps `@base-ui/react/button`'s `ButtonPrimitive` but
+does NOT use `forwardRef`. Base-ui's `render` prop pattern requires the
+component to accept a ref, otherwise React warns "Function components cannot
+be given refs."
+
+The component at `button.tsx:39` is a plain function:
+
+```tsx
+function Button({ className, variant, size, ...props }: ButtonPrimitive.Props & ...) {
+  return <ButtonPrimitive {...props} />;
+}
+```
+
+It doesn't forward its ref to `ButtonPrimitive`.
+
+**Fix:**
+
+1. Convert `Button` to use `forwardRef`:
+   ```tsx
+   const Button = React.forwardRef<
+     HTMLButtonElement,
+     ButtonPrimitive.Props & VariantProps<typeof buttonVariants>
+   >(({ className, variant = 'default', size = 'default', ...props }, ref) => (
+     <ButtonPrimitive
+       ref={ref}
+       data-slot="button"
+       className={cn(buttonVariants({ variant, size, className }))}
+       {...props}
+     />
+   ));
+   Button.displayName = 'Button';
+   ```
+
+**Acceptance:**
+
+- [ ] No "Function components cannot be given refs" warning in console
+- [ ] NotificationDropdown popover still opens/closes correctly
+- [ ] All other Popover usages work without warnings
+
+**Verification:**
+
+- [ ] Start client, open browser dev tools console
+- [ ] Click notification bell — no warning appears
+- [ ] `npm run typecheck` passes
+
+**Dependencies:** None
+**Estimated scope:** XS (1 file)
+
+---
+
+### Task 10: Fix `<button>` nested inside `<button>` in Sidebar user menu
+
+**Files:**
+
+- `client/src/components/Sidebar.tsx`
+
+**Problem:** Lines 162-167: `<DropdownMenuTrigger>` wraps a `<Button>` that contains
+a `<ChevronLeft>` icon. The `<Button>` renders as a `<button>`. The
+`<DropdownMenuTrigger>` from base-ui also renders as a `<button>`. This creates
+a `<button>` inside `<button>` which is invalid HTML and React warns:
+"validateDOMNesting(...): <button> cannot appear as a descendant of <button>."
+
+**Fix:**
+
+1. Replace the `<Button>` inside `<DropdownMenuTrigger>` with a native `<button>`
+   or use `asChild` pattern. The cleanest fix:
+   ```tsx
+   <DropdownMenuTrigger>
+     <button
+       className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+       aria-label="User menu"
+     >
+       <ChevronLeft className="size-4 rotate-[-90deg]" />
+     </button>
+   </DropdownMenuTrigger>
+   ```
+2. Alternatively, if base-ui supports `asChild`, use that pattern.
+
+**Acceptance:**
+
+- [ ] No "validateDOMNesting" warning in console
+- [ ] User menu dropdown still opens on click
+- [ ] Visual appearance unchanged
+
+**Verification:**
+
+- [ ] Start client, look at sidebar bottom-right, click chevron — no warning
+- [ ] `npm run typecheck` passes
+
+**Dependencies:** None
+**Estimated scope:** XS (1 file)
+
+---
+
+### Task 11: Fix 404 on `/api/actors/:id` for actors that don't exist
+
+**Files:**
+
+- `client/src/pages/actors/useActorPage.ts`
+- `client/src/pages/actors/ActorDetail.tsx` (or wherever the error boundary is)
+
+**Problem:** The browser console shows repeated 404 errors for
+`/api/actors/1caef7fd-d8f6-43ec-9cd6-62285a9735c1`. This happens when:
+
+1. The user navigates to an actor detail page for an actor that was deleted
+2. The actor ID doesn't exist in the database
+3. The backend returns 404 (correct), but the frontend doesn't handle it
+   gracefully — it just logs the error to console without redirecting
+
+**Fix:**
+
+1. In `useActorPage.ts`, handle the 404 error from the query:
+   ```typescript
+   if (isError && error?.response?.status === 404) {
+     navigate('/actors'); // Redirect to actor list
+   }
+   ```
+2. Or in the ActorDetail component, show a "Not found" state with a back link
+   instead of rendering a broken page.
+
+**Acceptance:**
+
+- [ ] Navigating to a non-existent actor ID redirects to actor list
+- [ ] No raw 404 errors spamming the console
+- [ ] User sees a friendly "not found" state or gets redirected
+
+**Verification:**
+
+- [ ] Navigate to `/actors/non-existent-id` — should redirect or show not-found
+- [ ] Console should not show 404 errors after redirect
+
+**Dependencies:** None
+**Estimated scope:** XS (1 file)
+
+---
+
+## Phase 6: End-to-End Verification
+
+### Task 12: Integration test — full actor generation flow
 
 **Files:**
 
@@ -443,8 +596,13 @@ Phase 3 (fal.ai API correctness):
 Phase 4 (Seed data):
   Task 8: Seed default actor taxonomy
 
-Phase 5 (Verification):
-  Task 9: Integration test
+Phase 5 (Runtime errors):
+  Task 9: Fix Popover forwardRef warning
+  Task 10: Fix button nesting in Sidebar
+  Task 11: Fix 404 on non-existent actor
+
+Phase 6 (Verification):
+  Task 12: Integration test
 ```
 
 ---
@@ -477,6 +635,12 @@ Phase 5 (Verification):
 - [ ] Form values are saved to actor's `prompt_recipe.identity`
 
 ### Checkpoint: After Phase 5
+
+- [ ] No React warnings in console (no forwardRef, no validateDOMNesting)
+- [ ] Non-existent actor IDs redirect gracefully (no 404 spam)
+- [ ] `npm run typecheck` passes
+
+### Checkpoint: After Phase 6
 
 - [ ] Integration test passes
 - [ ] Manual end-to-end: create actor → generate → see real images

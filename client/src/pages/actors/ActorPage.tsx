@@ -4,7 +4,7 @@
 import { useCurrentUser } from '@/hooks/useAuth';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
-import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
+import MultiOutputAssetLayout from '@/components/layout/MultiOutputAssetLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import ActorOutputs from './ActorOutputs';
 import { useActorPage } from './useActorPage';
@@ -79,7 +79,7 @@ export default function ActorPage() {
 
   return (
     <PageContainer>
-      <AssetDetailLayout
+      <MultiOutputAssetLayout
         libraryLabel="Actors"
         libraryPath="/actors"
         name={actor.name}

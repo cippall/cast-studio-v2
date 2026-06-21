@@ -57,25 +57,16 @@ export function useActorPageRender({
 
   const overviewContent = (
     <div className="flex flex-col gap-6">
-      {headshotOutput?.image_url && (
-        <img
-          src={headshotOutput.image_url}
-          alt={actor.name}
-          className="max-w-md object-cover"
-          width={512}
-          height={512}
-        />
-      )}
       {Object.keys(actor.taxonomy_values ?? {}).length > 0 && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="flex flex-col gap-3">
           {Object.entries(actor.taxonomy_values ?? {}).map(
             ([key, value]) =>
               value && (
-                <div key={key} className="border p-4">
+                <div key={key} className="flex flex-col gap-1">
                   <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
                     {formatLabel(key)}
                   </p>
-                  <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+                  <p className="text-sm text-foreground">{value}</p>
                 </div>
               ),
           )}
@@ -90,22 +81,21 @@ export function useActorPageRender({
   );
 
   const propertiesContent = (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-3">
       {Object.entries(actor.taxonomy_values ?? {}).map(
         ([key, value]) =>
           value && (
-            <div key={key} className="border p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {key}
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+            <div
+              key={key}
+              className="flex items-baseline justify-between gap-4 border-b border-border pb-2"
+            >
+              <span className="text-sm text-muted-foreground">{key}</span>
+              <span className="text-sm font-medium text-foreground">{value}</span>
             </div>
           ),
       )}
       {Object.keys(actor.taxonomy_values ?? {}).length === 0 && (
-        <p className="text-sm text-muted-foreground sm:col-span-full">
-          No taxonomy properties set.
-        </p>
+        <p className="text-sm text-muted-foreground">No taxonomy properties set.</p>
       )}
     </div>
   );
@@ -119,19 +109,25 @@ export function useActorPageRender({
     ) : undefined;
 
   const actions = isArtist ? (
-    <>
-      <Button variant="outline" size="sm" onClick={onDuplicate}>
-        <Copy className="mr-2 size-4" />
-        Duplicate
-      </Button>
-      <Button size="sm" disabled={!hasRequiredOutputs || isFrozen} onClick={onSubmitMarketplace}>
-        <Send className="mr-2 size-4" />
-        Submit to Marketplace
-      </Button>
+    <div className="flex flex-col items-start gap-3">
+      <div className="flex flex-wrap items-center gap-2">
+        <Button variant="ghost" size="sm" onClick={onDuplicate}>
+          <Copy className="mr-2 size-4" />
+          Duplicate
+        </Button>
+        <Button
+          size="default"
+          disabled={!hasRequiredOutputs || isFrozen}
+          onClick={onSubmitMarketplace}
+        >
+          <Send className="mr-2 size-4" />
+          Submit to Marketplace
+        </Button>
+      </div>
       {!hasRequiredOutputs && !isFrozen && (
         <p className="text-xs text-muted-foreground">Missing: {missingOutputs.join(', ')}</p>
       )}
-    </>
+    </div>
   ) : undefined;
 
   const banner = isFrozen ? (
