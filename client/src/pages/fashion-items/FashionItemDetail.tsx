@@ -248,13 +248,17 @@ export default function FashionItemDetail() {
     <>
       {isArtist && (
         <>
-          <Button variant="ghost" size="sm" onClick={() => duplicateMutation.mutate()}>
-            <Copy className="mr-2 size-4" />
-            Duplicate
-          </Button>
-          <Button size="sm" disabled={isFrozen} onClick={() => submitMarketplaceMutation.mutate()}>
+          <Button
+            size="default"
+            disabled={isFrozen}
+            onClick={() => submitMarketplaceMutation.mutate()}
+          >
             <Send className="mr-2 size-4" />
             Submit to Marketplace
+          </Button>
+          <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()}>
+            <Copy className="mr-2 size-4" />
+            Duplicate
           </Button>
         </>
       )}
@@ -262,7 +266,7 @@ export default function FashionItemDetail() {
         <Button
           variant="outline"
           size="sm"
-          className="text-destructive hover:bg-destructive hover:text-destructive-foreground"
+          className="text-destructive"
           onClick={() => deleteMutation.mutate()}
         >
           <Trash2 className="mr-2 size-4" />

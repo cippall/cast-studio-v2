@@ -111,10 +111,6 @@ export function useActorPageRender({
   const actions = isArtist ? (
     <div className="flex flex-col items-start gap-3">
       <div className="flex flex-wrap items-center gap-2">
-        <Button variant="ghost" size="sm" onClick={onDuplicate}>
-          <Copy className="mr-2 size-4" />
-          Duplicate
-        </Button>
         <Button
           size="default"
           disabled={!hasRequiredOutputs || isFrozen}
@@ -122,6 +118,10 @@ export function useActorPageRender({
         >
           <Send className="mr-2 size-4" />
           Submit to Marketplace
+        </Button>
+        <Button variant="outline" size="sm" onClick={onDuplicate}>
+          <Copy className="mr-2 size-4" />
+          Duplicate
         </Button>
       </div>
       {!hasRequiredOutputs && !isFrozen && (
