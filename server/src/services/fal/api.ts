@@ -67,9 +67,6 @@ export async function submitTextToImage(
   if (params.guidance_scale !== undefined) body['guidance_scale'] = params.guidance_scale;
   if (params.num_inference_steps !== undefined)
     body['num_inference_steps'] = params.num_inference_steps;
-  if (params.form_data) body['form_data'] = params.form_data;
-  if (params.reference_images) body['reference_images'] = params.reference_images;
-
   if (key) {
     const data = (await postJson(endpoint, key, body)) as { request_id: string };
     return { jobId: data.request_id, status: 'PENDING' };
