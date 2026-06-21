@@ -102,10 +102,21 @@ export async function submitImageToImage(
   return { jobId: simJobId(), status: 'PENDING' };
 }
 
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0; // Convert to 32-bit integer
+  }
+  return hash;
+}
+
 export async function pollJob(
   jobId: string,
   model: string,
   apiKey?: string,
+  seed?: number,
 ): Promise<FalJobResult> {
   const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(model);
@@ -149,13 +160,13 @@ export async function pollJob(
     return { id: jobId, status: 'PENDING', image_url: null, error_message: null, cost_credits: 0 };
   }
 
+  const picsumSeed = seed ?? Math.abs(hashString(jobId)) % 100000;
   return {
     id: jobId,
     status: 'SUCCESS',
-    image_url:
-      'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
+    image_url: `https://picsum.photos/seed/${picsumSeed}/400/500`,
     error_message: null,
-    cost_credits: 0.05,
+    cost_credits: 0,
   };
 }
 
