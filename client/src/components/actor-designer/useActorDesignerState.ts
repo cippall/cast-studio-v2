@@ -52,6 +52,7 @@ export interface ActorDesignerState {
   taxonomyValues: Record<string, string>;
   createError: string | null;
   generateError: string | null;
+  generateErrorCode: string | null;
   referenceValidationError: string | null;
   isCreating: boolean;
   isSaving: boolean;
@@ -92,6 +93,7 @@ export function useActorDesignerState(): ActorDesignerState {
   }));
   const [createError, setCreateError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
+  const [generateErrorCode, setGenerateErrorCode] = useState<string | null>(null);
   const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
 
   // Poll actor detail for live output status updates
@@ -238,7 +240,9 @@ export function useActorDesignerState(): ActorDesignerState {
       if (entryMethod === 'TEXT') setStepPrompts((p) => ({ ...p, [lt]: prompt }));
     },
     onError: (err: unknown) => {
-      setGenerateError((err as { message?: string }).message ?? 'Generation failed');
+      const errorObj = err as { message?: string; code?: string };
+      setGenerateError(errorObj.message ?? 'Generation failed');
+      setGenerateErrorCode(errorObj.code ?? null);
     },
   });
 
@@ -263,7 +267,9 @@ export function useActorDesignerState(): ActorDesignerState {
       if (entryMethod === 'TEXT') setStepPrompts((p) => ({ ...p, [lt]: prompt }));
     },
     onError: (err: unknown) => {
-      setGenerateError((err as { message?: string }).message ?? 'Regeneration failed');
+      const errorObj = err as { message?: string; code?: string };
+      setGenerateError(errorObj.message ?? 'Regeneration failed');
+      setGenerateErrorCode(errorObj.code ?? null);
     },
   });
 
@@ -367,6 +373,7 @@ export function useActorDesignerState(): ActorDesignerState {
     setCurrentStepIndex: (i: number) => {
       setCurrentStepIndex(i);
       setGenerateError(null);
+      setGenerateErrorCode(null);
     },
     setStage,
     setActorName,
@@ -416,6 +423,7 @@ export function useActorDesignerState(): ActorDesignerState {
     taxonomyValues,
     createError,
     generateError,
+    generateErrorCode,
     referenceValidationError,
     isCreating: createActorMutation.isPending,
     isSaving: saveActorMutation.isPending,

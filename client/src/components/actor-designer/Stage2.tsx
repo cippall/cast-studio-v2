@@ -30,6 +30,7 @@ export default function Stage2({
   referenceImages,
   formValues,
   generateError,
+  generateErrorCode,
   referenceValidationError,
   onSelectOption,
   onConfirmStep,
@@ -97,6 +98,14 @@ export default function Stage2({
       {generateError && (
         <div className="flex items-center gap-2 border border-error/20 bg-error/5 px-3 py-2 text-sm text-error">
           <span>{generateError}</span>
+          {generateError.toLowerCase().includes('insufficient credits') && (
+            <a
+              href="/settings/wallet"
+              className="font-medium underline underline-offset-2 hover:text-error/80"
+            >
+              Top up wallet
+            </a>
+          )}
         </div>
       )}
 

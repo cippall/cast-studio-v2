@@ -21,6 +21,7 @@ export interface Stage2Props {
   referenceImages: string[];
   formValues: Record<string, string>;
   generateError: string | null;
+  generateErrorCode: string | null;
   referenceValidationError: string | null;
   onSelectOption: (id: string) => void;
   onConfirmStep: () => void;
