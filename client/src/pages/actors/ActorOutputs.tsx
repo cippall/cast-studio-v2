@@ -1,4 +1,3 @@
-import { Card, CardContent } from '@/components/ui/card';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { ChevronDown } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -56,42 +55,40 @@ export default function ActorOutputs({
             open={isOpen}
             onOpenChange={() => onToggleSection(section.key)}
           >
-            <Card>
-              <CollapsibleTrigger className="w-full">
-                <div className="flex items-center justify-between px-6 py-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{section.label}</h3>
-                    <GenerationStatus status={sectionStatus} />
-                  </div>
-                  <ChevronDown
-                    className={cn(
-                      'size-5 text-muted-foreground transition-transform',
-                      isOpen && 'rotate-180',
-                    )}
-                  />
+            <CollapsibleTrigger className="w-full cursor-pointer">
+              <div className="flex items-center justify-between px-6 py-4 border-b border-border-subtle">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-lg font-semibold">{section.label}</h3>
+                  <GenerationStatus status={sectionStatus} />
                 </div>
-              </CollapsibleTrigger>
-              <CollapsibleContent>
-                <CardContent className="pt-0">
-                  <OutputSectionContent
-                    sectionKey={section.key}
-                    sectionLabel={section.label}
-                    output={output}
-                    isObsolete={isObsolete}
-                    isGenerating={isGenerating}
-                    isArtist={isArtist}
-                    isFrozen={isFrozen}
-                    characterSheetLookId={characterSheetLookId}
-                    onCharacterSheetLookChange={onCharacterSheetLookChange}
-                    looks={looks}
-                    onGenerate={onGenerate}
-                    onRegenerate={onRegenerate}
-                    isStale={isStaleOutput}
-                    onRetryStale={onRetryStale}
-                  />
-                </CardContent>
-              </CollapsibleContent>
-            </Card>
+                <ChevronDown
+                  className={cn(
+                    'size-5 text-muted-foreground transition-transform',
+                    isOpen && 'rotate-180',
+                  )}
+                />
+              </div>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <div className="p-6">
+                <OutputSectionContent
+                  sectionKey={section.key}
+                  sectionLabel={section.label}
+                  output={output}
+                  isObsolete={isObsolete}
+                  isGenerating={isGenerating}
+                  isArtist={isArtist}
+                  isFrozen={isFrozen}
+                  characterSheetLookId={characterSheetLookId}
+                  onCharacterSheetLookChange={onCharacterSheetLookChange}
+                  looks={looks}
+                  onGenerate={onGenerate}
+                  onRegenerate={onRegenerate}
+                  isStale={isStaleOutput}
+                  onRetryStale={onRetryStale}
+                />
+              </div>
+            </CollapsibleContent>
           </Collapsible>
         );
       })}
