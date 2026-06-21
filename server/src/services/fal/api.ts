@@ -106,6 +106,7 @@ export async function pollJob(
   jobId: string,
   model: string,
   apiKey?: string,
+  seed?: number,
 ): Promise<FalJobResult> {
   const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(model);

@@ -51,6 +51,7 @@ export interface ActorDesignerState {
   actorName: string;
   taxonomyValues: Record<string, string>;
   createError: string | null;
+  generateError: string | null;
   referenceValidationError: string | null;
   isCreating: boolean;
   isSaving: boolean;
@@ -68,18 +69,18 @@ export function useActorDesignerState(): ActorDesignerState {
   const [selectedOptions, setSelectedOptions] = useState<Record<LayoutStep, string | null>>({
     headshot: null,
     fullshot: null,
-    expressions: null,
+    expressions_3x4: null,
   });
   const [confirmedSteps, setConfirmedSteps] = useState<Set<LayoutStep>>(new Set());
   const [stepSessions, setStepSessions] = useState<Record<LayoutStep, GenerationSession[]>>(() => ({
     headshot: [],
     fullshot: [],
-    expressions: [],
+    expressions_3x4: [],
   }));
   const [selectedSessionIndices, setSelectedSessionIndices] = useState<Record<LayoutStep, number>>({
     headshot: 0,
     fullshot: 0,
-    expressions: 0,
+    expressions_3x4: 0,
   });
   const [actorName, setActorName] = useState('');
   const [taxonomyValues, setTaxonomyValues] = useState<Record<string, string>>({});
@@ -87,7 +88,7 @@ export function useActorDesignerState(): ActorDesignerState {
   const [stepPrompts, setStepPrompts] = useState<Record<LayoutStep, string>>(() => ({
     headshot: '',
     fullshot: '',
-    expressions: '',
+    expressions_3x4: '',
   }));
   const [createError, setCreateError] = useState<string | null>(null);
   const [generateError, setGenerateError] = useState<string | null>(null);
@@ -309,6 +310,7 @@ export function useActorDesignerState(): ActorDesignerState {
       return;
     }
     setReferenceValidationError(null);
+    setGenerateError(null);
     generateMutation.mutate(currentStep.key);
   }, [actorId, currentStep.key, generateMutation, entryMethod, prompt, referenceImages]);
 
