@@ -89,6 +89,7 @@ export default function ActorDesigner() {
             randomize={s.randomize}
             referenceImages={s.referenceImages}
             formValues={s.formValues}
+            generateError={s.generateError}
             referenceValidationError={s.referenceValidationError}
             onSelectOption={s.handleSelectOption}
             onConfirmStep={s.handleConfirmStep}

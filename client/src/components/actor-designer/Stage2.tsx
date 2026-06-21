@@ -93,6 +93,13 @@ export default function Stage2({
         </div>
       </div>
 
+      {/* Generate error banner */}
+      {generateError && (
+        <div className="flex items-center gap-2 border border-error/20 bg-error/5 px-3 py-2 text-sm text-error">
+          <span>{generateError}</span>
+        </div>
+      )}
+
       {/* Image grid area */}
       {isStructuredForm ? (
         <div className="flex flex-col gap-6 lg:flex-row">
