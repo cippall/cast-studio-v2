@@ -17,8 +17,38 @@ export async function resolvePrompt(
     return buildFallbackPrompt(task, variables);
   }
 
+  // Build identity_description from form fields if not explicitly provided
+  const enriched = { ...variables };
+  if (enriched.identity && typeof enriched.identity === 'object') {
+    // Spread form fields into top-level variables so {{age}}, {{gender}} etc. resolve
+    const identity = enriched.identity as Record<string, unknown>;
+    for (const [k, v] of Object.entries(identity)) {
+      if (enriched[k] === undefined) {
+        enriched[k] = v;
+      }
+    }
+  }
+  if (!enriched.identity_description) {
+    if (enriched.identity && typeof enriched.identity === 'object') {
+      const identity = enriched.identity as Record<string, unknown>;
+      const parts: string[] = [];
+      if (identity.age) parts.push(`${identity.age} year old`);
+      if (identity.gender) parts.push(String(identity.gender));
+      if (identity.ethnicity) parts.push(`${identity.ethnicity} ethnicity`);
+      if (identity.vibe) parts.push(`${identity.vibe} style`);
+      if (identity.hair_color) parts.push(`${identity.hair_color} hair`);
+      if (identity.eye_color) parts.push(`${identity.eye_color} eyes`);
+      if (identity.body_type) parts.push(`${identity.body_type} build`);
+      enriched.identity_description = parts.length > 0 ? parts.join(', ') : 'a person';
+    } else if (enriched.prompt) {
+      enriched.identity_description = String(enriched.prompt);
+    } else {
+      enriched.identity_description = 'the person in the reference images';
+    }
+  }
+
   let resolved = prompt.template;
-  for (const [key, value] of Object.entries(variables)) {
+  for (const [key, value] of Object.entries(enriched)) {
     const placeholder = `{{${key}}}`;
     const replacement = String(value ?? '');
     resolved = resolved.replaceAll(placeholder, replacement);

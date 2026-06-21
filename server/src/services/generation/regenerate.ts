@@ -4,6 +4,7 @@ import {
   getAssetOutputs,
   archiveAssetOutput,
   markDownstreamObsolete,
+  updateAssetOutputError,
 } from '../../db/repositories/asset-repo.js';
 import type { CreateAssetOutputInput } from '../../db/repositories/asset-repo.js';
 import type { AccountRow } from '../../middleware/requireSession.js';
@@ -181,7 +182,7 @@ export async function regenerateActorOutput(
           prompt,
           seed,
           num_outputs: 1,
-          image_size: '1024x1024',
+          form_data: options.form_data,
         },
         workspaceKey,
       );

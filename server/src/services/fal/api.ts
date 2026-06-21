@@ -111,7 +111,8 @@ export async function pollJob(
   const endpoint = getModelEndpoint(model);
 
   if (key) {
-    const response = await fetch(`${endpoint}/requests/${jobId}`, {
+    // Use the status endpoint for queue-based polling
+    const response = await fetch(`${endpoint}/requests/${jobId}/status`, {
       headers: {
         Authorization: `Key ${key}`,
         'Content-Type': 'application/json',
@@ -144,6 +145,7 @@ export async function pollJob(
         cost_credits: 0.05,
       };
     }
+    // IN_PROGRESS, QUEUED, etc. — still pending
     return { id: jobId, status: 'PENDING', image_url: null, error_message: null, cost_credits: 0 };
   }
 

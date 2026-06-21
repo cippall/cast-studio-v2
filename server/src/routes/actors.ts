@@ -53,7 +53,7 @@ const generateSchema = z.object({
 });
 
 const regenerateSchema = z.object({
-  layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4']),
+  layout_type: z.enum(['headshot', 'fullshot', 'expressions_3x4', 'character_sheet', 'editorial']),
   model: z.string().min(1).optional(),
   form_data: z.record(z.string(), z.unknown()).optional(),
   reference_images: z.array(z.string()).optional(),

@@ -88,7 +88,6 @@ export async function generateActorOutput(
     model,
     num_outputs: 1,
     layout_type: options.layout_type,
-    image_size: '1024x1024',
   };
 
   // Include form_data for FORM mode
@@ -177,7 +176,6 @@ export async function generateActorOutput(
             prompt: resolvedPrompt,
             seed: outputSeed,
             num_outputs: 1,
-            image_size: '1024x1024',
             form_data: options.form_data,
           },
           workspaceKey,

@@ -39,12 +39,17 @@ router.post('/fal-key', async (req, res) => {
 
     const encrypted = encrypt(api_key);
 
-    // Upsert: deactivate old keys, insert new one
-    await query('UPDATE fal_ai_keys SET is_active = FALSE WHERE workspace_id = $1', [workspaceId]);
-
+    // Upsert: insert or update existing key for this workspace
     const result = await query(
       `INSERT INTO fal_ai_keys (workspace_id, encrypted_key, iv, auth_tag, is_active)
        VALUES ($1, $2, $3, $4, TRUE)
+       ON CONFLICT (workspace_id)
+       DO UPDATE SET
+         encrypted_key = EXCLUDED.encrypted_key,
+         iv = EXCLUDED.iv,
+         auth_tag = EXCLUDED.auth_tag,
+         is_active = TRUE,
+         updated_at = NOW()
        RETURNING id, workspace_id, is_active, created_at, updated_at`,
       [workspaceId, encrypted.encrypted, encrypted.iv, encrypted.authTag],
     );

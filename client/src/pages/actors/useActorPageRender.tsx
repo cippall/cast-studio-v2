@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, Edit3, ImageIcon, Lock, RotateCcw, Send } from 'lucide-react';
+import { Copy, ImageIcon, Lock, RotateCcw, Send } from 'lucide-react';
 import { formatLabel } from '@/lib/utils';
 import type { MarketplaceStatus } from '@cast/types';
 import type { ActorDetail } from './actor-page-types';
@@ -124,10 +124,6 @@ export function useActorPageRender({
 
   const actions = isArtist ? (
     <>
-      <Button variant="outline" size="sm" disabled={isFrozen} onClick={() => {}}>
-        <Edit3 className="mr-2 size-4" />
-        Edit Fields
-      </Button>
       <Button
         variant="outline"
         size="sm"

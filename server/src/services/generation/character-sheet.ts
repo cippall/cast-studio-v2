@@ -131,7 +131,6 @@ export async function generateCharacterSheet(
     model: resolvedModel,
     num_outputs: 1,
     layout_type: 'character_sheet',
-    image_size: '1024x1024',
     source_assets: sourceAssetOutputs,
   };
 
@@ -157,7 +156,6 @@ export async function generateCharacterSheet(
         prompt,
         seed,
         num_outputs: 1,
-        image_size: '1024x1024',
       },
       workspaceKey,
     );

@@ -319,6 +319,21 @@ async function seed() {
     }
 
     // -------------------------------------------------------------------
+    // 4.5 FAL.AI KEY (encrypted, active)
+    // -------------------------------------------------------------------
+    if (process.env.FAL_KEY) {
+      const { encrypt } = await import('../utils/encryption.js');
+      const encrypted = encrypt(process.env.FAL_KEY);
+      await client.query(
+        `INSERT INTO fal_ai_keys (workspace_id, encrypted_key, iv, auth_tag, is_active)
+         VALUES ($1,$2,$3,$4,TRUE)`,
+        [studioWsId, encrypted.encrypted, encrypted.iv, encrypted.authTag],
+      );
+    } else {
+      console.log('[seed] Skipping fal.ai key — FAL_KEY env var not set');
+    }
+
+    // -------------------------------------------------------------------
     // 4. WALLETS + LEDGER
     // -------------------------------------------------------------------
     const walletC1Id = uid();
@@ -806,28 +821,28 @@ async function seed() {
         mid: 'fal-ai/flux-pro',
         name: 'FLUX Pro',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'actor_headshot',
         active: true,
       },
       {
         mid: 'fal-ai/flux-pro/v1.1-ultra',
         name: 'FLUX Pro 1.1 Ultra',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'actor_fullshot',
         active: true,
       },
       {
         mid: 'fal-ai/flux/dev',
         name: 'FLUX Dev',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'actor_expressions',
         active: true,
       },
       {
         mid: 'fal-ai/flux/schnell',
         name: 'FLUX Schnell',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'actor_editorial',
         active: true,
       },
       {
@@ -841,7 +856,7 @@ async function seed() {
         mid: 'fal-ai/sdxl-turbo',
         name: 'SDXL Turbo',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'actor_character_sheet',
         active: false,
       },
       {
@@ -869,7 +884,7 @@ async function seed() {
         mid: 'fal-ai/stable-cascade',
         name: 'Stable Cascade',
         mtype: 'TEXT_TO_IMAGE',
-        task: 'text_to_image',
+        task: 'look_generation',
         active: false,
       },
     ];

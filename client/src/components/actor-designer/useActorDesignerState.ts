@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { EntryMethod, LayoutStep, GenerationSession } from './types';
@@ -91,6 +91,65 @@ export function useActorDesignerState(): ActorDesignerState {
   }));
   const [createError, setCreateError] = useState<string | null>(null);
   const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
+
+  // Poll actor detail for live output status updates
+  const { data: actorDetail } = useQuery({
+    queryKey: ['actors', actorId],
+    queryFn: async () => {
+      if (!actorId) return null;
+      const { data } = await apiClient.get(`/actors/${actorId}`);
+      return data;
+    },
+    enabled: !!actorId,
+    refetchInterval: (query) => {
+      const outputs = query.state.data?.outputs;
+      if (outputs) {
+        const values = Object.values(outputs);
+        const hasPending = values.some((o: any) => o?.status === 'PENDING');
+        if (hasPending) return 3000;
+      }
+      return false;
+    },
+  });
+
+  // Sync polled output statuses into local session state
+  useEffect(() => {
+    if (!actorDetail?.outputs) return;
+    setStepSessions((prev) => {
+      const next = { ...prev };
+      let changed = false;
+      for (const lt of ['headshot', 'fullshot', 'expressions'] as LayoutStep[]) {
+        const serverOutput = actorDetail.outputs[lt];
+        if (!serverOutput) continue;
+        const sessions = next[lt];
+        if (!sessions.length) continue;
+        // Find the session/image that matches this server output ID
+        const updatedSessions = sessions.map((session) => {
+          const imgIdx = session.images.findIndex((img) => img.id === serverOutput.id);
+          if (imgIdx === -1) return session;
+          const img = session.images[imgIdx];
+          const newStatus =
+            serverOutput.status === 'SUCCESS'
+              ? 'SUCCESS'
+              : serverOutput.status === 'FAILED'
+                ? 'FAILED'
+                : 'PENDING';
+          if (img.status === newStatus && img.imageUrl === serverOutput.image_url) return session;
+          changed = true;
+          const newImages = [...session.images];
+          newImages[imgIdx] = {
+            ...img,
+            status: newStatus,
+            imageUrl: serverOutput.image_url ?? img.imageUrl,
+            errorMessage: serverOutput.error_message ?? img.errorMessage,
+          };
+          return { ...session, images: newImages };
+        });
+        next[lt] = updatedSessions;
+      }
+      return changed ? next : prev;
+    });
+  }, [actorDetail]);
 
   const currentStep = LAYOUT_STEPS[currentStepIndex];
   const currentSessions = stepSessions[currentStep.key];
@@ -295,7 +354,17 @@ export function useActorDesignerState(): ActorDesignerState {
     setStage,
     setActorName,
     setTaxonomyValues,
-    handleCreateActor: () => createActorMutation.mutate(),
+    handleCreateActor: () => {
+      if (entryMethod === 'TEXT' && !prompt.trim()) {
+        setCreateError('Please enter a prompt to generate the actor.');
+        return;
+      }
+      if (entryMethod === 'REFERENCE' && !prompt.trim() && referenceImages.length === 0) {
+        setCreateError('Add a description or upload at least one reference image.');
+        return;
+      }
+      createActorMutation.mutate();
+    },
     handleGenerate,
     handleRegenerate,
     handleSelectOption,

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
@@ -79,6 +79,10 @@ export function useActorPage() {
   });
 
   const [characterSheetLookId, setCharacterSheetLookId] = useState('');
+  const characterSheetLookIdRef = useRef(characterSheetLookId);
+  useEffect(() => {
+    characterSheetLookIdRef.current = characterSheetLookId;
+  }, [characterSheetLookId]);
   const [openSections, setOpenSections] = useState<Set<string>>(
     () => new Set(['headshot', 'fullshot', 'expressions', 'character_sheet', 'editorial']),
   );

@@ -26,8 +26,9 @@ export default function ModelsPage() {
   const { data: models, isLoading, isError, error } = useAdminModels();
 
   const [importingId, setImportingId] = useState<string | null>(null);
+  const [localConnected, setLocalConnected] = useState(false);
 
-  const isConnected = falStatus?.connected ?? false;
+  const isConnected = localConnected || (falStatus?.connected ?? false);
 
   const extractDefaultParams = (
     schema: Record<
@@ -73,6 +74,7 @@ export default function ModelsPage() {
   const handleDisconnect = async () => {
     try {
       await disconnectFalKey.mutateAsync();
+      setLocalConnected(false);
       toast.success('fal.ai disconnected');
     } catch (err: unknown) {
       const e = err as { message?: string };
@@ -85,7 +87,11 @@ export default function ModelsPage() {
       <PageContainer>
         <div className="flex flex-col gap-6">
           <PageHeader title="Models" description="Configure AI models for generation tasks" />
-          <FalConnectionFlow />
+          <FalConnectionFlow
+            onConnected={() => {
+              setLocalConnected(true);
+            }}
+          />
         </div>
       </PageContainer>
     );
