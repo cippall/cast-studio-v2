@@ -55,7 +55,7 @@ export default function GenerationStatus({
   // SUCCESS
   return (
     <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
-      <CheckCircle className="size-4 text-emerald-500" />
+      <CheckCircle className="size-4 text-success" />
       <span>Ready</span>
     </div>
   );
