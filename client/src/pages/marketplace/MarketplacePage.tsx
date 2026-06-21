@@ -5,8 +5,8 @@
  * Responsive: 1 col mobile, 2 col tablet, 3 col desktop, 4 col large.
  */
 import { useState, useMemo } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { useMarketplace } from '@/hooks/useMarketplace';
+import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useMarketplace, usePurchaseListing } from '@/hooks/useMarketplace';
 import { useWalletBalance } from '@/hooks/useWallet';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,7 +16,16 @@ import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import PageContainer from '@/components/layout/PageContainer';
 import PageHeader from '@/components/layout/PageHeader';
-import { ShoppingBag } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from '@/components/ui/dialog';
+import { useUIStore } from '@/store/ui-store';
+import { ShoppingBag, Loader2 } from 'lucide-react';
 
 const PAGE_SIZE = 12;
 
@@ -28,8 +37,15 @@ const LISTING_TYPE_OPTIONS = [
 
 export default function MarketplacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
   const page = Number(searchParams.get('page') ?? 1);
   const listingType = searchParams.get('type') ?? '';
+  const [purchasingListing, setPurchasingListing] = useState<{
+    id: string;
+    name: string;
+    price: number;
+  } | null>(null);
+  const addToast = useUIStore((s) => s.addToast);
 
   const filters = useMemo(
     () => ({
@@ -45,6 +61,7 @@ export default function MarketplacePage() {
   const { data, isLoading, isError, error } = useMarketplace(filters);
   const { data: wallet } = useWalletBalance();
   const balance = wallet?.balance_credits;
+  const purchase = usePurchaseListing();
 
   const setType = (type: string) => {
     const next = new URLSearchParams(searchParams);
@@ -65,6 +82,35 @@ export default function MarketplacePage() {
 
   const listings = data?.data ?? [];
   const totalPages = data?.totalPages ?? 1;
+
+  const handleBuy = (id: string) => {
+    const listing = listings.find((l) => l.id === id);
+    if (!listing) return;
+    setPurchasingListing({ id, name: listing.asset.name, price: listing.price_credits });
+  };
+
+  const handleConfirmPurchase = () => {
+    if (!purchasingListing) return;
+    purchase.mutate(purchasingListing.id, {
+      onSuccess: () => {
+        addToast({
+          title: 'Purchase complete',
+          description: `"${purchasingListing.name}" has been added to your library.`,
+        });
+        setPurchasingListing(null);
+        navigate(`/marketplace/${purchasingListing.id}`);
+      },
+      onError: (err) => {
+        addToast({
+          title: 'Purchase failed',
+          description:
+            err instanceof Error ? err.message : 'Something went wrong. Please try again.',
+          variant: 'destructive',
+        });
+        setPurchasingListing(null);
+      },
+    });
+  };
 
   return (
     <PageContainer>
@@ -121,9 +167,7 @@ export default function MarketplacePage() {
                       : listing.asset.image_url
                   }
                   balance={balance}
-                  onBuy={(id) => {
-                    window.location.href = `/marketplace/${id}`;
-                  }}
+                  onBuy={handleBuy}
                 />
               ))}
             </div>
@@ -155,6 +199,57 @@ export default function MarketplacePage() {
           </>
         )}
       </div>
+
+      {/* Quick-purchase confirmation dialog */}
+      <Dialog
+        open={purchasingListing !== null}
+        onOpenChange={(open) => {
+          if (!open && !purchase.isPending) {
+            setPurchasingListing(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Purchase</DialogTitle>
+            <DialogDescription>
+              {purchasingListing && (
+                <span>
+                  Purchase <strong>{purchasingListing.name}</strong> for{' '}
+                  <strong>{purchasingListing.price.toFixed(2)} cr</strong>?
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          {balance !== undefined && purchasingListing && (
+            <div className="flex items-center justify-between border-t border-border pt-4 text-sm">
+              <span className="text-muted-foreground">Your balance</span>
+              <span className="font-medium">{balance.toFixed(2)} cr</span>
+            </div>
+          )}
+          {balance !== undefined && purchasingListing && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">After purchase</span>
+              <span className="font-medium">
+                {(balance - purchasingListing.price).toFixed(2)} cr
+              </span>
+            </div>
+          )}
+          <DialogFooter showCloseButton={false}>
+            <Button
+              variant="outline"
+              onClick={() => setPurchasingListing(null)}
+              disabled={purchase.isPending}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleConfirmPurchase} disabled={purchase.isPending}>
+              {purchase.isPending && <Loader2 className="mr-2 size-4 animate-spin" />}
+              {purchase.isPending ? 'Processing...' : 'Confirm Purchase'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </PageContainer>
   );
 }
