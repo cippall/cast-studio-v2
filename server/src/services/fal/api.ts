@@ -118,6 +118,17 @@ export async function pollJob(
   const key = apiKey ?? getEnvKey();
   const endpoint = getModelEndpoint(model);
 
+  if (!key) {
+    console.warn(`[fal] No API key available for polling job ${jobId}`);
+    return {
+      id: jobId,
+      status: 'FAILED',
+      image_url: null,
+      error_message: 'No API key configured',
+      cost_credits: 0,
+    };
+  }
+
   if (key) {
     // Use the status endpoint for queue-based polling
     const response = await fetch(`${endpoint}/requests/${jobId}/status`, {
