@@ -6,6 +6,7 @@ import {
   duplicateAssetOutputs,
   findAssetById,
 } from '../../db/repositories/asset-repo.js';
+import { invalidateWalletCacheEntry } from '../../db/repositories/wallet-repo.js';
 import type { PurchaseResult } from './helpers.js';
 
 /**
@@ -89,6 +90,7 @@ export async function purchaseListing(
       `UPDATE wallets SET balance_credits = $1, updated_at = NOW() WHERE id = $2`,
       [newBalance, wallet.id],
     );
+    invalidateWalletCacheEntry(account.workspace_id, account.id);
 
     // 5. Create ledger entry (CHARGE)
     await dbClient.query(
