@@ -163,6 +163,7 @@ function createAdminMarketplaceApp(accountOverride?: Record<string, unknown>) {
 
 function resetMock() {
   mockQuery.mockReset();
+  mockQuery.mockClear();
 }
 
 // ================================================================
@@ -931,6 +932,7 @@ describe('POST /api/marketplace/:id/purchase', () => {
     seedRequireSessionQueries(client);
 
     const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockReset();
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
     mockPoolClient.query.mockResolvedValueOnce({
       rows: [
@@ -951,7 +953,38 @@ describe('POST /api/marketplace/:id/purchase', () => {
     } as any); // SELECT wallet FOR UPDATE
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (transfer ownership)
+
+    // findAssetById uses module-level query()
+    mockQuery.mockResolvedValueOnce({ rows: [makeAssetRow()] } as any);
+
+    // duplicateAsset uses module-level query()
+    const newAssetId = 'new-asset-uuid-0003';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: newAssetId,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: client.id,
+          asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
+          source_asset_id: ASSET_UUID,
+          source_type: 'MARKETPLACE_PURCHASE',
+          client_id: null,
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          deleted_at: null,
+          seed: 12345,
+          prompt_recipe: { identity: { age: 25, gender: 'female' } },
+          sold_at: null,
+          created_at: '2026-06-22T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    // duplicateAssetOutputs uses module-level query()
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (freeze original)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -966,7 +999,185 @@ describe('POST /api/marketplace/:id/purchase', () => {
     expect(res.body.cost_credits).toBe(10.0);
     expect(res.body.new_balance).toBe(40.0);
     expect(res.body.purchased_at).toBeDefined();
-    expect(res.body.assets).toEqual([]); // Single purchase: ownership transferred, no duplication
+    expect(res.body.assets).toEqual([]); // Duplicate created in buyer's workspace
+  });
+
+  it('duplicates asset into buyer workspace instead of transferring original', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockReset();
+
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: null,
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
+        },
+      ],
+    } as any); // SELECT listing FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [{ id: 'wallet-uuid', balance_credits: 50.0 }],
+    } as any); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger
+
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [makeAssetRow()] } as any);
+
+    // duplicateAsset
+    const newAssetId = 'new-asset-uuid-0001';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: newAssetId,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: client.id,
+          asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
+          source_asset_id: ASSET_UUID,
+          source_type: 'MARKETPLACE_PURCHASE',
+          client_id: null,
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          deleted_at: null,
+          seed: 12345,
+          prompt_recipe: { identity: { age: 25, gender: 'female' } },
+          sold_at: null,
+          created_at: '2026-06-22T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    // duplicateAssetOutputs
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (freeze original)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    // Notification
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.listing_id).toBe(LISTING_UUID);
+    expect(res.body.cost_credits).toBe(10.0);
+    expect(res.body.new_balance).toBe(40.0);
+
+    // Verify duplicateAsset was called with buyer workspace
+    const duplicateAssetCall = mockQuery.mock.calls.find(
+      (call) =>
+        (call[0] as string).includes('INSERT INTO assets') &&
+        (call[0] as string).includes('source_asset_id'),
+    );
+    expect(duplicateAssetCall).toBeDefined();
+    const duplicateParams = duplicateAssetCall![1] as unknown[];
+    // The workspace_id passed should be the buyer's workspace
+    expect(duplicateParams[0]).toBe(WORKSPACE_UUID);
+    // The creator_id should be the buyer
+    expect(duplicateParams[1]).toBe(client.id);
+
+    // Verify the original asset was NOT transferred to buyer (no UPDATE assets with client_id)
+    const transferCall = mockPoolClient.query.mock.calls.find((call) =>
+      (call[0] as string).includes('UPDATE assets SET client_id'),
+    );
+    expect(transferCall).toBeUndefined();
+
+    // Verify original asset was frozen instead
+    const freezeCall = mockPoolClient.query.mock.calls.find((call) =>
+      (call[0] as string).includes('is_marketplace_frozen = TRUE'),
+    );
+    expect(freezeCall).toBeDefined();
+  });
+
+  it('keeps original asset creator as seller after purchase', async () => {
+    const client = makeClientRow();
+    seedRequireSessionQueries(client);
+
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockReset();
+
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [
+        {
+          listing_id: LISTING_UUID,
+          asset_id: ASSET_UUID,
+          price_credits: 10.0,
+          is_active: true,
+          purchased_by: null,
+          seller_id: ARTIST_UUID,
+          asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
+        },
+      ],
+    } as any); // SELECT listing
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [{ id: 'wallet-uuid', balance_credits: 50.0 }],
+    } as any); // SELECT wallet
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger
+
+    // findAssetById
+    mockQuery.mockResolvedValueOnce({ rows: [makeAssetRow()] } as any);
+
+    const newAssetId = 'new-asset-uuid-0002';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: newAssetId,
+          workspace_id: WORKSPACE_UUID,
+          creator_id: client.id,
+          asset_type: 'ACTOR',
+          name: 'Cyberpunk Woman',
+          source_asset_id: ASSET_UUID,
+          source_type: 'MARKETPLACE_PURCHASE',
+          client_id: null,
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          deleted_at: null,
+          seed: 12345,
+          prompt_recipe: {},
+          sold_at: null,
+          created_at: '2026-06-22T10:00:00.000Z',
+        },
+      ],
+    } as any); // duplicateAsset
+
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any); // duplicateAssetOutputs
+
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (freeze)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+
+    // Notification
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    const res = await request(createMarketplaceApp(client)).post(
+      `/api/marketplace/${LISTING_UUID}/purchase`,
+    );
+    expect(res.status).toBe(200);
+
+    // The original asset UPDATE should set is_marketplace_frozen = TRUE
+    // and NOT change creator_id or workspace_id
+    const assetUpdateCall = mockPoolClient.query.mock.calls.find((call) =>
+      (call[0] as string).includes('UPDATE assets SET'),
+    );
+    expect(assetUpdateCall).toBeDefined();
+    expect(assetUpdateCall![0]).toContain('is_marketplace_frozen = TRUE');
+    // Should NOT contain client_id change for the original
+    expect(assetUpdateCall![0]).not.toContain('client_id');
   });
 });
 

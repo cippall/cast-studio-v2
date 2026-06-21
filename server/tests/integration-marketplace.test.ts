@@ -77,7 +77,7 @@ describe('Integration: Marketplace Lifecycle (Single Purchase Model)', () => {
     const approved = await marketplaceService.approveSubmission(ACTOR, 25, ARTIST);
     expect(approved.marketplace_status).toBe('MARKETPLACE_APPROVED');
 
-    // --- Purchase phase (single purchase model: transfer ownership) ---
+    // --- Purchase phase (duplicate asset into buyer workspace) ---
     resetMock();
     mockPoolClient.query.mockReset().mockResolvedValue({ rows: [], rowCount: 0 });
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
@@ -90,11 +90,38 @@ describe('Integration: Marketplace Lifecycle (Single Purchase Model)', () => {
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet (deduct)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger CHARGE
 
-    // Single purchase model: transfer ownership on original asset
-    // UPDATE assets SET client_id = $1, marketplace_status = NULL, sold_at = NOW() WHERE id = $2
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (transfer ownership)
+    // findAssetById (module-level query)
+    mockQuery.mockResolvedValueOnce({ rows: [actorRow()] } as any);
 
-    // Mark listing as purchased
+    // duplicateAsset (module-level query)
+    const newAssetId = 'new-asset-uuid-0001';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: newAssetId,
+          workspace_id: CLIENT_WS,
+          creator_id: CLIENT,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          source_asset_id: ACTOR,
+          source_type: 'MARKETPLACE_PURCHASE',
+          client_id: null,
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          deleted_at: null,
+          seed: 12345,
+          prompt_recipe: { identity: { age: 25 } },
+          sold_at: null,
+          created_at: '2026-06-22T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    // duplicateAssetOutputs (module-level query)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    // Freeze original asset
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (freeze)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased_by
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
 
@@ -147,13 +174,13 @@ describe('Integration: Marketplace Lifecycle (Single Purchase Model)', () => {
   });
 });
 
-describe('Single purchase model: ownership transfer verification', () => {
+describe('Single purchase model: duplication verification', () => {
   beforeEach(() => {
     resetMock();
     mockPoolClient.query.mockReset().mockResolvedValue({ rows: [], rowCount: 0 });
   });
 
-  it('transfers asset client_id to buyer and clears marketplace_status', async () => {
+  it('duplicates asset into buyer workspace and freezes original', async () => {
     resetMock();
     mockPoolClient.query.mockReset().mockResolvedValue({ rows: [], rowCount: 0 });
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN (0)
@@ -165,18 +192,61 @@ describe('Single purchase model: ownership transfer verification', () => {
     }); // SELECT wallet FOR UPDATE (2)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet (3)
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ id: 'ledger-1' }] }); // INSERT ledger (4)
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets transfer (5)
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased (6)
-    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT (7)
+
+    // findAssetById (module-level query) (5)
+    mockQuery.mockResolvedValueOnce({ rows: [actorRow()] } as any);
+
+    // duplicateAsset (module-level query) (6)
+    const newAssetId = 'new-asset-uuid-0002';
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: newAssetId,
+          workspace_id: CLIENT_WS,
+          creator_id: CLIENT,
+          asset_type: 'ACTOR',
+          name: 'Test Actor',
+          source_asset_id: ACTOR,
+          source_type: 'MARKETPLACE_PURCHASE',
+          client_id: null,
+          marketplace_status: null,
+          is_marketplace_frozen: false,
+          deleted_at: null,
+          seed: 12345,
+          prompt_recipe: { identity: { age: 25 } },
+          sold_at: null,
+          created_at: '2026-06-22T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    // duplicateAssetOutputs (module-level query) (7)
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any);
+
+    // Freeze original asset (8)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets (freeze)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE listing purchased (9)
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT (10)
 
     await marketplaceService.purchaseListing(LISTING, clientAccount());
 
-    // Verify the asset transfer UPDATE was called with correct params (call index 5)
-    const transferCall = mockPoolClient.query.mock.calls[5];
-    expect(transferCall[0]).toContain('UPDATE assets');
-    expect(transferCall[0]).toContain('client_id');
-    expect(transferCall[0]).toContain('sold_at');
-    expect(transferCall[1]).toContain(CLIENT); // buyer's account id set as client_id
-    expect(transferCall[1]).toContain(ACTOR); // asset id being transferred
+    // Verify the freeze UPDATE was called
+    const freezeCall = mockPoolClient.query.mock.calls.find(
+      (call) =>
+        (call[0] as string).includes('UPDATE assets SET') &&
+        (call[0] as string).includes('is_marketplace_frozen'),
+    );
+    expect(freezeCall).toBeDefined();
+    expect(freezeCall![1]).toContain(ACTOR); // original asset id
+
+    // Verify duplicateAsset was called with buyer workspace
+    const duplicateCall = mockQuery.mock.calls.find(
+      (call) =>
+        (call[0] as string).includes('INSERT INTO assets') &&
+        (call[0] as string).includes('source_asset_id'),
+    );
+    expect(duplicateCall).toBeDefined();
+    expect(duplicateCall![1]![0]).toBe(CLIENT_WS); // buyer's workspace
+    expect(duplicateCall![1]![1]).toBe(CLIENT); // buyer as creator
   });
 });

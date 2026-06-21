@@ -1,15 +1,19 @@
 import { getClient } from '../../db/pool.js';
 import type { AccountRow } from '../../middleware/requireSession.js';
 import { dispatchNotification } from '../notification-service.js';
+import {
+  duplicateAsset,
+  duplicateAssetOutputs,
+  findAssetById,
+} from '../../db/repositories/asset-repo.js';
 import type { PurchaseResult } from './helpers.js';
 
 /**
- * Purchase a marketplace listing (single purchase model).
- * Transfers ownership of the original asset to the buyer.
+ * Purchase a marketplace listing.
+ * Duplicates the asset into the buyer's workspace instead of transferring the original.
+ * The original asset stays with the seller (frozen).
  * Validates: listing is active and not yet purchased, client has sufficient balance.
- * All wallet deduction + ownership transfer + listing mark-purchased in single transaction.
- * After purchase: only buyer + Admins can see the asset.
- * Artist sees "sold" reference via marketplace_listings (purchased_by set).
+ * All wallet deduction + duplication + listing mark-purchased in single transaction.
  */
 export async function purchaseListing(
   listingId: string,
@@ -92,13 +96,26 @@ export async function purchaseListing(
       [account.workspace_id, wallet.id, Number((-priceCredits).toFixed(4)), 'CHARGE'],
     );
 
-    // 6. Transfer ownership of the original asset to the buyer
+    // 6. Fetch the source asset for duplication
+    const sourceAsset = await findAssetById(sourceAssetId, undefined, true);
+    if (!sourceAsset) {
+      throw Object.assign(new Error('Source asset not found'), { statusCode: 404 });
+    }
+
+    // 7. Duplicate asset into buyer's workspace
+    const assetName = listingRec.asset_name as string | null;
+    const newAsset = await duplicateAsset(sourceAsset, assetName, account.workspace_id, account.id);
+
+    // 8. Duplicate asset outputs to the new asset
+    await duplicateAssetOutputs(sourceAssetId, newAsset.id);
+
+    // 9. Freeze the original asset (seller keeps it, frozen)
     await dbClient.query(
-      `UPDATE assets SET client_id = $1, marketplace_status = NULL, sold_at = NOW(), is_marketplace_frozen = FALSE WHERE id = $2`,
-      [account.id, sourceAssetId],
+      `UPDATE assets SET is_marketplace_frozen = TRUE, sold_at = NOW() WHERE id = $1`,
+      [sourceAssetId],
     );
 
-    // 7. Mark listing as purchased
+    // 10. Mark listing as purchased
     const purchasedAt = new Date().toISOString();
     await dbClient.query(
       `UPDATE marketplace_listings SET purchased_by = $1, purchased_at = $2 WHERE id = $3`,
@@ -107,7 +124,7 @@ export async function purchaseListing(
 
     await dbClient.query('COMMIT');
 
-    // 8. Notify the seller (non-blocking, outside transaction)
+    // 11. Notify the seller (non-blocking, outside transaction)
     try {
       const sellerId = String(listingRec.seller_id);
       const assetName = String(listingRec.asset_name ?? assetType);
@@ -127,7 +144,7 @@ export async function purchaseListing(
       purchased_at: purchasedAt,
       cost_credits: priceCredits,
       new_balance: newBalance,
-      assets: [], // Ownership transferred, no duplication
+      assets: [], // Duplicate created in buyer's workspace
     };
   } catch (err) {
     await dbClient.query('ROLLBACK');
