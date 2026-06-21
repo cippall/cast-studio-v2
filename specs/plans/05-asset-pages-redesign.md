@@ -394,6 +394,8 @@ Phase 1 (parallel):  Task 1, Task 2, Task 9
                       ↓
 Phase 2 (sequential): Task 3 → Task 4, Task 5, Task 6 (parallel after Task 3)
                       ↓
+Phase 2b (after T4-6): Task 6b, Task 6c
+                      ↓
 Phase 3 (parallel):  Task 7, Task 8
                       ↓
 Phase 4 (after T4):  Task 10, Task 11
@@ -408,10 +410,12 @@ Phase 4 (after T4):  Task 10, Task 11
 5. Task 4 (ActorPage redesign) — depends on Task 3
 6. Task 5 (LookDetail redesign) — depends on Task 3, parallel with Task 4
 7. Task 6 (FashionItemDetail redesign) — depends on Task 3, parallel with Tasks 4-5
-8. Task 7 (AssetCardV2 noise reduction) — independent
-9. Task 8 (ProductCard Buy flow) — independent
-10. Task 10 (ActorOutputs Card removal) — depends on Task 4
-11. Task 11 (formatLabel fix) — depends on Task 4
+8. Task 6b (Action toolbar hierarchy) — depends on Tasks 4-6
+9. Task 6c (Image lightbox) — depends on Tasks 4-6
+10. Task 7 (AssetCardV2 noise reduction) — independent
+11. Task 8 (ProductCard Buy flow) — independent
+12. Task 10 (ActorOutputs Card removal) — depends on Task 4
+13. Task 11 (formatLabel fix) — depends on Task 4
 
 ## Checkpoints
 
@@ -430,6 +434,13 @@ Phase 4 (after T4):  Task 10, Task 11
 - [ ] No redundant image display
 - [ ] Properties are lists, not card grids
 - [ ] Responsive at all breakpoints
+
+### Checkpoint 2b: After Tasks 6b-6c
+
+- [ ] Action toolbars have clear visual hierarchy (primary > secondary > destructive)
+- [ ] Image lightbox opens on click, shows full-resolution image
+- [ ] Lightbox closes on Escape, click-outside, and close button
+- [ ] Missing outputs shown as text below disabled Submit button
 
 ### Checkpoint 3: After Tasks 7-8
 
@@ -451,6 +462,7 @@ Phase 4 (after T4):  Task 10, Task 11
 | Removing Card wrapper from ActorOutputs changes spacing                      | Medium | Verify padding matches DESIGN.md spec (36px → use p-6)                                        |
 | EmptyStateV2 variant prop breaks existing usages                             | Low    | Make variant optional; existing usages without it still work                                  |
 | ProductCard quick-purchase requires wallet balance check                     | Medium | Reuse existing `useWalletBalance` hook; show loading state while fetching                     |
+| Image lightbox causes layout shift on open                                   | Low    | Use `position: fixed` overlay; test with `prefers-reduced-motion`                             |
 
 ## Recommended Skills Per Task
 
@@ -460,8 +472,10 @@ Phase 4 (after T4):  Task 10, Task 11
 | Task 2  | impeccable                                        | Component API design — backward-compatible prop addition |
 | Task 3  | impeccable + agent-skills-frontend-ui-engineering | Layout component design — the core structural change     |
 | Task 4  | impeccable + agent-skills-frontend-ui-engineering | Page-level redesign with layout adoption                 |
-| Task 5  | impeccable + agent-skills-frontend-ui_engineering | Page-level redesign (same pattern as Task 4)             |
-| Task 6  | impeccable + agent-skills-frontend_ui_engineering | Page-level redesign (same pattern as Tasks 4-5)          |
+| Task 5  | impeccable + agent-skills-frontend-ui-engineering | Page-level redesign (same pattern as Task 4)             |
+| Task 6  | impeccable + agent-skills-frontend-ui-engineering | Page-level redesign (same pattern as Tasks 4-5)          |
+| Task 6b | impeccable                                        | Visual hierarchy — button sizing and ordering            |
+| Task 6c | impeccable + agent-skills-frontend-ui-engineering | New interactive component — lightbox with overlay        |
 | Task 7  | impeccable                                        | Component simplification — reducing visual noise         |
 | Task 8  | None                                              | Simple flow fix — rename or add dialog                   |
 | Task 9  | None                                              | Single-line grid fix                                     |

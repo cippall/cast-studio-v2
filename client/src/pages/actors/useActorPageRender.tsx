@@ -1,6 +1,6 @@
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import { Copy, ImageIcon, Lock, RotateCcw, Send } from 'lucide-react';
+import { Copy, ImageIcon, Lock, Send } from 'lucide-react';
 import { formatLabel } from '@/lib/utils';
 import type { MarketplaceStatus } from '@cast/types';
 import type { ActorDetail } from './actor-page-types';
@@ -18,8 +18,6 @@ interface ActorPageRenderProps {
   openSections: Set<string>;
   onCharacterSheetLookChange: (value: string) => void;
   onToggleSection: (key: string) => void;
-  onGenerate: (layoutType: string) => void;
-  onRegenerate: (layoutType: string) => void;
   onDuplicate: () => void;
   onSubmitMarketplace: () => void;
 }
@@ -37,8 +35,6 @@ export function useActorPageRender({
   openSections,
   onCharacterSheetLookChange,
   onToggleSection,
-  onGenerate,
-  onRegenerate,
   onDuplicate,
   onSubmitMarketplace,
 }: ActorPageRenderProps) {
@@ -124,15 +120,6 @@ export function useActorPageRender({
 
   const actions = isArtist ? (
     <>
-      <Button
-        variant="outline"
-        size="sm"
-        disabled={isFrozen}
-        onClick={() => onRegenerate('headshot')}
-      >
-        <RotateCcw className="mr-2 size-4" />
-        Regenerate Headshot
-      </Button>
       <Button variant="outline" size="sm" onClick={onDuplicate}>
         <Copy className="mr-2 size-4" />
         Duplicate

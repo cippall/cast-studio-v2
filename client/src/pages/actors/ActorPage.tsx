@@ -73,8 +73,6 @@ export default function ActorPage() {
       openSections,
       onCharacterSheetLookChange: setCharacterSheetLookId,
       onToggleSection: toggleSection,
-      onGenerate: (lt) => generateMutation.mutate(lt),
-      onRegenerate: (lt) => regenerateMutation.mutate(lt),
       onDuplicate: () => duplicateMutation.mutate(),
       onSubmitMarketplace: () => submitMarketplaceMutation.mutate(),
     });
