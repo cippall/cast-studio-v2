@@ -2,7 +2,7 @@ import type { GenerationState } from '@/components/GenerationStatus';
 
 export type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT';
 export type WizardStage = 1 | 2 | 3;
-export type LayoutStep = 'headshot' | 'fullshot' | 'expressions';
+export type LayoutStep = 'headshot' | 'fullshot' | 'expressions_3x4';
 
 export interface GeneratedOption {
   id: string;
@@ -24,7 +24,7 @@ export interface GenerationSession {
 export const LAYOUT_STEPS: { key: LayoutStep; label: string }[] = [
   { key: 'headshot', label: 'Headshot' },
   { key: 'fullshot', label: 'Fullshot' },
-  { key: 'expressions', label: 'Expressions' },
+  { key: 'expressions_3x4', label: 'Expressions' },
 ];
 
 export const NUM_OPTIONS = 4;

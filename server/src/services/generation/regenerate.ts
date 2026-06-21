@@ -14,7 +14,7 @@ import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { getWorkspaceApiKey } from '../fal-service.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
-import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
+import { refundCredits, InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
 import { resolvePrompt } from '../prompt-service.js';

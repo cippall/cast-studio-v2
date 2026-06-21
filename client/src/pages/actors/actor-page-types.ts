@@ -30,7 +30,7 @@ export interface ActorDetail {
 export type OutputSectionKey =
   | 'headshot'
   | 'fullshot'
-  | 'expressions'
+  | 'expressions_3x4'
   | 'character_sheet'
   | 'editorial';
 
@@ -41,8 +41,8 @@ export const OUTPUT_SECTIONS: Array<{
 }> = [
   { key: 'headshot', label: 'Headshot' },
   { key: 'fullshot', label: 'Fullshot', dependsOn: 'headshot' },
-  { key: 'expressions', label: 'Expressions', dependsOn: 'fullshot' },
-  { key: 'character_sheet', label: 'Character Sheet', dependsOn: 'expressions' },
+  { key: 'expressions_3x4', label: 'Expressions', dependsOn: 'fullshot' },
+  { key: 'character_sheet', label: 'Character Sheet', dependsOn: 'expressions_3x4' },
   { key: 'editorial', label: 'Editorial', dependsOn: 'fullshot' },
 ];
 

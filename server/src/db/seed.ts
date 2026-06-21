@@ -163,6 +163,7 @@ async function seed() {
     await client.query('DELETE FROM wallets');
     await client.query('DELETE FROM api_keys');
     await client.query('DELETE FROM accounts');
+    await client.query('DELETE FROM system_prompts');
     await client.query('DELETE FROM taxonomy');
     await client.query('DELETE FROM models');
     await client.query('DELETE FROM workspaces');

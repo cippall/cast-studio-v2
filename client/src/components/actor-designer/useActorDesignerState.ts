@@ -90,6 +90,7 @@ export function useActorDesignerState(): ActorDesignerState {
     expressions: '',
   }));
   const [createError, setCreateError] = useState<string | null>(null);
+  const [generateError, setGenerateError] = useState<string | null>(null);
   const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
 
   // Poll actor detail for live output status updates
@@ -230,9 +231,13 @@ export function useActorDesignerState(): ActorDesignerState {
       return data.outputs ?? [];
     },
     onSuccess: (outputs) => {
+      setGenerateError(null);
       const lt = LAYOUT_STEPS[currentStepIndex].key;
       createSessionFromOutputs(lt, outputs);
       if (entryMethod === 'TEXT') setStepPrompts((p) => ({ ...p, [lt]: prompt }));
+    },
+    onError: (err: unknown) => {
+      setGenerateError((err as { message?: string }).message ?? 'Generation failed');
     },
   });
 

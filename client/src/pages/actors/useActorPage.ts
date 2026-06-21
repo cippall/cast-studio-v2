@@ -35,7 +35,7 @@ export function useActorPage() {
   const generateMutation = useMutation({
     mutationFn: async (layoutType: string) => {
       const body: Record<string, unknown> = { layout_type: layoutType };
-      if (layoutType === 'character_sheet') body.look_id = characterSheetLookId;
+      if (layoutType === 'character_sheet') body.look_id = characterSheetLookIdRef.current;
       const { data } = await apiClient.post(`/actors/${id}/generate`, body);
       return (data.outputs ?? data) as ActorOutput[];
     },
@@ -96,7 +96,7 @@ export function useActorPage() {
     });
   };
 
-  const requiredOutputs = ['headshot', 'fullshot', 'expressions'] as const;
+  const requiredOutputs = ['headshot', 'fullshot', 'expressions_3x4'] as const;
   const missingOutputs = useMemo(() => {
     if (!actor?.outputs) return requiredOutputs.slice();
     return requiredOutputs.filter((key) => {
