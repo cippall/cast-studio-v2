@@ -60,6 +60,7 @@ const regenerateSchema = z.object({
   randomize: z.boolean().optional(),
   options: z
     .object({
+      num_outputs: z.number().int().min(1).max(8).optional(),
       prompt: z.string().optional(),
     })
     .optional(),
@@ -389,6 +390,7 @@ router.post(
           layout_type: parsed.data.layout_type,
           model: parsed.data.model,
           task: inferTaskFromLayout(parsed.data.layout_type),
+          num_outputs: parsed.data.options?.num_outputs,
           prompt: parsed.data.options?.prompt,
           form_data: parsed.data.form_data,
           reference_images: parsed.data.reference_images,
