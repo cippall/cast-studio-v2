@@ -216,23 +216,31 @@ export async function reserveCreditsForGeneration(
   account: AccountRow,
   amount: number,
 ): Promise<{ wallet: WalletRow; ledger: LedgerRow }> {
-  const wallet = await findWallet({ workspaceId, accountId: account.id, allowCreate: true });
+  // Atomic UPDATE: only succeeds if balance >= amount, preventing TOCTOU race
+  const updateResult = await query(
+    `UPDATE wallets SET balance_credits = balance_credits - $1, updated_at = NOW()
+     WHERE workspace_id = $2 AND account_id = $3 AND balance_credits >= $1
+     RETURNING *`,
+    [Number(amount.toFixed(4)), workspaceId, account.id],
+  );
 
-  if (!wallet) {
-    throw Object.assign(new Error('Wallet not found'), { statusCode: 404 });
+  if (updateResult.rowCount === 0) {
+    // Either wallet doesn't exist or insufficient credits — distinguish them
+    const wallet = await findWallet({ workspaceId, accountId: account.id });
+    if (!wallet) {
+      throw Object.assign(new Error('Wallet not found'), { statusCode: 404 });
+    }
+    throw new InsufficientCreditsError(wallet.balance_credits, amount);
   }
 
-  const currentBalance = wallet.balance_credits;
+  const updatedWallet = asWalletRow(updateResult.rows[0] as Record<string, unknown>);
 
-  if (currentBalance < amount) {
-    throw new InsufficientCreditsError(currentBalance, amount);
-  }
+  // Invalidate cache after successful deduction
+  invalidateWalletCacheEntry(workspaceId, account.id);
 
-  const newBalance = Number((currentBalance - amount).toFixed(4));
-  const updatedWallet = await updateWalletBalance(wallet.id, newBalance, workspaceId, account.id);
   const ledger = await createLedgerEntry({
     workspaceId,
-    walletId: wallet.id,
+    walletId: updatedWallet.id,
     amount: Number((-amount).toFixed(4)),
     type: 'CHARGE',
   });

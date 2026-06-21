@@ -180,9 +180,10 @@ describe('wallet repo/reserve flow', () => {
   });
 
   it('reserveCreditsForGeneration deducts credits and writes ledger', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [makeWalletRow()] } as any);
+    // Atomic UPDATE returns the updated wallet row directly
     mockQuery.mockResolvedValueOnce({
       rows: [makeWalletRow({ balance_credits: '150.45' })],
+      rowCount: 1,
     } as any);
     mockQuery.mockResolvedValueOnce({ rows: [buildLedgerRow()] } as any);
 
@@ -199,6 +200,9 @@ describe('wallet repo/reserve flow', () => {
   });
 
   it('reserveCreditsForGeneration throws InsufficientCreditsError when balance is low', async () => {
+    // Atomic UPDATE returns rowCount: 0 (insufficient credits)
+    mockQuery.mockResolvedValueOnce({ rows: [], rowCount: 0 } as any);
+    // Subsequent findWallet to distinguish "not found" from "insufficient"
     mockQuery.mockResolvedValueOnce({ rows: [makeWalletRow({ balance_credits: '0.01' })] } as any);
 
     await expect(
