@@ -161,9 +161,12 @@ export function SidebarNavContent({ onNavigate }: { onNavigate?: () => void }) {
               </Avatar>
               <DropdownMenu>
                 <DropdownMenuTrigger>
-                  <Button variant="ghost" size="icon-sm" aria-label="User menu">
+                  <span
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted"
+                    aria-label="User menu"
+                  >
                     <ChevronLeft className="size-4 rotate-[-90deg]" />
-                  </Button>
+                  </span>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" side="right" className="w-48">
                   <DropdownMenuItem onClick={() => navigate('/settings')}>
