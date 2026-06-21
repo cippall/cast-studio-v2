@@ -2,6 +2,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Copy, ImageIcon, Lock, Send } from 'lucide-react';
 import { formatLabel } from '@/lib/utils';
+import LightboxImage from '@/components/ui/LightboxImage';
 import type { MarketplaceStatus } from '@cast/types';
 import type { ActorDetail } from './actor-page-types';
 
@@ -41,13 +42,15 @@ export function useActorPageRender({
   const headshotOutput = actor.outputs?.headshot;
 
   const imageSlot = headshotOutput?.image_url ? (
-    <img
-      src={headshotOutput.image_url}
-      alt={actor.name}
-      className="w-full object-cover"
-      width={512}
-      height={512}
-    />
+    <LightboxImage src={headshotOutput.image_url} alt={actor.name}>
+      <img
+        src={headshotOutput.image_url}
+        alt={actor.name}
+        className="w-full object-cover"
+        width={512}
+        height={512}
+      />
+    </LightboxImage>
   ) : (
     <div className="flex flex-col items-center gap-4 py-12">
       <ImageIcon className="size-16 text-muted-foreground" />

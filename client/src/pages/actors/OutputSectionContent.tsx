@@ -8,6 +8,7 @@ import {
 } from '@/components/ui/select';
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
 import EmptyStateV2 from '@/components/EmptyStateV2';
+import LightboxImage from '@/components/ui/LightboxImage';
 import type { ActorOutput } from './actor-page-types';
 
 interface OutputSectionContentProps {
@@ -87,13 +88,15 @@ export default function OutputSectionContent({
 
       {!isOptional && output?.image_url && (
         <div className="space-y-4">
-          <img
-            src={output.image_url}
-            alt={sectionLabel}
-            className="max-w-md object-cover"
-            width={512}
-            height={512}
-          />
+          <LightboxImage src={output.image_url} alt={sectionLabel}>
+            <img
+              src={output.image_url}
+              alt={sectionLabel}
+              className="max-w-md object-cover"
+              width={512}
+              height={512}
+            />
+          </LightboxImage>
           {canRegenerate && (
             <Button
               variant="outline"
@@ -160,13 +163,15 @@ export default function OutputSectionContent({
             </Button>
           </div>
           {output?.image_url && (
-            <img
-              src={output.image_url}
-              alt="Character Sheet"
-              className="max-w-md object-cover"
-              width={512}
-              height={512}
-            />
+            <LightboxImage src={output.image_url} alt="Character Sheet">
+              <img
+                src={output.image_url}
+                alt="Character Sheet"
+                className="max-w-md object-cover"
+                width={512}
+                height={512}
+              />
+            </LightboxImage>
           )}
         </div>
       )}
@@ -175,13 +180,15 @@ export default function OutputSectionContent({
         <div className="space-y-4">
           {output?.image_url ? (
             <>
-              <img
-                src={output.image_url}
-                alt="Editorial"
-                className="max-w-md object-cover"
-                width={512}
-                height={512}
-              />
+              <LightboxImage src={output.image_url} alt="Editorial">
+                <img
+                  src={output.image_url}
+                  alt="Editorial"
+                  className="max-w-md object-cover"
+                  width={512}
+                  height={512}
+                />
+              </LightboxImage>
               {isArtist && !isFrozen && (
                 <Button
                   variant="outline"

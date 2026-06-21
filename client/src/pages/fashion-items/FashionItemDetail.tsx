@@ -13,6 +13,7 @@ import { Copy, ImageIcon, Loader2, Lock, RotateCcw, Send, Sparkles, Trash2 } fro
 import GenerationStatus from '@/components/GenerationStatus';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
+import LightboxImage from '@/components/ui/LightboxImage';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
 import SingleAssetLayout from '@/components/layout/SingleAssetLayout';
@@ -155,13 +156,15 @@ export default function FashionItemDetail() {
   /* -- Hero image slot for SingleAssetLayout -- */
 
   const heroImage = hasImage ? (
-    <img
-      src={output.image_url!}
-      alt={item.name}
-      className="h-full w-full object-cover"
-      width={800}
-      height={600}
-    />
+    <LightboxImage src={output.image_url!} alt={item.name}>
+      <img
+        src={output.image_url!}
+        alt={item.name}
+        className="h-full w-full object-cover"
+        width={800}
+        height={600}
+      />
+    </LightboxImage>
   ) : (
     <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-surface">
       <ImageIcon className="size-12 text-muted-foreground" />
