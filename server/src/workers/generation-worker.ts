@@ -5,6 +5,16 @@ import { query } from '../db/pool.js';
 
 // --- Debounce Flag ---
 
+function hashString(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = (hash << 5) - hash + char;
+    hash |= 0;
+  }
+  return hash;
+}
+
 let isRunning = false;
 let intervalHandle: ReturnType<typeof setInterval> | null = null;
 
@@ -69,7 +79,8 @@ async function processSingleOutput(output: {
 
   if (falJobId) {
     // Poll fal.ai for the job status
-    const result = await fal.pollJob(falJobId, output.model);
+    const outputSeed = generationParams['seed'] as number | undefined;
+    const result = await fal.pollJob(falJobId, output.model, undefined, outputSeed);
 
     if (result.status === 'SUCCESS') {
       await updateOutputsStatus(output.asset_id, [output.id], 'SUCCESS', {
@@ -96,11 +107,12 @@ async function processSingleOutput(output: {
     // If still PENDING, do nothing — will pick it up on next poll
   } else {
     // No fal.ai job ID — this is a simulated/dev scenario.
-    // Mark as SUCCESS immediately with a placeholder URL.
+    // Mark as SUCCESS immediately with a visible placeholder URL.
+    const outputSeed =
+      (generationParams['seed'] as number | undefined) ?? Math.abs(hashString(output.id)) % 100000;
     await updateOutputsStatus(output.asset_id, [output.id], 'SUCCESS', {
-      image_url:
-        'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==',
-      cost_credits: 0.05,
+      image_url: `https://picsum.photos/seed/${outputSeed}/400/500`,
+      cost_credits: 0,
     } as Record<string, unknown>);
   }
 }

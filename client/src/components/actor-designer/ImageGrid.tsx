@@ -10,6 +10,10 @@ interface ImageGridProps {
   onSelect: (id: string) => void;
 }
 
+function isSimulatedImage(url: string | null): boolean {
+  return url != null && url.includes('picsum.photos');
+}
+
 export default function ImageGrid({
   options,
   selectedId,
@@ -34,13 +38,22 @@ export default function ImageGrid({
         >
           <div className="relative aspect-square bg-muted">
             {option.imageUrl ? (
-              <img
-                src={option.imageUrl}
-                alt="Generated option"
-                className="size-full object-cover"
-                width={300}
-                height={300}
-              />
+              <>
+                <img
+                  src={option.imageUrl}
+                  alt="Generated option"
+                  className="size-full object-cover"
+                  width={300}
+                  height={300}
+                />
+                {isSimulatedImage(option.imageUrl) && (
+                  <div className="absolute bottom-0 left-0 right-0 bg-black/60 px-2 py-1 text-center">
+                    <span className="text-xs font-semibold tracking-wider text-white">
+                      SIMULATED
+                    </span>
+                  </div>
+                )}
+              </>
             ) : option.status === 'PENDING' ? (
               <div className="flex size-full items-center justify-center">
                 <Loader2 className="size-8 animate-spin text-muted-foreground" />
