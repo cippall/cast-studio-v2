@@ -62,6 +62,10 @@ export default function ActorDesigner() {
           onPromptChange={s.setPrompt}
           randomize={s.randomize}
           onRandomizeChange={s.setRandomize}
+          formValues={s.formValues}
+          onFormValuesChange={s.setFormValues}
+          referenceImages={s.referenceImages}
+          onReferenceImagesChange={s.setReferenceImages}
           onCreate={s.handleCreateActor}
           isCreating={s.isCreating}
         />

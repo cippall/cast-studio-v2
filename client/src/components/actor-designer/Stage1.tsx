@@ -3,8 +3,10 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Loader2, FormInput, ImageIcon, FileText } from 'lucide-react';
+import { ChevronRight, Loader2, FormInput, ImageIcon, FileText, AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import ActorFormFields from '@/components/ActorFormFields';
+import ReferenceImageUpload from '@/components/ReferenceImageUpload';
 import type { EntryMethod } from './types';
 
 const ENTRY_METHODS = [
@@ -35,6 +37,10 @@ interface Stage1Props {
   onPromptChange: (value: string) => void;
   randomize: boolean;
   onRandomizeChange: (value: boolean) => void;
+  formValues: Record<string, string>;
+  onFormValuesChange: (values: Record<string, string>) => void;
+  referenceImages: string[];
+  onReferenceImagesChange: (images: string[]) => void;
   onCreate: () => void;
   isCreating: boolean;
 }
@@ -46,9 +52,25 @@ export default function Stage1({
   onPromptChange,
   randomize,
   onRandomizeChange,
+  formValues,
+  onFormValuesChange,
+  referenceImages,
+  onReferenceImagesChange,
   onCreate,
   isCreating,
 }: Stage1Props) {
+  const validationError = (() => {
+    if (entryMethod === 'TEXT' && !prompt.trim()) {
+      return 'Please enter a description to continue.';
+    }
+    if (entryMethod === 'REFERENCE' && !prompt.trim() && referenceImages.length === 0) {
+      return 'Add a description or upload at least one reference image.';
+    }
+    return null;
+  })();
+
+  const isContinueDisabled = isCreating || validationError !== null;
+
   return (
     <div className="space-y-6">
       <RadioGroup
@@ -79,6 +101,32 @@ export default function Stage1({
         ))}
       </RadioGroup>
 
+      {entryMethod === 'FORM' && (
+        <div className="space-y-4">
+          <ActorFormFields values={formValues} onChange={onFormValuesChange} />
+        </div>
+      )}
+
+      {entryMethod === 'REFERENCE' && (
+        <div className="space-y-4">
+          <ReferenceImageUpload
+            images={referenceImages}
+            onChange={onReferenceImagesChange}
+            maxSlots={4}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="reference-prompt">Describe your actor</Label>
+            <Textarea
+              id="reference-prompt"
+              value={prompt}
+              onChange={(e) => onPromptChange(e.target.value)}
+              placeholder="A young asian woman with cyberpunk aesthetic, neon-lit city background..."
+              rows={3}
+            />
+          </div>
+        </div>
+      )}
+
       {entryMethod === 'TEXT' && (
         <div className="space-y-2">
           <Label htmlFor="prompt">Describe your actor</Label>
@@ -105,8 +153,15 @@ export default function Stage1({
         </div>
       )}
 
+      {validationError && (
+        <div className="flex items-center gap-2 text-sm text-error">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>{validationError}</span>
+        </div>
+      )}
+
       <div className="flex justify-end">
-        <Button onClick={onCreate} disabled={isCreating}>
+        <Button onClick={onCreate} disabled={isContinueDisabled}>
           {isCreating ? (
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
