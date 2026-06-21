@@ -108,6 +108,7 @@ export async function duplicateAsset(
   newName: string | null,
   newWorkspaceId: string,
   newCreatorId: string,
+  sourceType = 'DUPLICATE',
 ): Promise<AssetRow> {
   const result = await query(
     `INSERT INTO assets (workspace_id, creator_id, asset_type, name, seed, prompt_recipe, source_asset_id, source_type)
@@ -121,7 +122,7 @@ export async function duplicateAsset(
       sourceAsset.seed,
       JSON.stringify(sourceAsset.prompt_recipe),
       sourceAsset.id,
-      'DUPLICATE',
+      sourceType,
     ],
   );
   return result.rows[0] as AssetRow;

@@ -1087,6 +1087,8 @@ describe('POST /api/marketplace/:id/purchase', () => {
     expect(duplicateParams[0]).toBe(WORKSPACE_UUID);
     // The creator_id should be the buyer
     expect(duplicateParams[1]).toBe(client.id);
+    // The source_type should be MARKETPLACE_PURCHASE
+    expect(duplicateParams[7]).toBe('MARKETPLACE_PURCHASE');
 
     // Verify the original asset was NOT transferred to buyer (no UPDATE assets with client_id)
     const transferCall = mockPoolClient.query.mock.calls.find((call) =>

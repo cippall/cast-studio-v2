@@ -104,7 +104,13 @@ export async function purchaseListing(
 
     // 7. Duplicate asset into buyer's workspace
     const assetName = listingRec.asset_name as string | null;
-    const newAsset = await duplicateAsset(sourceAsset, assetName, account.workspace_id, account.id);
+    const newAsset = await duplicateAsset(
+      sourceAsset,
+      assetName,
+      account.workspace_id,
+      account.id,
+      'MARKETPLACE_PURCHASE',
+    );
 
     // 8. Duplicate asset outputs to the new asset
     await duplicateAssetOutputs(sourceAssetId, newAsset.id);
