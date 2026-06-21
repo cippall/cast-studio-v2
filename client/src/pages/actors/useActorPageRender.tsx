@@ -58,23 +58,31 @@ export function useActorPageRender({
     </div>
   );
 
-  const overviewContent = (
-    <div className="flex flex-col gap-6">
-      {Object.keys(actor.taxonomy_values ?? {}).length > 0 && (
-        <div className="flex flex-col gap-3">
-          {Object.entries(actor.taxonomy_values ?? {}).map(
-            ([key, value]) =>
-              value && (
-                <div key={key} className="flex flex-col gap-1">
-                  <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                    {formatLabel(key)}
-                  </p>
-                  <p className="text-sm text-foreground">{value}</p>
-                </div>
-              ),
-          )}
+  const taxonomyEntries = Object.entries(actor.taxonomy_values ?? {}).filter(([, value]) => value);
+
+  const renderTaxonomyList = (variant: 'stacked' | 'horizontal') =>
+    taxonomyEntries.map(([key, value]) =>
+      variant === 'stacked' ? (
+        <div key={key} className="flex flex-col gap-1">
+          <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+            {formatLabel(key)}
+          </p>
+          <p className="text-sm text-foreground">{value}</p>
         </div>
-      )}
+      ) : (
+        <div
+          key={key}
+          className="flex items-baseline justify-between gap-4 border-b border-border pb-2"
+        >
+          <span className="text-sm text-muted-foreground">{formatLabel(key)}</span>
+          <span className="text-sm font-medium text-foreground">{value}</span>
+        </div>
+      ),
+    );
+
+  const overviewContent = (
+    <div className="flex flex-col gap-3">
+      {renderTaxonomyList('stacked')}
       {actor.source_type && actor.source_type !== 'ORIGINAL' && (
         <p className="text-sm text-muted-foreground">
           Source: {actor.source_type.replace('_', ' ').toLowerCase()}
@@ -85,19 +93,9 @@ export function useActorPageRender({
 
   const propertiesContent = (
     <div className="flex flex-col gap-3">
-      {Object.entries(actor.taxonomy_values ?? {}).map(
-        ([key, value]) =>
-          value && (
-            <div
-              key={key}
-              className="flex items-baseline justify-between gap-4 border-b border-border pb-2"
-            >
-              <span className="text-sm text-muted-foreground">{key}</span>
-              <span className="text-sm font-medium text-foreground">{value}</span>
-            </div>
-          ),
-      )}
-      {Object.keys(actor.taxonomy_values ?? {}).length === 0 && (
+      {taxonomyEntries.length > 0 ? (
+        renderTaxonomyList('horizontal')
+      ) : (
         <p className="text-sm text-muted-foreground">No taxonomy properties set.</p>
       )}
     </div>
