@@ -29,6 +29,7 @@ export default function Stage2({
   randomize,
   referenceImages,
   formValues,
+  generateError,
   referenceValidationError,
   onSelectOption,
   onConfirmStep,
