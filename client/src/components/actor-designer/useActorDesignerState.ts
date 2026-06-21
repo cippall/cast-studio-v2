@@ -298,10 +298,13 @@ export function useActorDesignerState(): ActorDesignerState {
     setConfirmedSteps((p) => new Set(p).add(currentStep.key));
     if (currentStepIndex < LAYOUT_STEPS.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
+    } else if (entryMethod === 'FORM') {
+      setTaxonomyValues({ ...formValues });
+      setStage(3);
     } else {
       setStage(3);
     }
-  }, [currentStep, currentStepIndex]);
+  }, [currentStep, currentStepIndex, entryMethod, formValues]);
 
   const handleGenerate = useCallback(() => {
     if (!actorId) return;
