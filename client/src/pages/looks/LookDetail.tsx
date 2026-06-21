@@ -1,5 +1,7 @@
 /**
  * Look Detail — full look view with image, name, taxonomy values, and actions.
+ *
+ * Uses SingleAssetLayout: hero image at top, metadata below, no redundant Outputs tab.
  */
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -13,7 +15,7 @@ import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { MarketplaceStatus } from '@cast/types';
-import AssetDetailLayout from '@/components/layout/AssetDetailLayout';
+import SingleAssetLayout from '@/components/layout/SingleAssetLayout';
 import PageContainer from '@/components/layout/PageContainer';
 import { formatLabel } from '@/lib/utils';
 
@@ -148,112 +150,80 @@ export default function LookDetail() {
 
   const output = look.outputs?.[0];
   const isGenerating = regenerateMutation.isPending;
+  const hasImage = !!output?.image_url;
 
-  /* -- Render helpers for AssetDetailLayout slots -- */
+  /* -- Hero image slot for SingleAssetLayout -- */
 
-  const imageSlot = output?.image_url ? (
+  const heroImage = hasImage ? (
     <img
-      src={output.image_url}
+      src={output.image_url!}
       alt={look.name}
-      className="w-full object-cover"
+      className="h-full w-full object-cover"
       width={800}
       height={600}
     />
   ) : (
-    <div className="flex flex-col items-center gap-4 py-12">
-      <ImageIcon className="size-16 text-muted-foreground" />
-      <p className="text-sm text-muted-foreground">
-        {output?.status === 'PENDING' ? 'Generating look...' : 'No image generated yet.'}
-      </p>
+    <div className="flex h-full w-full flex-col items-center justify-center gap-3 bg-surface">
+      <ImageIcon className="size-12 text-muted-foreground" />
+      <p className="text-sm text-muted-foreground">No look generated yet.</p>
+    </div>
+  );
+
+  /* -- Generation controls (inline below image) -- */
+
+  const generationControls =
+    isArtist && !isFrozen ? (
+      <Button
+        variant="outline"
+        size="sm"
+        onClick={() => regenerateMutation.mutate()}
+        disabled={isGenerating}
+      >
+        {isGenerating ? (
+          <Loader2 className="mr-2 size-4 animate-spin" />
+        ) : hasImage ? (
+          <RotateCcw className="mr-2 size-4" />
+        ) : (
+          <Sparkles className="mr-2 size-4" />
+        )}
+        {hasImage ? 'Regenerate' : 'Generate'}
+      </Button>
+    ) : undefined;
+
+  /* -- Overview tab: source info only, no duplicate image -- */
+
+  const overviewContent = (
+    <div className="flex flex-col gap-4">
+      {look.source_type && look.source_type !== 'ORIGINAL' && (
+        <p className="text-sm text-muted-foreground">
+          Source: {look.source_type.replace('_', ' ').toLowerCase()}
+        </p>
+      )}
+      {output?.model && <p className="text-sm text-muted-foreground">Model: {output.model}</p>}
       {output?.status === 'FAILED' && output.error_message && (
         <p className="text-sm text-destructive">{output.error_message}</p>
       )}
     </div>
   );
 
-  const overviewContent = (
-    <div className="flex flex-col gap-6">
-      {output?.image_url && (
-        <img
-          src={output.image_url}
-          alt={look.name}
-          className="max-w-2xl object-cover"
-          width={800}
-          height={600}
-        />
-      )}
-      {look.source_type && look.source_type !== 'ORIGINAL' && (
-        <p className="text-sm text-muted-foreground">
-          Source: {look.source_type.replace('_', ' ').toLowerCase()}
-        </p>
-      )}
-    </div>
-  );
-
-  const outputsContent = (
-    <div className="flex flex-col gap-4">
-      {output?.image_url ? (
-        <div className="flex flex-col gap-4">
-          <img
-            src={output.image_url}
-            alt={look.name}
-            className="max-w-2xl object-cover"
-            width={800}
-            height={600}
-          />
-          {isArtist && !isFrozen && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => regenerateMutation.mutate()}
-              disabled={isGenerating}
-            >
-              {isGenerating ? (
-                <Loader2 className="mr-2 size-4 animate-spin" />
-              ) : (
-                <RotateCcw className="mr-2 size-4" />
-              )}
-              Regenerate
-            </Button>
-          )}
-        </div>
-      ) : (
-        <div className="flex flex-col items-center gap-4 py-12">
-          <ImageIcon className="size-16 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            {output?.status === 'PENDING' ? 'Generating look...' : 'No image generated yet.'}
-          </p>
-          {output?.status === 'FAILED' && output.error_message && (
-            <p className="text-sm text-destructive">{output.error_message}</p>
-          )}
-          {isArtist && !isFrozen && (
-            <Button size="sm" onClick={() => regenerateMutation.mutate()} disabled={isGenerating}>
-              <Sparkles className="mr-2 size-4" />
-              Generate
-            </Button>
-          )}
-        </div>
-      )}
-    </div>
-  );
+  /* -- Properties tab: taxonomy as key-value list, not card grid -- */
 
   const propertiesContent = (
-    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <div className="flex flex-col gap-3">
       {Object.entries(look.taxonomy_values ?? {}).map(
         ([key, value]) =>
           value && (
-            <div key={key} className="border p-4">
-              <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-                {formatLabel(key)}
-              </p>
-              <p className="mt-1 text-sm font-medium text-foreground">{value}</p>
+            <div
+              key={key}
+              className="flex items-baseline justify-between gap-4 border-b border-border pb-2"
+            >
+              <span className="text-sm text-muted-foreground">{formatLabel(key)}</span>
+              <span className="text-sm font-medium text-foreground">{value}</span>
             </div>
           ),
       )}
       {Object.keys(look.taxonomy_values ?? {}).length === 0 && (
-        <p className="text-sm text-muted-foreground sm:col-span-full">
-          No taxonomy properties set.
-        </p>
+        <p className="text-sm text-muted-foreground">No taxonomy properties set.</p>
       )}
     </div>
   );
@@ -278,7 +248,7 @@ export default function LookDetail() {
     <>
       {isArtist && (
         <>
-          <Button variant="outline" size="sm" onClick={() => duplicateMutation.mutate()}>
+          <Button variant="ghost" size="sm" onClick={() => duplicateMutation.mutate()}>
             <Copy className="mr-2 size-4" />
             Duplicate
           </Button>
@@ -313,16 +283,16 @@ export default function LookDetail() {
 
   return (
     <PageContainer>
-      <AssetDetailLayout
+      <SingleAssetLayout
         libraryLabel="Looks"
         libraryPath="/looks"
         name={look.name}
         typeLabel="Look"
         statusBadge={statusBadge}
         actions={actions}
-        image={imageSlot}
+        heroImage={heroImage}
+        generationControls={generationControls}
         overviewContent={overviewContent}
-        outputsContent={outputsContent}
         propertiesContent={propertiesContent}
         banner={banner}
       />

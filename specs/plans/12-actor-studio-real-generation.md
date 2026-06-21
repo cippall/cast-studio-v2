@@ -650,12 +650,14 @@ Phase 6 (Verification):
 
 ## Risks and Mitigations
 
-| Risk                                            | Impact | Mitigation                                                  |
-| ----------------------------------------------- | ------ | ----------------------------------------------------------- |
-| fal.ai REST API endpoint may have changed       | High   | Test with curl first; adapt response mapping                |
-| Workspace key decryption fails on existing data | Medium | Add try/catch; log error, fall back to env var              |
-| Model selector UI breaks mobile layout          | Low    | Use native `<select>` for mobile, shadcn Select for desktop |
-| Taxonomy seed conflicts with existing data      | Low    | Use `ON CONFLICT DO NOTHING` for idempotent seed            |
+| Risk                                            | Impact | Mitigation                                                         |
+| ----------------------------------------------- | ------ | ------------------------------------------------------------------ |
+| fal.ai REST API endpoint may have changed       | High   | Test with curl first; adapt response mapping                       |
+| Workspace key decryption fails on existing data | Medium | Add try/catch; log error, fall back to env var                     |
+| Model selector UI breaks mobile layout          | Low    | Use native `<select>` for mobile, shadcn Select for desktop        |
+| Taxonomy seed conflicts with existing data      | Low    | Use `ON CONFLICT DO NOTHING` for idempotent seed                   |
+| `forwardRef` on Button breaks existing tests    | Low    | Run all tests after change; check for ref-dependent code           |
+| 404 handling may mask real API errors           | Low    | Only redirect on 404 status; show generic error for other statuses |
 
 ---
 
