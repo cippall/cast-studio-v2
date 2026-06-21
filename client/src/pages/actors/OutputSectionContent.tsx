@@ -157,7 +157,7 @@ export default function OutputSectionContent({
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => onGenerate('editorial')}
+                  onClick={() => onRegenerate('editorial')}
                   disabled={isGenerating}
                 >
                   <Sparkles className="mr-2 size-4" />
