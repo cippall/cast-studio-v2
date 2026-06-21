@@ -34,6 +34,8 @@ export default function ActorPage() {
     regenerateMutation,
     duplicateMutation,
     submitMarketplaceMutation,
+    isStale,
+    clearStale,
   } = useActorPage();
 
   if (isLoading)
@@ -101,6 +103,11 @@ export default function ActorPage() {
             onToggleSection={toggleSection}
             onGenerate={(lt) => generateMutation.mutate(lt)}
             onRegenerate={(lt) => regenerateMutation.mutate(lt)}
+            isStale={isStale}
+            onRetryStale={(lt) => {
+              clearStale(lt);
+              generateMutation.mutate(lt);
+            }}
           />
         }
         propertiesContent={propertiesContent}

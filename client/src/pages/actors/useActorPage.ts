@@ -1,10 +1,12 @@
-import { useState, useMemo, useRef, useEffect } from 'react';
+import { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import { useLooks } from '@/hooks/useLooks';
 import type { MarketplaceStatus } from '@cast/types';
 import type { ActorDetail, ActorOutput } from './actor-page-types';
+
+const STALE_PENDING_MS = 5 * 60 * 1000; // 5 minutes
 
 export function useActorPage() {
   const { id } = useParams<{ id: string }>();
@@ -108,6 +110,78 @@ export function useActorPage() {
   const hasRequiredOutputs = missingOutputs.length === 0;
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;
 
+  // --- Stale PENDING tracking ---
+  const pendingStartTimes = useRef<Record<string, number>>({});
+  const [staleOutputs, setStaleOutputs] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    if (!actor?.outputs) return;
+
+    const now = Date.now();
+    const newPendingStarts = { ...pendingStartTimes.current };
+
+    // Record PENDING start times for newly PENDING outputs
+    for (const [key, output] of Object.entries(actor.outputs)) {
+      if (output?.status === 'PENDING' && !newPendingStarts[key]) {
+        newPendingStarts[key] = now;
+      }
+      // Clear start time if output is no longer PENDING
+      if (output?.status !== 'PENDING' && newPendingStarts[key]) {
+        delete newPendingStarts[key];
+      }
+    }
+
+    pendingStartTimes.current = newPendingStarts;
+
+    // Immediately check for already-stale outputs
+    const stale = new Set<string>();
+    const deadline = now - STALE_PENDING_MS;
+    for (const [key, startTime] of Object.entries(newPendingStarts)) {
+      if (startTime <= deadline) {
+        stale.add(key);
+      }
+    }
+    if (stale.size > 0) {
+      setStaleOutputs(stale);
+    }
+  }, [actor?.outputs]);
+
+  // Poll every 15 seconds for newly stale outputs
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const deadline = now - STALE_PENDING_MS;
+      const stale = new Set<string>();
+      for (const [key, startTime] of Object.entries(pendingStartTimes.current)) {
+        if (startTime <= deadline) {
+          stale.add(key);
+        }
+      }
+      setStaleOutputs((prev) => {
+        if (stale.size === prev.size && [...stale].every((k) => prev.has(k))) {
+          return prev; // No change
+        }
+        return stale;
+      });
+    }, 15_000);
+    return () => clearInterval(interval);
+  }, []);
+
+  const clearStale = useCallback((key: string) => {
+    setStaleOutputs((prev) => {
+      if (!prev.has(key)) return prev;
+      const next = new Set(prev);
+      next.delete(key);
+      return next;
+    });
+    delete pendingStartTimes.current[key];
+  }, []);
+
+  const clearAllStale = useCallback(() => {
+    setStaleOutputs(new Set());
+    pendingStartTimes.current = {};
+  }, []);
+
   return {
     actor,
     isLoading,
@@ -127,5 +201,9 @@ export function useActorPage() {
     regenerateMutation,
     duplicateMutation,
     submitMarketplaceMutation,
+    staleOutputs,
+    isStale: (key: string) => staleOutputs.has(key),
+    clearStale,
+    clearAllStale,
   };
 }

@@ -22,6 +22,8 @@ interface OutputSectionContentProps {
   looks: Array<{ id: string; name: string }>;
   onGenerate: (layoutType: string) => void;
   onRegenerate: (layoutType: string) => void;
+  isStale: boolean;
+  onRetryStale: (layoutType: string) => void;
 }
 
 export default function OutputSectionContent({
@@ -37,6 +39,8 @@ export default function OutputSectionContent({
   looks,
   onGenerate,
   onRegenerate,
+  isStale,
+  onRetryStale,
 }: OutputSectionContentProps) {
   const isOptional = sectionKey === 'character_sheet' || sectionKey === 'editorial';
   const canRegenerate = isArtist && !isFrozen && !isOptional && output !== null;
@@ -58,6 +62,23 @@ export default function OutputSectionContent({
               onClick={() => onRegenerate(sectionKey)}
             >
               Regenerate
+            </Button>
+          )}
+        </div>
+      )}
+
+      {isStale && output?.status === 'PENDING' && (
+        <div className="mb-4 flex items-center gap-2 border border-destructive/20 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <AlertCircle className="size-4 shrink-0" />
+          <span>Generation timed out. The request may have failed silently.</span>
+          {isArtist && !isFrozen && (
+            <Button
+              variant="outline"
+              size="xs"
+              className="ml-auto"
+              onClick={() => onRetryStale(sectionKey)}
+            >
+              Retry
             </Button>
           )}
         </div>

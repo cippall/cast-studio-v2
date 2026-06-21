@@ -19,6 +19,8 @@ interface ActorOutputsProps {
   onToggleSection: (key: string) => void;
   onGenerate: (layoutType: string) => void;
   onRegenerate: (layoutType: string) => void;
+  isStale: (key: string) => boolean;
+  onRetryStale: (layoutType: string) => void;
 }
 
 export default function ActorOutputs({
@@ -33,6 +35,8 @@ export default function ActorOutputs({
   onToggleSection,
   onGenerate,
   onRegenerate,
+  isStale,
+  onRetryStale,
 }: ActorOutputsProps) {
   return (
     <div className="space-y-4">
@@ -40,7 +44,11 @@ export default function ActorOutputs({
         const output = actor.outputs?.[section.key] as ActorOutput | null | undefined;
         const isObsolete = output?.is_obsolete === true;
         const isOpen = openSections.has(section.key);
-        const sectionStatus = getOutputStatus(output);
+        const isStaleOutput = isStale(section.key);
+        const sectionStatus =
+          isStaleOutput && output?.status === 'PENDING'
+            ? ('FAILED' as const)
+            : getOutputStatus(output);
 
         return (
           <Collapsible
@@ -78,6 +86,8 @@ export default function ActorOutputs({
                     looks={looks}
                     onGenerate={onGenerate}
                     onRegenerate={onRegenerate}
+                    isStale={isStaleOutput}
+                    onRetryStale={onRetryStale}
                   />
                 </CardContent>
               </CollapsibleContent>
