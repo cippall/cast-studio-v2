@@ -135,7 +135,7 @@ export default function LibraryLayout<T>({
           ) : items.length > 0 ? (
             <>
               {viewMode === 'grid' ? (
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                <div className="grid grid-cols-[repeat(auto-fill,minmax(280px,1fr))] gap-4">
                   {items.map((item, i) => renderCard(item, i))}
                 </div>
               ) : (
