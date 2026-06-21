@@ -58,7 +58,7 @@ export default function FashionItemCreator() {
         outputs.map((o) => ({
           id: o.id,
           imageUrl: o.image_url,
-          status: o.status as GenerationState,
+          status: o.status as 'PENDING' | 'SUCCESS' | 'FAILED',
           errorMessage: o.error_message,
         })),
       );
@@ -89,7 +89,7 @@ export default function FashionItemCreator() {
         outputs.map((o) => ({
           id: o.id,
           imageUrl: o.image_url,
-          status: o.status as GenerationState,
+          status: o.status as 'PENDING' | 'SUCCESS' | 'FAILED',
           errorMessage: o.error_message,
         })),
       );

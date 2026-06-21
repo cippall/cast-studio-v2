@@ -6,7 +6,7 @@ import { CheckCircle, XCircle, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
-export type GenerationState = 'PENDING' | 'SUCCESS' | 'FAILED';
+export type GenerationState = 'NONE' | 'PENDING' | 'SUCCESS' | 'FAILED';
 
 interface GenerationStatusProps {
   status: GenerationState;
@@ -21,6 +21,14 @@ export default function GenerationStatus({
   onRetry,
   className,
 }: GenerationStatusProps) {
+  if (status === 'NONE') {
+    return (
+      <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>
+        <span>Not generated</span>
+      </div>
+    );
+  }
+
   if (status === 'PENDING') {
     return (
       <div className={cn('flex items-center gap-2 text-sm text-muted-foreground', className)}>

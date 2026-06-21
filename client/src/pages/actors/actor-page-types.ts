@@ -47,6 +47,6 @@ export const OUTPUT_SECTIONS: Array<{
 ];
 
 export function getOutputStatus(output: ActorOutput | null | undefined): GenerationState {
-  if (!output) return 'SUCCESS';
-  return (output.status as GenerationState) ?? 'SUCCESS';
+  if (!output) return 'NONE';
+  return (output.status as GenerationState) ?? 'NONE';
 }
