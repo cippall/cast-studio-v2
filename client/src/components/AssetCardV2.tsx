@@ -1,9 +1,8 @@
 /**
- * AssetCardV2 — richer library card with consistent metadata.
+ * AssetCardV2 — simplified library card with reduced visual noise.
  */
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -11,25 +10,18 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { AspectRatio } from '@/components/ui/aspect-ratio';
 import { cn } from '@/lib/utils';
 import { MoreHorizontal, Copy, Trash2, Share2 } from 'lucide-react';
 import type { AssetCardType } from '@/components/AssetCard';
-import AddToCollectionDropdown from '@/components/AddToCollectionDropdown';
-import {
-  formatDate,
-  detailPath,
-  typeLabel,
-  statusVariant,
-  marketplaceStatusBadge,
-} from './asset-card-helpers';
+import { detailPath } from './asset-card-helpers';
 
 interface AssetCardV2Props {
   id: string;
   name: string;
   type: AssetCardType;
   imageUrl: string | null;
-  creatorName?: string;
   createdAt: string;
   status?: 'active' | 'archived' | 'pending' | 'draft';
   marketplaceStatus?:
@@ -44,12 +36,53 @@ interface AssetCardV2Props {
   onShare?: () => void;
 }
 
+function relativeTime(dateStr: string): string {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const diffMs = now - then;
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+  const diffDay = Math.floor(diffHour / 24);
+  const diffWeek = Math.floor(diffDay / 7);
+  const diffMonth = Math.floor(diffDay / 30);
+  const diffYear = Math.floor(diffDay / 365);
+
+  if (diffSec < 60) return 'just now';
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHour < 24) return `${diffHour}h ago`;
+  if (diffDay < 7) return `${diffDay}d ago`;
+  if (diffWeek < 4) return `${diffWeek}w ago`;
+  if (diffMonth < 12) return `${diffMonth}mo ago`;
+  return `${diffYear}y ago`;
+}
+
+function statusDotColor(status?: string, marketplaceStatus?: string | null): string {
+  if (marketplaceStatus === 'MARKETPLACE_APPROVED') return 'bg-success';
+  if (marketplaceStatus === 'MARKETPLACE_PENDING') return 'bg-info';
+  if (marketplaceStatus === 'MARKETPLACE_REJECTED') return 'bg-destructive';
+  if (marketplaceStatus === 'MARKETPLACE_DELISTED') return 'bg-muted-foreground';
+  if (status === 'active') return 'bg-success';
+  if (status === 'pending') return 'bg-warning';
+  if (status === 'archived') return 'bg-muted-foreground';
+  return 'bg-muted-foreground';
+}
+
+function statusLabel(status?: string, marketplaceStatus?: string | null): string {
+  const parts: string[] = [];
+  if (status) parts.push(status.charAt(0).toUpperCase() + status.slice(1));
+  if (marketplaceStatus) {
+    const mpLabel = marketplaceStatus.replace('MARKETPLACE_', '');
+    parts.push(mpLabel.charAt(0).toUpperCase() + mpLabel.slice(1).toLowerCase());
+  }
+  return parts.join(' · ');
+}
+
 export default function AssetCardV2({
   id,
   name,
   type,
   imageUrl,
-  creatorName,
   createdAt,
   status,
   marketplaceStatus,
@@ -60,8 +93,7 @@ export default function AssetCardV2({
 }: AssetCardV2Props) {
   const navigate = useNavigate();
   const hasActions = onDuplicate || onDelete || onShare;
-  const apiAssetType = type === 'actor' ? 'ACTOR' : type === 'look' ? 'LOOK' : 'FASHION_ITEM';
-  const mpBadge = marketplaceStatus ? marketplaceStatusBadge(marketplaceStatus) : null;
+  const hasStatusIndicator = status || marketplaceStatus;
 
   return (
     <Card
@@ -86,7 +118,6 @@ export default function AssetCardV2({
           <h3 className="truncate text-sm font-medium text-foreground">{name}</h3>
           {hasActions && (
             <div className="flex items-center gap-1 shrink-0 opacity-0 transition-opacity group-hover/card:opacity-100">
-              <AddToCollectionDropdown assetType={apiAssetType} assetId={id} assetName={name} />
               <DropdownMenu>
                 <DropdownMenuTrigger onClick={(e) => e.stopPropagation()}>
                   <MoreHorizontal className="size-4 text-muted-foreground" />
@@ -119,56 +150,39 @@ export default function AssetCardV2({
           )}
         </div>
 
-        <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          <Badge variant="secondary" className="text-[10px] font-medium">
-            {typeLabel(type)}
-          </Badge>
-          {status && (
-            <span
-              className={cn(
-                'inline-flex h-5 items-center px-2 text-[10px] font-semibold uppercase',
-                statusVariant(status),
-              )}
-            >
-              {status}
-            </span>
-          )}
-          {mpBadge && (
-            <span
-              className={cn(
-                'inline-flex h-5 items-center px-2 text-[10px] font-semibold uppercase',
-                mpBadge.classes,
-              )}
-            >
-              {mpBadge.label}
-            </span>
-          )}
-        </div>
+        {hasStatusIndicator && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            <Tooltip>
+              <TooltipTrigger>
+                <span
+                  className={cn(
+                    'inline-block size-2 shrink-0 rounded-full',
+                    statusDotColor(status, marketplaceStatus),
+                  )}
+                />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p className="text-xs">{statusLabel(status, marketplaceStatus)}</p>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        )}
 
         {tags && tags.length > 0 && (
-          <div className="mt-1.5 flex flex-wrap gap-1">
-            {tags.slice(0, 2).map((tag) => (
-              <Badge key={tag} variant="outline" className="text-[10px]">
+          <div className="mt-1.5 flex flex-wrap gap-x-1.5 gap-y-0.5 text-[11px] text-muted-foreground">
+            {tags.slice(0, 3).map((tag, i) => (
+              <span key={tag} className="inline-flex items-center gap-1">
+                {i > 0 && <span className="text-border">·</span>}
                 {tag}
-              </Badge>
+              </span>
             ))}
-            {tags.length > 2 && (
-              <Badge variant="outline" className="text-[10px]">
-                +{tags.length - 2}
-              </Badge>
+            {tags.length > 3 && (
+              <span className="text-[11px] text-muted-foreground">+{tags.length - 3}</span>
             )}
           </div>
         )}
 
-        <div className="mt-2 flex items-center gap-1.5 text-[11px] text-muted-foreground">
-          {creatorName && (
-            <>
-              <span className="truncate">{creatorName}</span>
-              <span className="shrink-0">·</span>
-            </>
-          )}
-          <span className="shrink-0">{formatDate(createdAt)}</span>
-        </div>
+        <div className="mt-2 text-[11px] text-muted-foreground">{relativeTime(createdAt)}</div>
       </CardContent>
     </Card>
   );
