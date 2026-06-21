@@ -296,6 +296,9 @@ async function unlockCommissionPremium(
   const premiumCost = commission.premium_cost ?? 0;
   if (premiumCost <= 0) return;
 
+  // Idempotency guard: skip if premium was already unlocked
+  if (commission.is_premium_unlocked) return;
+
   const dbClient = await getClient();
   try {
     await dbClient.query('BEGIN');
@@ -340,6 +343,9 @@ async function unlockCommissionPremium(
     }
 
     await dbClient.query('COMMIT');
+
+    // Mark commission as premium unlocked for idempotency
+    await query('UPDATE commissions SET is_premium_unlocked = TRUE WHERE id = $1', [commissionId]);
   } catch (err) {
     await dbClient.query('ROLLBACK');
     throw err;

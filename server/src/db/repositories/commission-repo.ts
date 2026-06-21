@@ -13,6 +13,7 @@ export interface CommissionRow {
   premium_cost: number | null;
   submitted_at: string | null;
   approved_at: string | null;
+  is_premium_unlocked: boolean;
   created_at: string;
 }
 

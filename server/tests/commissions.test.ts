@@ -103,6 +103,7 @@ function makeCommissionRow(overrides: Record<string, unknown> = {}) {
     premium_cost: null,
     submitted_at: null,
     approved_at: null,
+    is_premium_unlocked: false,
     created_at: '2026-06-17T10:00:00.000Z',
     ...overrides,
   };
@@ -691,6 +692,7 @@ describe('PATCH /api/commissions/:id/status', () => {
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ asset_id: ASSET_UUID }] }); // SELECT commission_assets
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets ownership
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any); // UPDATE is_premium_unlocked = TRUE
     // updateCommissionStatus
     mockQuery.mockResolvedValueOnce({ rows: [updated] } as any);
     // getCommissionAssets
@@ -994,6 +996,7 @@ describe('Full commission flow', () => {
     mockPoolClient.query.mockResolvedValueOnce({ rows: [{ asset_id: ASSET_UUID }] }); // SELECT commission_assets
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE assets ownership
     mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // COMMIT
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any); // UPDATE is_premium_unlocked = TRUE
     // Update commission status
     mockQuery.mockResolvedValueOnce({
       rows: [
@@ -1014,5 +1017,106 @@ describe('Full commission flow', () => {
     expect(res8.status).toBe(200);
     expect(res8.body.status).toBe('APPROVED');
     expect(res8.body.approved_at).toBeTruthy();
+  });
+});
+
+// ================================================================
+// Premium unlock idempotency
+// ================================================================
+describe('Premium unlock idempotency', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('does not double-charge wallet on double APPROVED transition', async () => {
+    const client = makeClientRow();
+
+    // --- First APPROVED call: should charge wallet ---
+    seedRequireSessionQueries(client);
+    const submittedCommission = makeCommissionRow({
+      status: 'SUBMITTED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [submittedCommission] } as any);
+    // Transaction: BEGIN + SELECT wallet FOR UPDATE + UPDATE wallet + INSERT ledger + SELECT assets + UPDATE assets + COMMIT
+    const mockPoolClient = await poolModule.getClient();
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // BEGIN
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'w-00000000-0000-4000-8000-000000000001',
+          workspace_id: WORKSPACE_UUID,
+          account_id: CLIENT_UUID,
+          balance_credits: 10.0,
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any); // SELECT wallet FOR UPDATE
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] }); // UPDATE wallet
+    mockPoolClient.query.mockResolvedValueOnce({
+      rows: [{ id: 'l-00000000-0000-4000-8000-000000000001' }],
+    } as any); // INSERT ledger
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [{ asset_id: ASSET_UUID }] } as any); // SELECT commission_assets
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] } as any); // UPDATE assets ownership
+    mockPoolClient.query.mockResolvedValueOnce({ rows: [] } as any); // COMMIT
+    mockQuery.mockResolvedValueOnce({ rows: [] } as any); // UPDATE is_premium_unlocked = TRUE
+    const approvedCommission = makeCommissionRow({
+      status: 'APPROVED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+      submitted_at: '2026-06-17T12:00:00.000Z',
+      approved_at: '2026-06-17T13:00:00.000Z',
+      is_premium_unlocked: true,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [approvedCommission] } as any); // updateCommissionStatus
+    mockQuery.mockResolvedValueOnce({ rows: [makeCommissionAssetRow()] } as any); // getCommissionAssets
+
+    const res1 = await request(createRouteApp(client))
+      .patch(`/api/commissions/${COMMISSION_UUID}/status`)
+      .send({ status: 'APPROVED' });
+    expect(res1.status).toBe(200);
+    expect(res1.body.status).toBe('APPROVED');
+
+    // Record wallet UPDATE count after first call
+    const walletUpdateCountAfterFirst = mockPoolClient.query.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('UPDATE wallets'),
+    ).length;
+
+    // --- Second APPROVED call: should NOT charge wallet again ---
+    seedRequireSessionQueries(client);
+    // Commission is still SUBMITTED (two rapid-fire approval attempts)
+    // The first call already set is_premium_unlocked = true in the DB
+    const stillSubmittedCommission = makeCommissionRow({
+      status: 'SUBMITTED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+      submitted_at: '2026-06-17T12:00:00.000Z',
+      is_premium_unlocked: true,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [stillSubmittedCommission] } as any);
+    // updateCommissionStatus returns APPROVED (no wallet transaction expected since premium already unlocked)
+    const approvedSecondCall = makeCommissionRow({
+      status: 'APPROVED',
+      client_id: CLIENT_UUID,
+      premium_cost: 5.0,
+      submitted_at: '2026-06-17T12:00:00.000Z',
+      approved_at: '2026-06-17T13:00:00.000Z',
+      is_premium_unlocked: true,
+    });
+    mockQuery.mockResolvedValueOnce({ rows: [approvedSecondCall] } as any);
+    mockGetCommissionAssets();
+
+    const res2 = await request(createRouteApp(client))
+      .patch(`/api/commissions/${COMMISSION_UUID}/status`)
+      .send({ status: 'APPROVED' });
+    expect(res2.status).toBe(200);
+    expect(res2.body.status).toBe('APPROVED');
+
+    // Verify no additional wallet UPDATE happened on second call
+    const walletUpdateCountAfterSecond = mockPoolClient.query.mock.calls.filter(
+      (call: unknown[]) => typeof call[0] === 'string' && call[0].includes('UPDATE wallets'),
+    ).length;
+    expect(walletUpdateCountAfterSecond).toBe(walletUpdateCountAfterFirst);
   });
 });
