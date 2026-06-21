@@ -1,4 +1,5 @@
 import * as fal from '../services/fal-service.js';
+import { getWorkspaceApiKey } from '../services/fal-service.js';
 import { findPendingOutputs, updateOutputsStatus } from '../db/repositories/asset-repo.js';
 import { notifyWorkflowCompleted, notifyWorkflowFailed } from '../services/notification-service.js';
 import { query } from '../db/pool.js';
@@ -80,7 +81,15 @@ async function processSingleOutput(output: {
   if (falJobId) {
     // Poll fal.ai for the job status
     const outputSeed = generationParams['seed'] as number | undefined;
-    const result = await fal.pollJob(falJobId, output.model, undefined, outputSeed);
+
+    // Look up workspace ID from the asset, then resolve workspace-scoped API key
+    const assetResult = await query('SELECT workspace_id FROM assets WHERE id = $1', [
+      output.asset_id,
+    ]);
+    const workspaceId = assetResult.rows[0]?.workspace_id as string | undefined;
+    const workspaceKey = workspaceId ? await getWorkspaceApiKey(workspaceId) : undefined;
+
+    const result = await fal.pollJob(falJobId, output.model, workspaceKey, outputSeed);
 
     if (result.status === 'SUCCESS') {
       await updateOutputsStatus(output.asset_id, [output.id], 'SUCCESS', {
