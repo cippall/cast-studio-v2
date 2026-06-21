@@ -5,6 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { Button } from '@/components/ui/button';
 import FilterPanel, { type FilterGroup } from '@/components/FilterPanel';
 import EmptyStateV2 from '@/components/EmptyStateV2';
+import type { EmptyStateVariant } from '@/components/EmptyStateV2';
 import ErrorState from '@/components/ErrorState';
 import LoadingState from '@/components/LoadingState';
 import LibraryPagination from './LibraryPagination';
@@ -42,6 +43,7 @@ export interface LibraryLayoutProps<T> {
   emptyDescription: string;
   emptyActionLabel?: string;
   emptyActionPath?: string;
+  emptyVariant?: EmptyStateVariant;
   showFilters?: boolean;
   onToggleFilters?: () => void;
 }
@@ -74,6 +76,7 @@ export default function LibraryLayout<T>({
   emptyDescription,
   emptyActionLabel,
   emptyActionPath,
+  emptyVariant,
   showFilters = true,
   onToggleFilters,
 }: LibraryLayoutProps<T>) {
@@ -156,6 +159,7 @@ export default function LibraryLayout<T>({
               description={emptyDescription}
               actionLabel={emptyActionLabel}
               actionPath={emptyActionPath}
+              variant={emptyVariant}
             />
           )}
         </div>

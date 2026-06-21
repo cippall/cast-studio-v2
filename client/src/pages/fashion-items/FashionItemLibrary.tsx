@@ -279,6 +279,7 @@ export default function FashionItemLibrary() {
         emptyDescription="Create your first fashion item to get started."
         emptyActionLabel="New Item"
         emptyActionPath="/fashion-items/new"
+        emptyVariant="no-assets"
       />
 
       {isClient && (

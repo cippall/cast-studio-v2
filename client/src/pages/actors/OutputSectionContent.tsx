@@ -6,7 +6,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { AlertCircle, ImageIcon, RotateCcw, Sparkles } from 'lucide-react';
+import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
+import EmptyStateV2 from '@/components/EmptyStateV2';
 import type { ActorOutput } from './actor-page-types';
 
 interface OutputSectionContentProps {
@@ -108,18 +109,25 @@ export default function OutputSectionContent({
       )}
 
       {!isOptional && !output?.image_url && (
-        <div className="flex flex-col items-center gap-4 py-8">
-          <ImageIcon className="size-12 text-muted-foreground" />
-          <p className="text-sm text-muted-foreground">
-            No {sectionLabel.toLowerCase()} generated yet.
-          </p>
-          {isArtist && !isFrozen && (
-            <Button size="sm" onClick={() => onGenerate(sectionKey)} disabled={isGenerating}>
-              <Sparkles className="mr-2 size-4" />
-              Generate {sectionLabel}
-            </Button>
-          )}
-        </div>
+        <EmptyStateV2
+          variant={output?.status === 'FAILED' ? 'generation-failed' : 'no-image'}
+          title={
+            output?.status === 'FAILED'
+              ? undefined
+              : `No ${sectionLabel.toLowerCase()} generated yet`
+          }
+          description={
+            output?.status === 'FAILED'
+              ? undefined
+              : `Generate ${sectionLabel.toLowerCase()} to see it here.`
+          }
+          actionLabel={
+            isArtist && !isFrozen && output?.status !== 'FAILED'
+              ? `Generate ${sectionLabel}`
+              : undefined
+          }
+          actionPath={undefined}
+        />
       )}
 
       {sectionKey === 'character_sheet' && (
@@ -187,16 +195,13 @@ export default function OutputSectionContent({
               )}
             </>
           ) : (
-            <div className="flex flex-col items-center gap-4 py-8">
-              <ImageIcon className="size-12 text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">No editorial shots generated yet.</p>
-              {isArtist && !isFrozen && (
-                <Button size="sm" onClick={() => onGenerate('editorial')} disabled={isGenerating}>
-                  <Sparkles className="mr-2 size-4" />
-                  Generate Editorial
-                </Button>
-              )}
-            </div>
+            <EmptyStateV2
+              variant="no-image"
+              title="No editorial shots generated yet"
+              description="Generate editorial shots to see them here."
+              actionLabel={isArtist && !isFrozen ? 'Generate Editorial' : undefined}
+              actionPath={undefined}
+            />
           )}
         </div>
       )}

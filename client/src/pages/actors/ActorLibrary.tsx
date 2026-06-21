@@ -258,6 +258,7 @@ export default function ActorLibrary() {
         emptyDescription="Create your first actor to get started."
         emptyActionLabel="New Actor"
         emptyActionPath="/actors/new"
+        emptyVariant="no-assets"
       />
 
       {isClient && (

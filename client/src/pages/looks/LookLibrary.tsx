@@ -267,6 +267,7 @@ export default function LookLibrary() {
         emptyDescription="Create your first look to get started."
         emptyActionLabel="New Look"
         emptyActionPath="/looks/new"
+        emptyVariant="no-assets"
       />
 
       {isClient && (
