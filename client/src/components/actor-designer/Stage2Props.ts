@@ -1,4 +1,5 @@
 import type { LayoutStep, GenerationSession, GeneratedOption, EntryMethod } from './types';
+import type { ModelConfig } from '@/hooks/useAdminModels';
 
 export interface Stage2Props {
   entryMethod: EntryMethod;
@@ -23,6 +24,9 @@ export interface Stage2Props {
   generateError: string | null;
   generateErrorCode: string | null;
   referenceValidationError: string | null;
+  models: ModelConfig[];
+  selectedModel: string;
+  onModelChange: (modelId: string | null) => void;
   onSelectOption: (id: string) => void;
   onConfirmStep: () => void;
   onGenerate: () => void;

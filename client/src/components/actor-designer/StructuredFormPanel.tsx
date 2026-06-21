@@ -12,6 +12,7 @@ interface StructuredFormPanelProps {
   onGenerate: () => void;
   isGenerating: boolean;
   hasImages: boolean;
+  selectedModelName?: string;
 }
 
 export default function StructuredFormPanel({
@@ -22,6 +23,7 @@ export default function StructuredFormPanel({
   onGenerate,
   isGenerating,
   hasImages,
+  selectedModelName,
 }: StructuredFormPanelProps) {
   return (
     <div className="flex flex-col">
@@ -30,6 +32,11 @@ export default function StructuredFormPanel({
       </div>
 
       <div className="mt-6 space-y-4 border-t border-border-subtle pt-4">
+        {selectedModelName && (
+          <p className="text-xs text-muted-foreground">
+            Model: <span className="font-medium text-foreground">{selectedModelName}</span>
+          </p>
+        )}
         <div className="flex items-center gap-2">
           <Checkbox
             id="form-randomize"

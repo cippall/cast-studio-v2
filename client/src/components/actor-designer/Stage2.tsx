@@ -1,5 +1,6 @@
 import type { LayoutStep, GenerationSession, GeneratedOption } from './types';
 import type { Stage2Props } from './Stage2Props';
+import type { ModelConfig } from '@/hooks/useAdminModels';
 import { LAYOUT_STEPS } from './types';
 import ImageGrid from './ImageGrid';
 import SessionNavigator from './SessionNavigator';
@@ -7,6 +8,14 @@ import StructuredFormPanel from './StructuredFormPanel';
 import ReferencePhotoPanel from './ReferencePhotoPanel';
 import RawTextPanel from './RawTextPanel';
 import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { AlertCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Check, ChevronRight } from 'lucide-react';
 
@@ -32,6 +41,9 @@ export default function Stage2({
   generateError,
   generateErrorCode,
   referenceValidationError,
+  models,
+  selectedModel,
+  onModelChange,
   onSelectOption,
   onConfirmStep,
   onGenerate,
@@ -45,8 +57,46 @@ export default function Stage2({
   onReferenceImagesChange,
   onFormValuesChange,
 }: Stage2Props) {
+  const activeModels = models.filter((m) => m.is_active);
   return (
     <div className="space-y-6">
+      {/* Model selector */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <label htmlFor="model-select" className="text-sm font-medium text-muted-foreground">
+            Model
+          </label>
+          {activeModels.length > 0 ? (
+            <Select
+              value={selectedModel}
+              onValueChange={(val) => onModelChange(val ?? selectedModel)}
+            >
+              <SelectTrigger id="model-select" className="w-[240px]">
+                <SelectValue placeholder="Select a model" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeModels.map((model) => (
+                  <SelectItem key={model.id} value={model.id}>
+                    {model.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className="flex items-center gap-2 text-sm text-warning">
+              <AlertCircle className="size-4" />
+              <span>
+                No models configured. Go to{' '}
+                <a href="/settings/models" className="font-medium underline underline-offset-2">
+                  Settings → Models
+                </a>{' '}
+                to add one.
+              </span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Stepper */}
       <div className="flex w-full border border-border-subtle">
         {LAYOUT_STEPS.map((step, index) => {
@@ -121,6 +171,7 @@ export default function Stage2({
               onGenerate={onGenerate}
               isGenerating={isGenerating}
               hasImages={hasGeneratedImages}
+              selectedModelName={models.find((m) => m.id === selectedModel)?.name}
             />
           </div>
           <div className="w-full space-y-3 lg:w-2/3">

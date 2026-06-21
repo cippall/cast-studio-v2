@@ -5,6 +5,8 @@ import apiClient from '@/lib/api-client';
 import type { GenerationState } from '@/components/GenerationStatus';
 import type { EntryMethod, LayoutStep, GenerationSession } from './types';
 import { LAYOUT_STEPS, NUM_OPTIONS, createEmptyOptions } from './types';
+import { useAdminModels } from '@/hooks/useAdminModels';
+import type { ModelConfig } from '@/hooks/useAdminModels';
 
 export interface ActorDesignerState {
   // Actions
@@ -17,6 +19,7 @@ export interface ActorDesignerState {
   setStage: (s: 1 | 2 | 3) => void;
   setActorName: (n: string) => void;
   setTaxonomyValues: (v: Record<string, string>) => void;
+  setModel: (modelId: string | null) => void;
   handleCreateActor: () => void;
   handleGenerate: () => void;
   handleRegenerate: () => void;
@@ -48,6 +51,7 @@ export interface ActorDesignerState {
   isStructuredForm: boolean;
   isReference: boolean;
   isRawText: boolean;
+  selectedModel: string;
   actorName: string;
   taxonomyValues: Record<string, string>;
   createError: string | null;
@@ -56,6 +60,7 @@ export interface ActorDesignerState {
   referenceValidationError: string | null;
   isCreating: boolean;
   isSaving: boolean;
+  models: ModelConfig[];
 }
 
 export function useActorDesignerState(): ActorDesignerState {
@@ -95,6 +100,18 @@ export function useActorDesignerState(): ActorDesignerState {
   const [generateError, setGenerateError] = useState<string | null>(null);
   const [generateErrorCode, setGenerateErrorCode] = useState<string | null>(null);
   const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
+  const [selectedModel, setSelectedModel] = useState<string>('');
+
+  // Fetch available models
+  const { data: models = [] } = useAdminModels();
+  const activeModels = models.filter((m) => m.is_active);
+
+  // Initialize selectedModel from first active model
+  useEffect(() => {
+    if (activeModels.length > 0 && !selectedModel) {
+      setSelectedModel(activeModels[0].id);
+    }
+  }, [activeModels, selectedModel]);
 
   // Poll actor detail for live output status updates
   const { data: actorDetail } = useQuery({
@@ -225,6 +242,7 @@ export function useActorDesignerState(): ActorDesignerState {
       if (!actorId) return [];
       const { data } = await apiClient.post(`/actors/${actorId}/generate`, {
         layout_type: layoutType,
+        model: selectedModel,
         options: { num_outputs: NUM_OPTIONS },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
         ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
@@ -251,6 +269,7 @@ export function useActorDesignerState(): ActorDesignerState {
       if (!actorId) return [];
       const { data } = await apiClient.post(`/actors/${actorId}/regenerate`, {
         layout_type: layoutType,
+        model: selectedModel,
         options: { num_outputs: NUM_OPTIONS },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
         ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
@@ -425,6 +444,11 @@ export function useActorDesignerState(): ActorDesignerState {
     generateError,
     generateErrorCode,
     referenceValidationError,
+    setModel: (modelId: string | null) => {
+      if (modelId) setSelectedModel(modelId);
+    },
+    selectedModel,
+    models,
     isCreating: createActorMutation.isPending,
     isSaving: saveActorMutation.isPending,
   };
