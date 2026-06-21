@@ -44,6 +44,7 @@ const ACTOR_UUID = 'c0000000-0000-4000-8000-000000000001';
 const LOOK_UUID = 'd0000000-0000-4000-8000-000000000002';
 const OUTPUT_UUID = 'e0000000-0000-4000-8000-000000000003';
 const SECOND_OUTPUT_UUID = 'f0000000-0000-4000-8000-000000000004';
+const THIRD_OUTPUT_UUID = 'a1000000-0000-4000-8000-000000000005';
 
 // --- Test data factories ---
 
@@ -202,6 +203,7 @@ function seedWalletCreditMocks(accountId: string) {
 
 function resetMock() {
   mockQuery.mockReset();
+  mockSubmitTextToImage.mockReset();
   mockSubmitTextToImage.mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' });
 }
 
@@ -437,6 +439,127 @@ describe('POST /api/actors/:id/generate', () => {
 
     expect(res.status).toBe(202);
     expect(res.body.outputs).toHaveLength(2);
+  });
+
+  it('502 when output 2 of 3 fails: all 3 outputs marked FAILED, all credits refunded', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: no active models → falls back to DEFAULT_MODEL
+    seedNoActiveModels();
+
+    // reserveCreditsForGeneration for all 3 outputs (3 × 0.05 = 0.15)
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    // Three outputs
+    const output1 = makeOutputRow({ id: OUTPUT_UUID });
+    const output2 = makeOutputRow({ id: SECOND_OUTPUT_UUID });
+    const output3 = makeOutputRow({ id: THIRD_OUTPUT_UUID });
+
+    // createAssetOutput for output 1
+    mockQuery.mockResolvedValueOnce({ rows: [output1] } as any);
+    // UPDATE fal_job_id for output 1 (succeeds)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // createAssetOutput for output 2
+    mockQuery.mockResolvedValueOnce({ rows: [output2] } as any);
+
+    // fal.ai submission for output 2 FAILS
+    // First call (output 1) succeeds — consume the default mock
+    mockSubmitTextToImage.mockResolvedValueOnce({ jobId: 'test-job-id', status: 'PENDING' });
+    // Second call (output 2) fails
+    mockSubmitTextToImage.mockRejectedValueOnce(new Error('fal.ai API error (500): internal'));
+
+    // updateAssetOutputError for output 2 (the one that failed)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // updateAssetOutputError for output 1 (already submitted — mark FAILED)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // createAssetOutput for output 3 (never submitted — created as FAILED immediately)
+    mockQuery.mockResolvedValueOnce({ rows: [output3] } as any);
+
+    // updateAssetOutputError for output 3 (never submitted — mark FAILED)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // refundCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '999.8500',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '1000.0000',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: createLedgerEntry (REFUND type)
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'ledger-refund-uuid',
+          workspace_id: WORKSPACE_UUID,
+          wallet_id: 'wallet-uuid',
+          workflow_id: null,
+          api_key_id: null,
+          amount: 0.15,
+          type: 'REFUND',
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'fullshot', options: { num_outputs: 3 } });
+
+    expect(res.status).toBe(502);
+
+    // Verify all 3 outputs were marked FAILED
+    const failedUpdateCalls = mockQuery.mock.calls.filter(
+      (call) => typeof call[0] === 'string' && call[0].includes("status = 'FAILED'"),
+    );
+    expect(failedUpdateCalls).toHaveLength(3);
+
+    // Call 0: output 2 (the one that actually failed on fal.ai)
+    expect(failedUpdateCalls[0][1][1]).toBe(SECOND_OUTPUT_UUID);
+    expect(failedUpdateCalls[0][1][0]).toBe('fal.ai API error (500): internal');
+
+    // Call 1: output 1 (already submitted sibling — marked FAILED)
+    expect(failedUpdateCalls[1][1][1]).toBe(OUTPUT_UUID);
+    expect(failedUpdateCalls[1][1][0]).toBe('Aborted: sibling output failed');
+
+    // Call 2: output 3 (never submitted — marked FAILED)
+    expect(failedUpdateCalls[2][1][1]).toBe(THIRD_OUTPUT_UUID);
+    expect(failedUpdateCalls[2][1][0]).toBe('Aborted: sibling output failed');
+
+    // Verify refund ledger entry was created with REFUND type for full amount (0.15)
+    const refundLedgerCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('INSERT INTO ledger') &&
+        call[1] &&
+        Array.isArray(call[1]) &&
+        call[1].includes('REFUND'),
+    );
+    expect(refundLedgerCall).toBeDefined();
+    // The refund amount should be 0.15 (all 3 outputs)
+    expect(refundLedgerCall![1]).toContain(0.15);
   });
 
   it('409 when actor is marketplace frozen', async () => {

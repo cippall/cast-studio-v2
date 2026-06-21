@@ -131,7 +131,27 @@ export async function generateActorOutput(
     cost_credits: number;
   }> = [];
 
+  const createdOutputIds: string[] = [];
+  let falFailed = false;
+  let falErrorMessage = '';
+
   for (let i = 0; i < numOutputs; i++) {
+    // If a previous output failed, mark this one as FAILED immediately
+    if (falFailed) {
+      const input: CreateAssetOutputInput = {
+        asset_id: assetId,
+        layout_type: options.layout_type,
+        model,
+        status: 'FAILED',
+        cost_credits: DEFAULT_COST,
+        generation_params: { ...generationParams, seed: seed + i },
+      };
+      const output = await createAssetOutput(input);
+      await updateAssetOutputError(output.id, 'Aborted: sibling output failed');
+      createdOutputIds.push(output.id);
+      continue;
+    }
+
     const outputSeed = seed + i;
 
     // Clone per-output generation_params with unique seed
@@ -151,6 +171,7 @@ export async function generateActorOutput(
     };
 
     const output = await createAssetOutput(input);
+    createdOutputIds.push(output.id);
 
     // Submit to fal.ai and store the job ID in generation_params for worker polling
     try {
@@ -190,26 +211,33 @@ export async function generateActorOutput(
         output.id,
       ]);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
+      falErrorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
+      falFailed = true;
       console.error(`fal.ai submission error for output ${output.id}:`, err);
 
-      // Update output row to FAILED
-      await updateAssetOutputError(output.id, errorMessage);
+      // Mark the failed output
+      await updateAssetOutputError(output.id, falErrorMessage);
 
-      // Refund credits
-      await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
-
-      // Propagate error to route handler
-      throw Object.assign(new Error(errorMessage), { statusCode: 502 });
+      // Mark all previously submitted sibling outputs as FAILED
+      const siblingIds = createdOutputIds.slice(0, -1);
+      for (const siblingId of siblingIds) {
+        await updateAssetOutputError(siblingId, 'Aborted: sibling output failed');
+      }
     }
 
     outputs.push({
       id: output.id,
       layout_type: output.layout_type,
-      status: output.status,
+      status: falFailed ? 'FAILED' : output.status,
       model: output.model,
       cost_credits: output.cost_credits,
     });
+  }
+
+  // If any output failed, refund all credits and propagate error
+  if (falFailed) {
+    await refundCredits(account.workspace_id, account.id, totalCost);
+    throw Object.assign(new Error(falErrorMessage), { statusCode: 502 });
   }
 
   return { outputs };
