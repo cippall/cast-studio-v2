@@ -99,6 +99,8 @@ export default function ActorDesigner() {
             models={s.models}
             selectedModel={s.selectedModel}
             onModelChange={s.setModel}
+            numOutputs={s.numOutputs}
+            onNumOutputsChange={s.setNumOutputs}
             onSelectOption={s.handleSelectOption}
             onConfirmStep={s.handleConfirmStep}
             onGenerate={s.handleGenerate}

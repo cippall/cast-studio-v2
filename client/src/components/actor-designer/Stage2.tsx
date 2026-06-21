@@ -44,6 +44,8 @@ export default function Stage2({
   models,
   selectedModel,
   onModelChange,
+  numOutputs,
+  onNumOutputsChange,
   onSelectOption,
   onConfirmStep,
   onGenerate,
@@ -172,6 +174,8 @@ export default function Stage2({
               isGenerating={isGenerating}
               hasImages={hasGeneratedImages}
               selectedModelName={models.find((m) => m.id === selectedModel)?.name}
+              numOutputs={numOutputs}
+              onNumOutputsChange={onNumOutputsChange}
             />
           </div>
           <div className="w-full space-y-3 lg:w-2/3">

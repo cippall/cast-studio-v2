@@ -1,6 +1,7 @@
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Loader2, RotateCcw, Sparkles } from 'lucide-react';
 import ActorFormFields from '@/components/ActorFormFields';
 
@@ -13,6 +14,8 @@ interface StructuredFormPanelProps {
   isGenerating: boolean;
   hasImages: boolean;
   selectedModelName?: string;
+  numOutputs: number;
+  onNumOutputsChange: (value: number) => void;
 }
 
 export default function StructuredFormPanel({
@@ -24,6 +27,8 @@ export default function StructuredFormPanel({
   isGenerating,
   hasImages,
   selectedModelName,
+  numOutputs,
+  onNumOutputsChange,
 }: StructuredFormPanelProps) {
   return (
     <div className="flex flex-col">
@@ -32,6 +37,21 @@ export default function StructuredFormPanel({
       </div>
 
       <div className="mt-6 space-y-4 border-t border-border-subtle pt-4">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="num-outputs">Variations</Label>
+          <Input
+            id="num-outputs"
+            type="number"
+            min={1}
+            max={8}
+            value={numOutputs}
+            onChange={(e) => {
+              const val = parseInt(e.target.value, 10);
+              if (!isNaN(val)) onNumOutputsChange(val);
+            }}
+            className="w-20"
+          />
+        </div>
         {selectedModelName && (
           <p className="text-xs text-muted-foreground">
             Model: <span className="font-medium text-foreground">{selectedModelName}</span>

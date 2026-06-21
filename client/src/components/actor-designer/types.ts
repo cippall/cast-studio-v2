@@ -29,7 +29,7 @@ export const LAYOUT_STEPS: { key: LayoutStep; label: string }[] = [
 
 export const NUM_OPTIONS = 4;
 
-export function createEmptyOptions(count: number): GeneratedOption[] {
+export function createEmptyOptions(count: number = NUM_OPTIONS): GeneratedOption[] {
   return Array.from({ length: count }, (_, i) => ({
     id: `opt-${i}-${Date.now()}`,
     imageUrl: null,

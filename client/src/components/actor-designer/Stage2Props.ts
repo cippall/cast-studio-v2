@@ -27,6 +27,8 @@ export interface Stage2Props {
   models: ModelConfig[];
   selectedModel: string;
   onModelChange: (modelId: string | null) => void;
+  numOutputs: number;
+  onNumOutputsChange: (value: number) => void;
   onSelectOption: (id: string) => void;
   onConfirmStep: () => void;
   onGenerate: () => void;

@@ -20,6 +20,7 @@ export interface ActorDesignerState {
   setActorName: (n: string) => void;
   setTaxonomyValues: (v: Record<string, string>) => void;
   setModel: (modelId: string | null) => void;
+  setNumOutputs: (n: number) => void;
   handleCreateActor: () => void;
   handleGenerate: () => void;
   handleRegenerate: () => void;
@@ -52,6 +53,7 @@ export interface ActorDesignerState {
   isReference: boolean;
   isRawText: boolean;
   selectedModel: string;
+  numOutputs: number;
   actorName: string;
   taxonomyValues: Record<string, string>;
   createError: string | null;
@@ -101,6 +103,7 @@ export function useActorDesignerState(): ActorDesignerState {
   const [generateErrorCode, setGenerateErrorCode] = useState<string | null>(null);
   const [referenceValidationError, setReferenceValidationError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>('');
+  const [numOutputs, setNumOutputs] = useState<number>(NUM_OPTIONS);
 
   // Fetch available models
   const { data: models = [] } = useAdminModels();
@@ -238,12 +241,18 @@ export function useActorDesignerState(): ActorDesignerState {
   });
 
   const generateMutation = useMutation({
-    mutationFn: async (layoutType: string) => {
+    mutationFn: async ({
+      layoutType,
+      numOutputs: outputs,
+    }: {
+      layoutType: string;
+      numOutputs: number;
+    }) => {
       if (!actorId) return [];
       const { data } = await apiClient.post(`/actors/${actorId}/generate`, {
         layout_type: layoutType,
         model: selectedModel,
-        options: { num_outputs: NUM_OPTIONS },
+        options: { num_outputs: outputs },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
         ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
         ...(entryMethod === 'TEXT' && { prompt }),
@@ -265,12 +274,18 @@ export function useActorDesignerState(): ActorDesignerState {
   });
 
   const regenerateMutation = useMutation({
-    mutationFn: async (layoutType: string) => {
+    mutationFn: async ({
+      layoutType,
+      numOutputs: outputs,
+    }: {
+      layoutType: string;
+      numOutputs: number;
+    }) => {
       if (!actorId) return [];
       const { data } = await apiClient.post(`/actors/${actorId}/regenerate`, {
         layout_type: layoutType,
         model: selectedModel,
-        options: { num_outputs: NUM_OPTIONS },
+        options: { num_outputs: outputs },
         ...(entryMethod === 'FORM' && { form_data: formValues }),
         ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
         ...(entryMethod === 'TEXT' && { prompt }),
@@ -339,13 +354,21 @@ export function useActorDesignerState(): ActorDesignerState {
     }
     setReferenceValidationError(null);
     setGenerateError(null);
-    generateMutation.mutate(currentStep.key);
-  }, [actorId, currentStep.key, generateMutation, entryMethod, prompt, referenceImages]);
+    generateMutation.mutate({ layoutType: currentStep.key, numOutputs });
+  }, [
+    actorId,
+    currentStep.key,
+    generateMutation,
+    entryMethod,
+    prompt,
+    referenceImages,
+    numOutputs,
+  ]);
 
   const handleRegenerate = useCallback(() => {
     if (!actorId) return;
-    regenerateMutation.mutate(currentStep.key);
-  }, [actorId, currentStep.key, regenerateMutation]);
+    regenerateMutation.mutate({ layoutType: currentStep.key, numOutputs });
+  }, [actorId, currentStep.key, regenerateMutation, numOutputs]);
 
   const handleSaveSettings = useCallback(
     (sessionIndex: number) => {
@@ -447,7 +470,11 @@ export function useActorDesignerState(): ActorDesignerState {
     setModel: (modelId: string | null) => {
       if (modelId) setSelectedModel(modelId);
     },
+    setNumOutputs: (n: number) => {
+      if (n >= 1 && n <= 8) setNumOutputs(n);
+    },
     selectedModel,
+    numOutputs,
     models,
     isCreating: createActorMutation.isPending,
     isSaving: saveActorMutation.isPending,
