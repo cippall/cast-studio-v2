@@ -268,7 +268,7 @@ export async function getLook(
     return null;
   }
 
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toLookDetail(asset, outputs);
 }
 
@@ -295,7 +295,7 @@ export async function updateLook(
 
   // Handle output selection
   if (data.selected_output_id) {
-    const allOutputs = await getAssetOutputs(id);
+    const allOutputs = await getAssetOutputs(id, account.workspace_id);
     const selectedOutput = allOutputs.find((o) => o.id === data.selected_output_id);
 
     if (!selectedOutput) {
@@ -325,7 +325,7 @@ export async function updateLook(
     if (!updated) {
       return null;
     }
-    const outputs = await getAssetOutputs(id);
+    const outputs = await getAssetOutputs(id, account.workspace_id);
     return toLookDetail(updated, outputs);
   }
 
@@ -334,7 +334,7 @@ export async function updateLook(
   if (!freshAsset) {
     return null;
   }
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toLookDetail(freshAsset, outputs);
 }
 

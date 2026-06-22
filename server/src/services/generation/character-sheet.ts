@@ -88,12 +88,12 @@ export async function generateCharacterSheet(
   }
 
   // Find the actor's headshot output and the look's selected output
-  const actorOutputs = await getAssetOutputs(assetId);
+  const actorOutputs = await getAssetOutputs(assetId, account.workspace_id);
   const headshotOutput = actorOutputs.find(
     (o) => o.layout_type === 'headshot' && o.status === 'SUCCESS',
   );
 
-  const lookOutputs = await getAssetOutputs(lookId);
+  const lookOutputs = await getAssetOutputs(lookId, account.workspace_id);
   const lookSelectedOutput = lookOutputs.find((o) => o.status === 'SUCCESS');
 
   // Build source_asset_outputs reference

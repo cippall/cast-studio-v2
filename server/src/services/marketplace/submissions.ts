@@ -52,7 +52,7 @@ export async function submitAssetForMarketplace(
       });
     }
 
-    const outputs = await getAssetOutputs(assetId);
+    const outputs = await getAssetOutputs(assetId, account.workspace_id);
     const missing = findMissingOutputs(outputs, getRequiredOutputsForType(asset.asset_type));
 
     if (missing.length > 0) {

@@ -362,11 +362,29 @@ export async function softDeleteAsset(
 
 /**
  * Get all non-deleted (i.e. current) outputs for an asset.
+ * When workspaceId is provided, JOINs to assets table to ensure
+ * the asset belongs to the given workspace, preventing cross-workspace data leakage.
  */
-export async function getAssetOutputs(assetId: string): Promise<AssetOutputRow[]> {
+export async function getAssetOutputs(
+  assetId: string,
+  workspaceId?: string,
+): Promise<AssetOutputRow[]> {
+  const conditions: string[] = ['ao.asset_id = $1'];
+  const params: unknown[] = [assetId];
+  let idx = 2;
+
+  if (workspaceId) {
+    conditions.push(`a.workspace_id = $${idx++}`);
+    params.push(workspaceId);
+  }
+
+  const fromClause = workspaceId
+    ? `FROM asset_outputs ao JOIN assets a ON a.id = ao.asset_id`
+    : 'FROM asset_outputs ao';
+
   const result = await query(
-    `SELECT * FROM asset_outputs WHERE asset_id = $1 ORDER BY created_at DESC LIMIT 100`,
-    [assetId],
+    `SELECT ao.* ${fromClause} WHERE ${conditions.join(' AND ')} ORDER BY ao.created_at DESC LIMIT 100`,
+    params,
   );
   return result.rows as AssetOutputRow[];
 }

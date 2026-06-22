@@ -264,7 +264,7 @@ export async function getFashionItem(
     return null;
   }
 
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toFashionItemDetail(asset, outputs);
 }
 
@@ -291,7 +291,7 @@ export async function updateFashionItem(
 
   // Handle output selection
   if (data.selected_output_id) {
-    const allOutputs = await getAssetOutputs(id);
+    const allOutputs = await getAssetOutputs(id, account.workspace_id);
     const selectedOutput = allOutputs.find((o) => o.id === data.selected_output_id);
 
     if (!selectedOutput) {
@@ -321,7 +321,7 @@ export async function updateFashionItem(
     if (!updated) {
       return null;
     }
-    const outputs = await getAssetOutputs(id);
+    const outputs = await getAssetOutputs(id, account.workspace_id);
     return toFashionItemDetail(updated, outputs);
   }
 
@@ -330,7 +330,7 @@ export async function updateFashionItem(
   if (!freshAsset) {
     return null;
   }
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toFashionItemDetail(freshAsset, outputs);
 }
 

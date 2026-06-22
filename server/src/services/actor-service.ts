@@ -201,7 +201,7 @@ export async function getActor(
     return null;
   }
 
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toActorDetail(asset, outputs);
 }
 
@@ -251,7 +251,7 @@ export async function updateActor(
     return null;
   }
 
-  const outputs = await getAssetOutputs(id);
+  const outputs = await getAssetOutputs(id, account.workspace_id);
   return toActorDetail(updated, outputs);
 }
 

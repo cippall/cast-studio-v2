@@ -107,7 +107,7 @@ export async function regenerateActorOutput(
   }
 
   // Find current outputs for this layout type
-  const allOutputs = await getAssetOutputs(assetId);
+  const allOutputs = await getAssetOutputs(assetId, account.workspace_id);
   const currentOutputs = allOutputs.filter(
     (o) => o.layout_type === layoutType && o.status !== 'FAILED',
   );
