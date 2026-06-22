@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import apiClient from '@/lib/api-client';
 import { useLooks } from '@/hooks/useLooks';
+import { useMarketplaceSettings } from '@/hooks/useMarketplaceAdmin';
 import type { MarketplaceStatus } from '@cast/types';
 import type { ActorDetail, ActorOutput } from './actor-page-types';
 
@@ -14,6 +15,8 @@ export function useActorPage() {
   const queryClient = useQueryClient();
 
   const { data: looksData } = useLooks({});
+  const { data: marketplaceSettings } = useMarketplaceSettings();
+
   const looks = looksData?.data ?? [];
 
   const {
@@ -111,14 +114,18 @@ export function useActorPage() {
     });
   };
 
-  const requiredOutputs = ['headshot', 'fullshot', 'expressions_3x4'] as const;
+  const requiredOutputs = marketplaceSettings?.actor_package?.required_outputs ?? [
+    'headshot',
+    'fullshot',
+    'expressions_3x4',
+  ];
   const missingOutputs = useMemo(() => {
     if (!actor?.outputs) return requiredOutputs.slice();
     return requiredOutputs.filter((key) => {
       const output = actor.outputs[key];
       return !output || output.status !== 'SUCCESS';
     });
-  }, [actor?.outputs]);
+  }, [actor?.outputs, requiredOutputs]);
 
   const hasRequiredOutputs = missingOutputs.length === 0;
   const isGenerating = generateMutation.isPending || regenerateMutation.isPending;

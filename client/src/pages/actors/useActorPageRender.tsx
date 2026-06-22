@@ -103,9 +103,19 @@ export function useActorPageRender({
 
   const statusBadge =
     marketplaceStatus && marketplaceStatus !== 'NONE' ? (
-      <Badge variant={marketplaceStatus === 'MARKETPLACE_APPROVED' ? 'default' : 'outline'}>
+      <Badge
+        variant={
+          marketplaceStatus === 'MARKETPLACE_DELISTED'
+            ? 'secondary'
+            : marketplaceStatus === 'MARKETPLACE_APPROVED'
+              ? 'default'
+              : 'outline'
+        }
+      >
         <Lock className="mr-1 size-3" />
-        {marketplaceStatus.replace('MARKETPLACE_', '')}
+        {marketplaceStatus === 'MARKETPLACE_DELISTED'
+          ? 'Delisted'
+          : marketplaceStatus.replace('MARKETPLACE_', '')}
       </Badge>
     ) : undefined;
 

@@ -7,6 +7,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { AlertCircle, RotateCcw, Sparkles } from 'lucide-react';
+import { ObsoleteBanner } from '@/components/ObsoleteBanner';
 import EmptyStateV2 from '@/components/EmptyStateV2';
 import LightboxImage from '@/components/ui/LightboxImage';
 import type { ActorOutput } from './actor-page-types';
@@ -50,23 +51,10 @@ export default function OutputSectionContent({
   return (
     <>
       {isObsolete && output && (
-        <div className="mb-4 flex items-center gap-2 border border-warning/20 bg-warning/10 px-3 py-2 text-sm text-warning">
-          <AlertCircle className="size-4 shrink-0" />
-          <span>
-            {output.obsolete_reason ??
-              'This asset is based on a previous version. Regenerate to update.'}
-          </span>
-          {canRegenerate && (
-            <Button
-              variant="outline"
-              size="xs"
-              className="ml-auto"
-              onClick={() => onRegenerate(sectionKey)}
-            >
-              Regenerate
-            </Button>
-          )}
-        </div>
+        <ObsoleteBanner
+          reason={output.obsolete_reason}
+          onRegenerate={canRegenerate ? () => onRegenerate(sectionKey) : undefined}
+        />
       )}
 
       {isStale && output?.status === 'PENDING' && (
