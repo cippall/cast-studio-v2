@@ -1,6 +1,6 @@
 import type { GenerationState } from '@/components/GenerationStatus';
 
-export type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT';
+export type EntryMethod = 'FORM' | 'REFERENCE' | 'TEXT' | 'RANDOMIZE';
 export type WizardStage = 1 | 2 | 3;
 export type LayoutStep = 'headshot' | 'fullshot' | 'expressions_3x4';
 

@@ -52,6 +52,7 @@ export interface ActorDesignerState {
   isStructuredForm: boolean;
   isReference: boolean;
   isRawText: boolean;
+  isRandomize: boolean;
   selectedModel: string;
   numOutputs: number;
   actorName: string;
@@ -222,12 +223,13 @@ export function useActorDesignerState(): ActorDesignerState {
 
   const createActorMutation = useMutation({
     mutationFn: async () => {
-      const { data } = await apiClient.post('/actors', {
+      const payload: Record<string, unknown> = {
         entry_method: entryMethod,
-        ...(entryMethod === 'TEXT' && { prompt }),
-        ...(entryMethod === 'FORM' && { form_data: formValues }),
-        ...(randomize && { randomize: true }),
-      });
+      };
+      if (entryMethod === 'TEXT') payload.prompt = prompt;
+      if (entryMethod === 'FORM') payload.form_data = formValues;
+      if (entryMethod === 'RANDOMIZE') payload.randomize = true;
+      const { data } = await apiClient.post('/actors', payload);
       return data;
     },
     onSuccess: (data) => {
@@ -249,15 +251,16 @@ export function useActorDesignerState(): ActorDesignerState {
       numOutputs: number;
     }) => {
       if (!actorId) return [];
-      const { data } = await apiClient.post(`/actors/${actorId}/generate`, {
+      const payload: Record<string, unknown> = {
         layout_type: layoutType,
         model: selectedModel,
         options: { num_outputs: outputs },
-        ...(entryMethod === 'FORM' && { form_data: formValues }),
-        ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
-        ...(entryMethod === 'TEXT' && { prompt }),
-        ...(randomize && { randomize: true }),
-      });
+      };
+      if (entryMethod === 'FORM') payload.form_data = formValues;
+      if (entryMethod === 'REFERENCE') payload.reference_images = referenceImages;
+      if (entryMethod === 'TEXT') payload.prompt = prompt;
+      if (entryMethod === 'RANDOMIZE') payload.randomize = true;
+      const { data } = await apiClient.post(`/actors/${actorId}/generate`, payload);
       return data.outputs ?? [];
     },
     onSuccess: (outputs) => {
@@ -282,15 +285,16 @@ export function useActorDesignerState(): ActorDesignerState {
       numOutputs: number;
     }) => {
       if (!actorId) return [];
-      const { data } = await apiClient.post(`/actors/${actorId}/regenerate`, {
+      const payload: Record<string, unknown> = {
         layout_type: layoutType,
         model: selectedModel,
         options: { num_outputs: outputs },
-        ...(entryMethod === 'FORM' && { form_data: formValues }),
-        ...(entryMethod === 'REFERENCE' && { reference_images: referenceImages }),
-        ...(entryMethod === 'TEXT' && { prompt }),
-        ...(randomize && { randomize: true }),
-      });
+      };
+      if (entryMethod === 'FORM') payload.form_data = formValues;
+      if (entryMethod === 'REFERENCE') payload.reference_images = referenceImages;
+      if (entryMethod === 'TEXT') payload.prompt = prompt;
+      if (entryMethod === 'RANDOMIZE') payload.randomize = true;
+      const { data } = await apiClient.post(`/actors/${actorId}/regenerate`, payload);
       return data.outputs ?? [];
     },
     onSuccess: (outputs) => {
@@ -323,9 +327,10 @@ export function useActorDesignerState(): ActorDesignerState {
   const selectedOptionId = selectedOptions[currentStep.key];
   const isStepConfirmed = confirmedSteps.has(currentStep.key);
   const canConfirm = selectedOptionId !== null && !isGenerating && !isStepConfirmed;
-  const isStructuredForm = entryMethod === 'FORM' && stage === 2;
+  const isStructuredForm = (entryMethod === 'FORM' || entryMethod === 'RANDOMIZE') && stage === 2;
   const isReference = entryMethod === 'REFERENCE' && stage === 2;
   const isRawText = entryMethod === 'TEXT' && stage === 2;
+  const isRandomize = entryMethod === 'RANDOMIZE';
 
   const handleSelectOption = useCallback(
     (id: string) => {
@@ -338,7 +343,7 @@ export function useActorDesignerState(): ActorDesignerState {
     setConfirmedSteps((p) => new Set(p).add(currentStep.key));
     if (currentStepIndex < LAYOUT_STEPS.length - 1) {
       setCurrentStepIndex(currentStepIndex + 1);
-    } else if (entryMethod === 'FORM') {
+    } else if (entryMethod === 'FORM' || entryMethod === 'RANDOMIZE') {
       setTaxonomyValues({ ...formValues });
       setStage(3);
     } else {
@@ -429,6 +434,14 @@ export function useActorDesignerState(): ActorDesignerState {
         setCreateError('Add a description or upload at least one reference image.');
         return;
       }
+      if (entryMethod === 'RANDOMIZE') {
+        // Generate random form values for all taxonomy fields
+        const randomValues: Record<string, string> = {};
+        // We'll seed random values via the API by passing randomize flag
+        // The backend handles random generation; just set local state
+        setFormValues(randomValues);
+        setRandomize(true);
+      }
       createActorMutation.mutate();
     },
     handleGenerate,
@@ -461,6 +474,7 @@ export function useActorDesignerState(): ActorDesignerState {
     isStructuredForm,
     isReference,
     isRawText,
+    isRandomize,
     actorName,
     taxonomyValues,
     createError,

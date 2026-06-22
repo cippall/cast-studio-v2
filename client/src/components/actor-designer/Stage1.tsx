@@ -3,7 +3,15 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
-import { ChevronRight, Loader2, FormInput, ImageIcon, FileText, AlertCircle } from 'lucide-react';
+import {
+  ChevronRight,
+  Loader2,
+  FormInput,
+  ImageIcon,
+  FileText,
+  AlertCircle,
+  Shuffle,
+} from 'lucide-react';
 import { cn } from '@/lib/utils';
 import ActorFormFields from '@/components/ActorFormFields';
 import ReferenceImageUpload from '@/components/ReferenceImageUpload';
@@ -27,6 +35,12 @@ const ENTRY_METHODS = [
     icon: FileText,
     title: 'Raw Text',
     desc: 'Describe the actor freely in your own words.',
+  },
+  {
+    value: 'RANDOMIZE' as EntryMethod,
+    icon: Shuffle,
+    title: 'Randomize',
+    desc: 'Generate a random actor identity automatically.',
   },
 ];
 
@@ -76,7 +90,7 @@ export default function Stage1({
       <RadioGroup
         value={entryMethod}
         onValueChange={(v) => onSelect(v as EntryMethod)}
-        className="grid grid-cols-1 gap-3 sm:grid-cols-3"
+        className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4"
       >
         {ENTRY_METHODS.map((method) => (
           <Label
@@ -140,6 +154,15 @@ export default function Stage1({
         </div>
       )}
 
+      {entryMethod === 'RANDOMIZE' && (
+        <div className="flex items-center gap-2 border border-border-subtle bg-muted/30 px-4 py-3 text-sm text-muted-foreground">
+          <Shuffle className="size-4 shrink-0" />
+          <span>
+            A random actor identity will be generated. You can edit all properties in Stage 3.
+          </span>
+        </div>
+      )}
+
       {(entryMethod === 'FORM' || entryMethod === 'TEXT') && (
         <div className="flex items-center gap-2">
           <Checkbox
@@ -166,6 +189,11 @@ export default function Stage1({
             <>
               <Loader2 className="mr-2 size-4 animate-spin" />
               Creating...
+            </>
+          ) : entryMethod === 'RANDOMIZE' ? (
+            <>
+              Generate Random Actor
+              <Shuffle className="ml-2 size-4" />
             </>
           ) : (
             <>
