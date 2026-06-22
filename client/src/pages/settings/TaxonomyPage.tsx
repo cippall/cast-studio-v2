@@ -41,6 +41,8 @@ const INPUT_TYPES = [
   { value: 'TEXT', label: 'Text' },
   { value: 'NUMBER', label: 'Number' },
   { value: 'CHECKBOX', label: 'Checkbox' },
+  { value: 'SLIDER', label: 'Slider' },
+  { value: 'MULTI_SELECT', label: 'Multi-Select' },
 ];
 
 const CATEGORY_LABELS: Record<string, string> = {

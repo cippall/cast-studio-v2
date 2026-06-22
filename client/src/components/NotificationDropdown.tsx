@@ -96,6 +96,10 @@ export default function NotificationDropdown() {
                       navigate('/commissions');
                     } else if (notif.type.startsWith('ASSET')) {
                       navigate('/actors');
+                    } else if (notif.type.startsWith('MARKETPLACE')) {
+                      navigate('/marketplace/manage');
+                    } else if (notif.type.startsWith('COLLECTION')) {
+                      navigate('/collections');
                     }
                   }}
                 >

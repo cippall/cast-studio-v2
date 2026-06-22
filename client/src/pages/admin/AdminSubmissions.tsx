@@ -97,7 +97,13 @@ export default function AdminSubmissions() {
       header: 'Type',
       sortable: false,
       render: (row) => (
-        <Badge variant="outline">{row.asset_type === 'ACTOR' ? 'Actor Package' : 'Look'}</Badge>
+        <Badge variant="outline">
+          {row.asset_type === 'ACTOR'
+            ? 'Actor Package'
+            : row.asset_type === 'FASHION_ITEM'
+              ? 'Fashion Item'
+              : 'Look'}
+        </Badge>
       ),
     },
     {

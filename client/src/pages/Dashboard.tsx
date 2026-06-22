@@ -169,9 +169,15 @@ export default function Dashboard() {
           <h3 className="font-heading text-[22px] font-normal leading-[30px] tracking-[-0.01em] text-foreground">
             Quick Actions
           </h3>
+          <button
+            className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground hover:text-foreground transition-colors"
+            onClick={() => navigate('/actors')}
+          >
+            View All
+          </button>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {quickActions.slice(0, 3).map((action) => (
+          {quickActions.map((action) => (
             <div
               key={action.path}
               className="border border-border p-6 flex flex-col justify-between h-48 bg-surface-bright hover:bg-surface-container-low transition-colors duration-200 cursor-pointer"

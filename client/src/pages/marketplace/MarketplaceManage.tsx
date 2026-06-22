@@ -94,7 +94,13 @@ export default function MarketplaceManage() {
       header: 'Type',
       sortable: false,
       render: (row: ListingRow) => (
-        <Badge variant="secondary">{row.listing_type === 'ACTOR_PACKAGE' ? 'Actor' : 'Look'}</Badge>
+        <Badge variant="secondary">
+          {row.listing_type === 'ACTOR_PACKAGE'
+            ? 'Actor'
+            : row.listing_type === 'FASHION_ITEM'
+              ? 'Fashion Item'
+              : 'Look'}
+        </Badge>
       ),
     },
     {
