@@ -11,10 +11,14 @@ const updateAccountSchema = z
   .object({
     name: z.string().min(1).max(255).optional(),
     is_api_able: z.boolean().optional(),
+    role: z.enum(['ADMIN', 'ARTIST', 'CLIENT']).optional(),
   })
-  .refine((data) => data.name !== undefined || data.is_api_able !== undefined, {
-    message: 'At least one field (name or is_api_able) must be provided',
-  });
+  .refine(
+    (data) => data.name !== undefined || data.is_api_able !== undefined || data.role !== undefined,
+    {
+      message: 'At least one field (name, is_api_able, or role) must be provided',
+    },
+  );
 
 const accountParamsSchema = z.object({
   id: z.string().uuid('Invalid account ID'),
@@ -58,7 +62,7 @@ router.patch('/:id', requireSession, async (req, res) => {
     }
 
     const { id } = parsedParams.data;
-    const { name, is_api_able } = parsed.data;
+    const { name, is_api_able, role } = parsed.data;
     const currentAccount = req.account!;
 
     // Admin can update any account; non-admin can only update their own name
@@ -75,12 +79,21 @@ router.patch('/:id', requireSession, async (req, res) => {
       return;
     }
 
-    // Only admins can toggle is_api_able
+    // Only admins can toggle is_api_able or role
     if (is_api_able !== undefined && !isAdmin) {
       res.status(403).json({
         error: {
           code: 'FORBIDDEN',
           message: 'Only admins can toggle API access',
+        },
+      });
+      return;
+    }
+    if (role !== undefined && !isAdmin) {
+      res.status(403).json({
+        error: {
+          code: 'FORBIDDEN',
+          message: 'Only admins can change roles',
         },
       });
       return;
@@ -114,6 +127,11 @@ router.patch('/:id', requireSession, async (req, res) => {
     if (is_api_able !== undefined) {
       setClauses.push(`is_api_able = $${paramIndex++}`);
       values.push(is_api_able);
+    }
+
+    if (role !== undefined) {
+      setClauses.push(`role = $${paramIndex++}`);
+      values.push(role);
     }
 
     if (setClauses.length === 0) {
@@ -152,14 +170,39 @@ router.get('/', requireSession, async (req, res) => {
     const page = parseInt(req.query.page as string) || 1;
     const pageSize = parseInt(req.query.pageSize as string) || 20;
     const offset = (page - 1) * pageSize;
+    const role = req.query.role as string | undefined;
+    const workspaceId = req.query.workspace_id as string | undefined;
 
-    const countResult = await query('SELECT COUNT(*)::int AS count FROM accounts');
+    const conditions: string[] = [];
+    const params: unknown[] = [];
+    let paramIndex = 0;
+
+    if (role) {
+      paramIndex++;
+      conditions.push(`role = $${paramIndex}`);
+      params.push(role);
+    }
+    if (workspaceId) {
+      paramIndex++;
+      conditions.push(`workspace_id = $${paramIndex}`);
+      params.push(workspaceId);
+    }
+
+    const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : '';
+
+    const countResult = await query(
+      `SELECT COUNT(*)::int AS count FROM accounts ${whereClause}`,
+      params,
+    );
     const totalItems = countResult.rows[0]?.count ?? 0;
 
+    const dataParams = [...params, pageSize, offset];
+    const limitIdx = paramIndex + 1;
+    const offsetIdx = paramIndex + 2;
     const result = await query(
       `SELECT id, workspace_id, name, email, role, is_api_able, true AS is_active, created_at
-       FROM accounts ORDER BY created_at DESC LIMIT $1 OFFSET $2`,
-      [pageSize, offset],
+       FROM accounts ${whereClause} ORDER BY created_at DESC LIMIT $${limitIdx} OFFSET $${offsetIdx}`,
+      dataParams,
     );
 
     res.json({

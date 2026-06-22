@@ -543,14 +543,14 @@ describe('PATCH /api/accounts/:id', () => {
     expect(res.body.name).toBe('New Name');
   });
 
-  it('422 on invalid body field', async () => {
-    const admin = makeAccountRow({ id: ADMIN_UUID, role: 'ADMIN', is_api_able: true });
-    seedRequireSessionQueries(admin);
+  it('403 when non-admin tries to change role', async () => {
+    const artist = makeAccountRow({ id: ARTIST_UUID, role: 'ARTIST', is_api_able: false });
+    seedRequireSessionQueries(artist);
 
-    const res = await request(createAccountsApp(admin))
+    const res = await request(createAccountsApp(artist))
       .patch(`/api/accounts/${ARTIST_UUID}`)
-      .send({ role: 'ADMIN' }); // can't change role via PATCH
-    expect(res.status).toBe(422);
+      .send({ role: 'ADMIN' });
+    expect(res.status).toBe(403);
   });
 
   it('422 on invalid account id', async () => {

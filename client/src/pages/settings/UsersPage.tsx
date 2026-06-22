@@ -4,6 +4,7 @@
  */
 import { useState } from 'react';
 import { useAdminUsers, useUpdateUser, type AdminUser } from '@/hooks/useAdminUsers';
+import { useAdminWorkspaces } from '@/hooks/useAdminWorkspaces';
 import { Badge } from '@/components/ui/badge';
 import { DataTable, type Column } from '@/components/DataTable';
 import {
@@ -34,12 +35,17 @@ const ROLE_OPTIONS = [
 
 export default function UsersPage() {
   const [roleFilter, setRoleFilter] = useState<string | null>(null);
+  const [workspaceFilter, setWorkspaceFilter] = useState<string | null>(null);
   const [editId, setEditId] = useState<string | null>(null);
   const [editRole, setEditRole] = useState<string | null>(null);
   const [editApi, setEditApi] = useState(false);
 
+  const { data: workspaces } = useAdminWorkspaces();
+
   const { data, isLoading, isError, error } = useAdminUsers(
-    roleFilter ? { role: roleFilter, pageSize: 50 } : { pageSize: 50 },
+    roleFilter || workspaceFilter
+      ? { role: roleFilter ?? undefined, workspaceId: workspaceFilter ?? undefined, pageSize: 50 }
+      : { pageSize: 50 },
   );
   const updateUser = useUpdateUser();
 
@@ -118,6 +124,22 @@ export default function UsersPage() {
               {ROLE_OPTIONS.map((r) => (
                 <SelectItem key={r.value} value={r.value}>
                   {r.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select
+            value={workspaceFilter ?? ''}
+            onValueChange={(v) => setWorkspaceFilter(v || null)}
+          >
+            <SelectTrigger className="w-44">
+              <SelectValue placeholder="All workspaces" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="">All</SelectItem>
+              {workspaces?.map((w) => (
+                <SelectItem key={w.id} value={w.id}>
+                  {w.name}
                 </SelectItem>
               ))}
             </SelectContent>

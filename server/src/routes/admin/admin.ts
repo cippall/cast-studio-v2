@@ -19,6 +19,7 @@ import modelRoutes from './model-routes.js';
 import modelSchemaRoutes from './model-schema-routes.js';
 import promptRoutes from './prompt-routes.js';
 import taxonomyRoutes from './taxonomy-routes.js';
+import commissionFormRoutes from './commission-form-routes.js';
 
 const router = Router();
 
@@ -41,5 +42,6 @@ router.use(modelRoutes);
 router.use(modelSchemaRoutes);
 router.use(promptRoutes);
 router.use(taxonomyRoutes);
+router.use(commissionFormRoutes);
 
 export default router;

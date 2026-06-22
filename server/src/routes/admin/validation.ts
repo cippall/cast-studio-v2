@@ -92,6 +92,35 @@ export const updatePromptSchema = z
   });
 
 // -------------------------------------------------------------------
+// Commission form endpoints
+// -------------------------------------------------------------------
+
+const formFieldSchema = z.object({
+  key: z.string().min(1, { message: 'key is required' }),
+  label: z.string().min(1, { message: 'label is required' }),
+  input_type: z.string().min(1, { message: 'input_type is required' }),
+  is_required: z.boolean().optional(),
+  options: z.array(z.object({ value: z.string(), label: z.string() })).optional(),
+});
+
+export const createCommissionFormSchema = z.object({
+  name: z.string().min(1, { message: 'name is required' }),
+  fields: z.array(formFieldSchema).min(1, { message: 'fields must be a non-empty array' }),
+  is_active: z.boolean().optional(),
+});
+
+export const updateCommissionFormSchema = z
+  .object({
+    name: z.string().min(1, { message: 'name must not be empty' }).optional(),
+    fields: z.array(formFieldSchema).optional(),
+    is_active: z.boolean().optional(),
+  })
+  .refine(
+    (data) => data.name !== undefined || data.fields !== undefined || data.is_active !== undefined,
+    { message: 'At least one of name, fields, or is_active is required' },
+  );
+
+// -------------------------------------------------------------------
 // Inferred types
 // -------------------------------------------------------------------
 
@@ -104,3 +133,5 @@ export type CreateTaxonomyInput = z.infer<typeof createTaxonomySchema>;
 export type UpdateTaxonomyInput = z.infer<typeof updateTaxonomySchema>;
 export type CreatePromptInput = z.infer<typeof createPromptSchema>;
 export type UpdatePromptInput = z.infer<typeof updatePromptSchema>;
+export type CreateCommissionFormInput = z.infer<typeof createCommissionFormSchema>;
+export type UpdateCommissionFormInput = z.infer<typeof updateCommissionFormSchema>;
