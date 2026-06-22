@@ -3,7 +3,7 @@
  * Migrated to use LibraryLayout composite component.
  * Clients see two sections: "My Assets" and "Similar in Marketplace".
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useFashionItems } from '@/hooks/useFashionItems';
@@ -14,80 +14,11 @@ import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layo
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { FashionItemListItem } from '@cast/types';
-import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import EmptyStateV2 from '@/components/EmptyStateV2';
-
-const FASHION_FILTER_GROUPS: FilterGroup[] = [
-  {
-    key: 'gender',
-    label: 'Gender',
-    options: [
-      { label: 'Women', value: 'women' },
-      { label: 'Men', value: 'men' },
-      { label: 'Girls', value: 'girls' },
-      { label: 'Boys', value: 'boys' },
-      { label: 'Unisex', value: 'unisex' },
-    ],
-  },
-  {
-    key: 'itemType',
-    label: 'Item Type',
-    options: [
-      { label: 'Clothing', value: 'clothing' },
-      { label: 'Shoes', value: 'shoes' },
-      { label: 'Accessories', value: 'accessories' },
-    ],
-  },
-  {
-    key: 'subType',
-    label: 'Sub-type',
-    options: [
-      { label: 'Jackets', value: 'jackets' },
-      { label: 'Shirts', value: 'shirts' },
-      { label: 'Pants', value: 'pants' },
-      { label: 'Dresses', value: 'dresses' },
-      { label: 'Sneakers', value: 'sneakers' },
-      { label: 'Boots', value: 'boots' },
-      { label: 'Bags', value: 'bags' },
-      { label: 'Jewelry', value: 'jewelry' },
-    ],
-  },
-  {
-    key: 'style',
-    label: 'Style',
-    options: [
-      { label: 'Casual', value: 'casual' },
-      { label: 'Formal', value: 'formal' },
-      { label: 'Streetwear', value: 'streetwear' },
-      { label: 'Vintage', value: 'vintage' },
-      { label: 'Minimalist', value: 'minimalist' },
-    ],
-  },
-  {
-    key: 'color',
-    label: 'Color',
-    options: [
-      { label: 'Black', value: 'black' },
-      { label: 'White', value: 'white' },
-      { label: 'Red', value: 'red' },
-      { label: 'Blue', value: 'blue' },
-      { label: 'Green', value: 'green' },
-      { label: 'Neutral', value: 'neutral' },
-    ],
-  },
-  {
-    key: 'season',
-    label: 'Season',
-    options: [
-      { label: 'Spring', value: 'spring' },
-      { label: 'Summer', value: 'summer' },
-      { label: 'Fall', value: 'fall' },
-      { label: 'Winter', value: 'winter' },
-    ],
-  },
-];
+import { useTaxonomyFilters, TAXONOMY_CATEGORIES } from '@/hooks/useTaxonomyFilters';
+import type { FilterGroup } from '@/components/FilterPanel';
 
 const PAGE_SIZE = 20;
 
@@ -115,14 +46,21 @@ export default function FashionItemLibrary() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showFilters, setShowFilters] = useState(true);
 
-  const [filters, setFilters] = useState<Record<string, string[]>>(() => {
+  const { data: dynamicFilterGroups = [] } = useTaxonomyFilters(TAXONOMY_CATEGORIES.FASHION_ITEM);
+
+  const filtersInitialized = useRef(false);
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (filtersInitialized.current || dynamicFilterGroups.length === 0) return;
     const initial: Record<string, string[]> = {};
-    FASHION_FILTER_GROUPS.forEach((group) => {
+    dynamicFilterGroups.forEach((group) => {
       const vals = searchParams.getAll(group.key);
       if (vals.length > 0) initial[group.key] = vals;
     });
-    return initial;
-  });
+    filtersInitialized.current = true;
+    setFilters(initial);
+  }, [dynamicFilterGroups, searchParams]);
   const [sharedWithMe, setSharedWithMe] = useState(searchParams.get('shared') === 'true');
 
   const queryFilters = useMemo(() => {
@@ -229,7 +167,7 @@ export default function FashionItemLibrary() {
       <LibraryLayout<FashionItemListItem>
         title="Fashion Items"
         description="items"
-        filterGroups={FASHION_FILTER_GROUPS}
+        filterGroups={dynamicFilterGroups}
         selectedFilters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}

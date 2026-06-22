@@ -3,7 +3,7 @@
  * Migrated to use LibraryLayout composite component.
  * Clients see two sections: "My Assets" and "Similar in Marketplace".
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useLooks } from '@/hooks/useLooks';
@@ -14,68 +14,11 @@ import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layo
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { LookListItem } from '@cast/types';
-import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import EmptyStateV2 from '@/components/EmptyStateV2';
-
-const LOOK_FILTER_GROUPS: FilterGroup[] = [
-  {
-    key: 'gender',
-    label: 'Gender',
-    options: [
-      { label: 'Women', value: 'women' },
-      { label: 'Men', value: 'men' },
-      { label: 'Girls', value: 'girls' },
-      { label: 'Boys', value: 'boys' },
-      { label: 'Unisex', value: 'unisex' },
-    ],
-  },
-  {
-    key: 'style',
-    label: 'Style',
-    options: [
-      { label: 'Casual', value: 'casual' },
-      { label: 'Formal', value: 'formal' },
-      { label: 'Streetwear', value: 'streetwear' },
-      { label: 'Bohemian', value: 'bohemian' },
-      { label: 'Minimalist', value: 'minimalist' },
-    ],
-  },
-  {
-    key: 'season',
-    label: 'Season',
-    options: [
-      { label: 'Spring', value: 'spring' },
-      { label: 'Summer', value: 'summer' },
-      { label: 'Fall', value: 'fall' },
-      { label: 'Winter', value: 'winter' },
-    ],
-  },
-  {
-    key: 'color',
-    label: 'Color',
-    options: [
-      { label: 'Black', value: 'black' },
-      { label: 'White', value: 'white' },
-      { label: 'Red', value: 'red' },
-      { label: 'Blue', value: 'blue' },
-      { label: 'Green', value: 'green' },
-      { label: 'Neutral', value: 'neutral' },
-    ],
-  },
-  {
-    key: 'occasion',
-    label: 'Occasion',
-    options: [
-      { label: 'Everyday', value: 'everyday' },
-      { label: 'Work', value: 'work' },
-      { label: 'Evening', value: 'evening' },
-      { label: 'Outdoor', value: 'outdoor' },
-      { label: 'Athletic', value: 'athletic' },
-    ],
-  },
-];
+import { useTaxonomyFilters, TAXONOMY_CATEGORIES } from '@/hooks/useTaxonomyFilters';
+import type { FilterGroup } from '@/components/FilterPanel';
 
 const PAGE_SIZE = 20;
 
@@ -103,14 +46,21 @@ export default function LookLibrary() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showFilters, setShowFilters] = useState(true);
 
-  const [filters, setFilters] = useState<Record<string, string[]>>(() => {
+  const { data: dynamicFilterGroups = [] } = useTaxonomyFilters(TAXONOMY_CATEGORIES.LOOK);
+
+  const filtersInitialized = useRef(false);
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (filtersInitialized.current || dynamicFilterGroups.length === 0) return;
     const initial: Record<string, string[]> = {};
-    LOOK_FILTER_GROUPS.forEach((group) => {
+    dynamicFilterGroups.forEach((group) => {
       const vals = searchParams.getAll(group.key);
       if (vals.length > 0) initial[group.key] = vals;
     });
-    return initial;
-  });
+    filtersInitialized.current = true;
+    setFilters(initial);
+  }, [dynamicFilterGroups, searchParams]);
   const [sharedWithMe, setSharedWithMe] = useState(searchParams.get('shared') === 'true');
 
   const queryFilters = useMemo(() => {
@@ -217,7 +167,7 @@ export default function LookLibrary() {
       <LibraryLayout<LookListItem>
         title="Looks"
         description="looks"
-        filterGroups={LOOK_FILTER_GROUPS}
+        filterGroups={dynamicFilterGroups}
         selectedFilters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}

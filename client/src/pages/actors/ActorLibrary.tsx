@@ -3,7 +3,7 @@
  * Migrated to use LibraryLayout composite component.
  * Clients see two sections: "My Assets" and "Similar in Marketplace".
  */
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useMemo, useCallback, useEffect, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useCurrentUser } from '@/hooks/useAuth';
 import { useActors } from '@/hooks/useActors';
@@ -14,51 +14,11 @@ import LibraryLayout, { type SortOption, type ViewMode } from '@/components/layo
 import PageContainer from '@/components/layout/PageContainer';
 import AssetCardV2 from '@/components/AssetCardV2';
 import type { ActorListItem } from '@cast/types';
-import type { FilterGroup } from '@/components/FilterPanel';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Separator } from '@/components/ui/separator';
 import EmptyStateV2 from '@/components/EmptyStateV2';
-
-const ACTOR_FILTER_GROUPS: FilterGroup[] = [
-  {
-    key: 'gender',
-    label: 'Gender',
-    options: [
-      { label: 'Female', value: 'female' },
-      { label: 'Male', value: 'male' },
-      { label: 'Non-binary', value: 'non_binary' },
-    ],
-  },
-  {
-    key: 'age',
-    label: 'Age',
-    options: [
-      { label: 'Young', value: 'young' },
-      { label: 'Middle', value: 'middle' },
-      { label: 'Mature', value: 'mature' },
-    ],
-  },
-  {
-    key: 'vibe',
-    label: 'Vibe',
-    options: [
-      { label: 'Cyberpunk', value: 'cyberpunk' },
-      { label: 'Fantasy', value: 'fantasy' },
-      { label: 'Realistic', value: 'realistic' },
-      { label: 'Stylized', value: 'stylized' },
-    ],
-  },
-  {
-    key: 'style',
-    label: 'Style',
-    options: [
-      { label: 'Casual', value: 'casual' },
-      { label: 'Formal', value: 'formal' },
-      { label: 'Editorial', value: 'editorial' },
-      { label: 'Streetwear', value: 'streetwear' },
-    ],
-  },
-];
+import { useTaxonomyFilters, TAXONOMY_CATEGORIES } from '@/hooks/useTaxonomyFilters';
+import type { FilterGroup } from '@/components/FilterPanel';
 
 const PAGE_SIZE = 20;
 
@@ -94,14 +54,21 @@ export default function ActorLibrary() {
   const [viewMode, setViewMode] = useState<ViewMode>('grid');
   const [showFilters, setShowFilters] = useState(true);
 
-  const [filters, setFilters] = useState<Record<string, string[]>>(() => {
+  const { data: dynamicFilterGroups = [] } = useTaxonomyFilters(TAXONOMY_CATEGORIES.ACTOR);
+
+  const filtersInitialized = useRef(false);
+  const [filters, setFilters] = useState<Record<string, string[]>>({});
+
+  useEffect(() => {
+    if (filtersInitialized.current || dynamicFilterGroups.length === 0) return;
     const initial: Record<string, string[]> = {};
-    ACTOR_FILTER_GROUPS.forEach((group) => {
+    dynamicFilterGroups.forEach((group) => {
       const vals = searchParams.getAll(group.key);
       if (vals.length > 0) initial[group.key] = vals;
     });
-    return initial;
-  });
+    filtersInitialized.current = true;
+    setFilters(initial);
+  }, [dynamicFilterGroups, searchParams]);
   const [sharedWithMe, setSharedWithMe] = useState(searchParams.get('shared') === 'true');
 
   const queryFilters = useMemo(() => {
@@ -208,7 +175,7 @@ export default function ActorLibrary() {
       <LibraryLayout<ActorListItem>
         title="Actors"
         description="actors"
-        filterGroups={ACTOR_FILTER_GROUPS}
+        filterGroups={dynamicFilterGroups}
         selectedFilters={filters}
         onFilterChange={handleFilterChange}
         onResetFilters={handleResetFilters}
