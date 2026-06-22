@@ -38,7 +38,7 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
             ))}
           </SelectContent>
         </Select>
-        {description && <p className="text-xs text-[#A8A29E]">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
     );
   }
@@ -50,7 +50,7 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
       <div className="space-y-2">
         <div className="flex items-center justify-between">
           <Label htmlFor={`param-${name}`}>{label}</Label>
-          <span className="text-sm font-mono text-[#57534E]">{numValue}</span>
+          <span className="text-sm font-mono text-secondary">{numValue}</span>
         </div>
         <Slider
           id={`param-${name}`}
@@ -60,7 +60,7 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
           value={[numValue]}
           onValueChange={(vals) => onChange(Array.isArray(vals) ? vals[0] : vals)}
         />
-        {description && <p className="text-xs text-[#A8A29E]">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
     );
   }
@@ -79,7 +79,7 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
           max={field.maximum}
           step={field.maximum !== undefined && field.maximum - (field.minimum ?? 0) <= 10 ? 0.1 : 1}
         />
-        {description && <p className="text-xs text-[#A8A29E]">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
     );
   }
@@ -93,12 +93,12 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
           id={`param-${name}`}
           checked={boolValue}
           onChange={(e) => onChange(e.target.checked)}
-          className="size-4 border-[#D6D3D1] bg-[#FAFAF9] accent-[#78716C]"
+          className="size-4 border-input bg-background accent-primary"
         />
         <Label htmlFor={`param-${name}`} className="cursor-pointer">
           {label}
         </Label>
-        {description && <p className="text-xs text-[#A8A29E]">{description}</p>}
+        {description && <p className="text-xs text-muted-foreground">{description}</p>}
       </div>
     );
   }
@@ -113,7 +113,7 @@ export default function SchemaField({ name, field, value, onChange }: SchemaFiel
         value={strValue}
         onChange={(e) => onChange(e.target.value)}
       />
-      {description && <p className="text-xs text-[#A8A29E]">{description}</p>}
+      {description && <p className="text-xs text-muted-foreground">{description}</p>}
     </div>
   );
 }

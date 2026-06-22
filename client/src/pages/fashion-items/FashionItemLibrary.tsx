@@ -64,12 +64,12 @@ export default function FashionItemLibrary() {
   const [sharedWithMe, setSharedWithMe] = useState(searchParams.get('shared') === 'true');
 
   const queryFilters = useMemo(() => {
-    const result: Record<string, string | boolean | number> = {
+    const result: Record<string, string | string[] | boolean | number> = {
       page,
       pageSize: PAGE_SIZE,
     };
     Object.entries(filters).forEach(([key, vals]) => {
-      if (vals.length === 1) result[key] = vals[0];
+      if (vals.length > 0) result[key] = vals;
     });
     if (sharedWithMe) result.sharedWithMe = true;
     return result;

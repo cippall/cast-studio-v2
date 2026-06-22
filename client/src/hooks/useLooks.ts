@@ -6,13 +6,18 @@ import apiClient from '@/lib/api-client';
 import type { LookListItem, PaginatedResponse, PaginationParams } from '@cast/types';
 
 interface LookFilters extends PaginationParams {
-  gender?: string;
-  style?: string;
-  season?: string;
-  color?: string;
-  occasion?: string;
+  gender?: string | string[];
+  style?: string | string[];
+  season?: string | string[];
+  color?: string | string[];
+  occasion?: string | string[];
   sharedWithMe?: boolean;
   creatorId?: string;
+  [key: string]: string | string[] | boolean | number | undefined;
+}
+
+function appendParam(params: URLSearchParams, key: string, value: string) {
+  params.append(key, value);
 }
 
 function buildQueryString(filters: LookFilters): string {
@@ -21,13 +26,28 @@ function buildQueryString(filters: LookFilters): string {
   if (filters.pageSize) params.set('pageSize', String(filters.pageSize));
   if (filters.sortBy) params.set('sortBy', filters.sortBy);
   if (filters.sortOrder) params.set('sortOrder', filters.sortOrder);
-  if (filters.gender) params.set('gender', filters.gender);
-  if (filters.style) params.set('style', filters.style);
-  if (filters.season) params.set('season', filters.season);
-  if (filters.color) params.set('color', filters.color);
-  if (filters.occasion) params.set('occasion', filters.occasion);
   if (filters.sharedWithMe) params.set('shared_with_me', 'true');
   if (filters.creatorId) params.set('creator_id', filters.creatorId);
+
+  // Handle all filter keys: known taxonomy fields + dynamic ones
+  const handledKeys = new Set([
+    'page',
+    'pageSize',
+    'sortBy',
+    'sortOrder',
+    'shared_with_me',
+    'creator_id',
+  ]);
+  for (const [key, value] of Object.entries(filters)) {
+    if (handledKeys.has(key) || value === undefined || value === null) continue;
+    if (Array.isArray(value)) {
+      for (const v of value) {
+        if (v) appendParam(params, key, v);
+      }
+    } else if (value !== '') {
+      params.set(key, String(value));
+    }
+  }
   return params.toString();
 }
 

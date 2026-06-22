@@ -2,6 +2,7 @@
  * LibraryLayout — composite layout for all library pages.
  */
 import { useState, type ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import FilterPanel, { type FilterGroup } from '@/components/FilterPanel';
 import EmptyStateV2 from '@/components/EmptyStateV2';
@@ -80,6 +81,7 @@ export default function LibraryLayout<T>({
   showFilters = true,
   onToggleFilters,
 }: LibraryLayoutProps<T>) {
+  const navigate = useNavigate();
   const [showMobileFilters, setShowMobileFilters] = useState(false);
   const activeFilterCount = Object.values(selectedFilters).reduce(
     (sum, vals) => sum + vals.length,
@@ -100,7 +102,7 @@ export default function LibraryLayout<T>({
         <div className="flex items-center gap-2">
           {extraActions}
           {newItemPath && (
-            <Button size="sm" onClick={() => (window.location.href = newItemPath)}>
+            <Button size="sm" onClick={() => navigate(newItemPath)}>
               {newItemLabel ?? '+ New'}
             </Button>
           )}
