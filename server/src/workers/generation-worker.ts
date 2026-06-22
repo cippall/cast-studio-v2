@@ -65,7 +65,9 @@ async function processPendingOutputs(): Promise<void> {
 }
 
 /**
- * Process a single pending output by polling fal.ai.
+ * Process a single pending output.
+ * Routes by provider: openrouter results are already in generation_params,
+ * fal.ai jobs need polling.
  */
 async function processSingleOutput(output: {
   id: string;
@@ -74,8 +76,40 @@ async function processSingleOutput(output: {
   layout_type: string;
   generation_params: Record<string, unknown> | null;
 }): Promise<void> {
-  // If generation_params has a fal_job_id, poll that job
   const generationParams = output.generation_params ?? {};
+
+  // If this output has an openrouter_result, skip polling — result is already stored
+  const openRouterResult = generationParams['openrouter_result'] as
+    | { content: string; finish_reason: string | null }
+    | undefined;
+
+  if (openRouterResult) {
+    if (openRouterResult.finish_reason === 'error') {
+      // OpenRouter returned an error (e.g. no API key)
+      await updateOutputsStatus(output.asset_id, [output.id], 'FAILED', {
+        error_message: 'OpenRouter generation failed (no API key or API error)',
+        image_url: null,
+      } as Record<string, unknown>);
+      notifyAssetCreator(output.asset_id, 'WORKFLOW_FAILED', {
+        title: 'Generation Failed',
+        message: `Your ${output.layout_type} generation failed.`,
+        reason: 'OpenRouter generation failed (no API key or API error)',
+      }).catch(() => {});
+    } else {
+      // OpenRouter succeeded — store content as text result
+      await updateOutputsStatus(output.asset_id, [output.id], 'SUCCESS', {
+        image_url: null,
+        openrouter_content: openRouterResult.content,
+      } as Record<string, unknown>);
+      notifyAssetCreator(output.asset_id, 'WORKFLOW_COMPLETED', {
+        title: 'Generation Complete',
+        message: `Your ${output.layout_type} generation has completed successfully.`,
+      }).catch(() => {});
+    }
+    return;
+  }
+
+  // If generation_params has a fal_job_id, poll that job
   const falJobId = generationParams['fal_job_id'] as string | undefined;
 
   if (falJobId) {
@@ -115,7 +149,7 @@ async function processSingleOutput(output: {
     }
     // If still PENDING, do nothing — will pick it up on next poll
   } else {
-    // No fal.ai job ID — this is a simulated/dev scenario.
+    // No fal.ai job ID and no openrouter_result — this is a simulated/dev scenario.
     // Mark as SUCCESS immediately with a visible placeholder URL.
     const outputSeed =
       (generationParams['seed'] as number | undefined) ?? Math.abs(hashString(output.id)) % 100000;

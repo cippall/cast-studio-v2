@@ -5,6 +5,15 @@ import {
 } from '../../db/repositories/model-repo.js';
 
 /**
+ * Resolved model info including provider routing.
+ */
+export interface ResolvedModel {
+  modelId: string;
+  provider: string;
+  endpoint: string | null;
+}
+
+/**
  * Error thrown when a requested model is not in the workspace's active list.
  */
 export class InvalidModelError extends Error {
@@ -26,32 +35,38 @@ export class InvalidModelError extends Error {
  * 3. Fall back to the first active model.
  * 4. Throw if no models are configured — forces explicit configuration.
  */
-export async function resolveModel(requestedModel?: string, task?: string): Promise<string> {
+export async function resolveModel(requestedModel?: string, task?: string): Promise<ResolvedModel> {
   const activeModels = await listActiveModels();
   const activeModelIds = activeModels.map((m) => m.model_id);
 
   // 1. Specific model requested — validate it
+  let found: (typeof activeModels)[number] | null = null;
+
   if (requestedModel) {
-    const found = await findActiveModel(requestedModel);
-    if (found) {
-      return found.model_id;
+    found = await findActiveModel(requestedModel);
+    if (!found) {
+      throw new InvalidModelError(requestedModel, activeModelIds);
     }
-    throw new InvalidModelError(requestedModel, activeModelIds);
   }
 
   // 2. Task-based lookup — find model assigned to this task
-  if (task) {
-    const taskModel = await findModelByTask(task);
-    if (taskModel) {
-      return taskModel.model_id;
-    }
+  if (!found && task) {
+    found = await findModelByTask(task);
   }
 
   // 3. First active model
-  if (activeModels.length > 0) {
-    return activeModels[0].model_id;
+  if (!found && activeModels.length > 0) {
+    found = activeModels[0];
   }
 
   // 4. No models configured — fail fast
-  throw new Error('No models configured. Please add models in Settings → Models.');
+  if (!found) {
+    throw new Error('No models configured. Please add models in Settings → Models.');
+  }
+
+  return {
+    modelId: found.model_id,
+    provider: found.provider,
+    endpoint: found.endpoint,
+  };
 }

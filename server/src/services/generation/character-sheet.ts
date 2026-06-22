@@ -10,10 +10,12 @@ import { query } from '../../db/pool.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { getWorkspaceApiKey } from '../fal-service.js';
+import { submitOpenRouterRequest } from '../openrouter/api.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
+import type { ResolvedModel } from './resolve-model.js';
 import { resolvePrompt } from '../prompt-service.js';
 import type { CharacterSheetResponse } from './generation-types.js';
 
@@ -51,7 +53,7 @@ export async function generateCharacterSheet(
   }
 
   // Resolve model with character_sheet_composition task
-  const resolvedModel = await resolveModel(model, 'character_sheet_composition');
+  const resolved = await resolveModel(model, 'character_sheet_composition');
 
   // Build the prompt: use character_sheet_composition system prompt
   const identityData = (asset.prompt_recipe?.identity as Record<string, unknown>) ?? {};
@@ -124,7 +126,8 @@ export async function generateCharacterSheet(
   const generationParams: Record<string, unknown> = {
     seed,
     prompt,
-    model: resolvedModel,
+    model: resolved.modelId,
+    provider: resolved.provider,
     num_outputs: 1,
     layout_type: 'character_sheet',
     source_assets: sourceAssetOutputs,
@@ -133,7 +136,7 @@ export async function generateCharacterSheet(
   const input: CreateAssetOutputInput = {
     asset_id: assetId,
     layout_type: 'character_sheet',
-    model: resolvedModel,
+    model: resolved.modelId,
     status: 'PENDING',
     cost_credits: DEFAULT_COST,
     generation_params: generationParams,
@@ -144,26 +147,47 @@ export async function generateCharacterSheet(
 
   const output = await createAssetOutput(input);
 
-  // Submit to fal.ai and store the job ID
-  try {
-    const result = await fal.submitTextToImage(
-      {
-        model: resolvedModel,
-        prompt,
-        seed,
-        num_outputs: 1,
-      },
-      workspaceKey,
-    );
+  // Route by provider
+  if (resolved.provider === 'openrouter') {
+    // Synchronous path: OpenRouter returns immediately
+    try {
+      const result = await submitOpenRouterRequest({
+        model: resolved.modelId,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      generationParams['openrouter_result'] = {
+        content: result.content,
+        finish_reason: result.finish_reason,
+      };
+      await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+        JSON.stringify(generationParams),
+        output.id,
+      ]);
+    } catch (err) {
+      console.error(`OpenRouter submission error for character sheet ${output.id}:`, err);
+    }
+  } else {
+    // Async path: submit to fal.ai and store the job ID
+    try {
+      const result = await fal.submitTextToImage(
+        {
+          model: resolved.modelId,
+          prompt,
+          seed,
+          num_outputs: 1,
+        },
+        workspaceKey,
+      );
 
-    // Store fal job ID in generation_params for worker polling
-    generationParams['fal_job_id'] = result.jobId;
-    await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
-      JSON.stringify(generationParams),
-      output.id,
-    ]);
-  } catch (err) {
-    console.error(`fal.ai submission error for character sheet ${output.id}:`, err);
+      // Store fal job ID in generation_params for worker polling
+      generationParams['fal_job_id'] = result.jobId;
+      await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+        JSON.stringify(generationParams),
+        output.id,
+      ]);
+    } catch (err) {
+      console.error(`fal.ai submission error for character sheet ${output.id}:`, err);
+    }
   }
 
   return {

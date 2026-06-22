@@ -1221,7 +1221,7 @@ describe('Model resolution in generation', () => {
     } as any);
 
     const result = await resolveModel(undefined, 'actor_generation');
-    expect(result).toBe('fal-ai/flux-anime');
+    expect(result.modelId).toBe('fal-ai/flux-anime');
   });
 
   it('resolveModel: task lookup misses falls through to first active model', async () => {
@@ -1245,7 +1245,7 @@ describe('Model resolution in generation', () => {
     mockQuery.mockResolvedValueOnce({ rows: [] } as any);
 
     const result = await resolveModel(undefined, 'unconfigured_task');
-    expect(result).toBe('fal-ai/flux-pro');
+    expect(result.modelId).toBe('fal-ai/flux-pro');
   });
 
   it('resolveModel: task lookup misses + no active models → throws', async () => {

@@ -13,10 +13,12 @@ import { query } from '../../db/pool.js';
 import { generateSeed } from '../actor-service.js';
 import * as fal from '../fal-service.js';
 import { getWorkspaceApiKey } from '../fal-service.js';
+import { submitOpenRouterRequest } from '../openrouter/api.js';
 import { reserveCreditsForGeneration } from '../wallet-service.js';
 import { refundCredits, InsufficientCreditsError } from '../../db/repositories/wallet-repo.js';
 import { DEFAULT_COST } from './generation-constants.js';
 import { resolveModel, InvalidModelError } from './resolve-model.js';
+import type { ResolvedModel } from './resolve-model.js';
 import { resolvePrompt } from '../prompt-service.js';
 import type { GenerateOptions, GenerateResponse } from './generation-types.js';
 
@@ -66,7 +68,7 @@ export async function regenerateActorOutput(
   }
 
   // Resolve model: validate against active models or use default
-  const model = await resolveModel(options.model, options.task);
+  const resolved = await resolveModel(options.model, options.task);
 
   // Build the prompt: use system prompt template if no explicit prompt provided
   let prompt: string;
@@ -129,7 +131,8 @@ export async function regenerateActorOutput(
   const generationParams: Record<string, unknown> = {
     seed,
     prompt,
-    model,
+    model: resolved.modelId,
+    provider: resolved.provider,
     num_outputs: options.num_outputs ?? 1,
     layout_type: layoutType,
     image_size: '1024x1024',
@@ -149,7 +152,7 @@ export async function regenerateActorOutput(
   const input: CreateAssetOutputInput = {
     asset_id: assetId,
     layout_type: layoutType,
-    model,
+    model: resolved.modelId,
     status: 'PENDING',
     cost_credits: DEFAULT_COST,
     version: newVersion,
@@ -158,55 +161,80 @@ export async function regenerateActorOutput(
 
   const output = await createAssetOutput(input);
 
-  // Submit to fal.ai and store the job ID
-  try {
-    let jobId: string;
-    if (options.reference_images && options.reference_images.length > 0) {
-      const result = await fal.submitImageToImage(
-        {
-          model,
-          prompt,
-          seed,
-          num_outputs: options.num_outputs ?? 1,
-          image_url: options.reference_images[0],
-          strength: 0.7,
-          reference_images: options.reference_images,
-        },
-        workspaceKey,
-      );
-      jobId = result.jobId;
-    } else {
-      const result = await fal.submitTextToImage(
-        {
-          model,
-          prompt,
-          seed,
-          num_outputs: options.num_outputs ?? 1,
-          form_data: options.form_data,
-        },
-        workspaceKey,
-      );
-      jobId = result.jobId;
+  // Route by provider
+  if (resolved.provider === 'openrouter') {
+    // Synchronous path: OpenRouter returns immediately
+    try {
+      const result = await submitOpenRouterRequest({
+        model: resolved.modelId,
+        messages: [{ role: 'user', content: prompt }],
+      });
+      generationParams['openrouter_result'] = {
+        content: result.content,
+        finish_reason: result.finish_reason,
+      };
+      await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+        JSON.stringify(generationParams),
+        output.id,
+      ]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'OpenRouter submission failed';
+      console.error(`OpenRouter submission error for regenerated output ${output.id}:`, err);
+      await updateAssetOutputError(output.id, errorMessage);
+      await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
+      throw Object.assign(new Error(errorMessage), { statusCode: 502 });
     }
+  } else {
+    // Async path: submit to fal.ai and store the job ID
+    try {
+      let jobId: string;
+      if (options.reference_images && options.reference_images.length > 0) {
+        const result = await fal.submitImageToImage(
+          {
+            model: resolved.modelId,
+            prompt,
+            seed,
+            num_outputs: options.num_outputs ?? 1,
+            image_url: options.reference_images[0],
+            strength: 0.7,
+            reference_images: options.reference_images,
+          },
+          workspaceKey,
+        );
+        jobId = result.jobId;
+      } else {
+        const result = await fal.submitTextToImage(
+          {
+            model: resolved.modelId,
+            prompt,
+            seed,
+            num_outputs: options.num_outputs ?? 1,
+            form_data: options.form_data,
+          },
+          workspaceKey,
+        );
+        jobId = result.jobId;
+      }
 
-    // Store fal job ID in generation_params for worker polling
-    generationParams['fal_job_id'] = jobId;
-    await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
-      JSON.stringify(generationParams),
-      output.id,
-    ]);
-  } catch (err) {
-    const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
-    console.error(`fal.ai submission error for regenerated output ${output.id}:`, err);
+      // Store fal job ID in generation_params for worker polling
+      generationParams['fal_job_id'] = jobId;
+      await query('UPDATE asset_outputs SET generation_params = $1 WHERE id = $2', [
+        JSON.stringify(generationParams),
+        output.id,
+      ]);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'fal.ai submission failed';
+      console.error(`fal.ai submission error for regenerated output ${output.id}:`, err);
 
-    // Update output row to FAILED
-    await updateAssetOutputError(output.id, errorMessage);
+      // Update output row to FAILED
+      await updateAssetOutputError(output.id, errorMessage);
 
-    // Refund credits
-    await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
+      // Refund credits
+      await refundCredits(account.workspace_id, account.id, DEFAULT_COST);
 
-    // Propagate error to route handler
-    throw Object.assign(new Error(errorMessage), { statusCode: 502 });
+      // Propagate error to route handler
+      throw Object.assign(new Error(errorMessage), { statusCode: 502 });
+    }
   }
 
   return {
