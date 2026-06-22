@@ -6,6 +6,8 @@ export interface ModelRow {
   name: string;
   model_type: string;
   task: string;
+  provider: string;
+  endpoint: string | null;
   parameters: Record<string, unknown>;
   input_schema: Record<string, unknown> | null;
   is_active: boolean;

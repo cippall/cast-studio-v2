@@ -840,6 +840,8 @@ async function seed() {
         name: 'FLUX Pro',
         mtype: 'TEXT_TO_IMAGE',
         task: 'actor_headshot',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux-pro',
         active: true,
       },
       {
@@ -847,6 +849,8 @@ async function seed() {
         name: 'FLUX Pro 1.1 Ultra',
         mtype: 'TEXT_TO_IMAGE',
         task: 'actor_fullshot',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux-pro/v1.1-ultra',
         active: true,
       },
       {
@@ -854,6 +858,8 @@ async function seed() {
         name: 'FLUX Dev',
         mtype: 'TEXT_TO_IMAGE',
         task: 'actor_expressions',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux/dev',
         active: true,
       },
       {
@@ -861,6 +867,8 @@ async function seed() {
         name: 'FLUX Schnell',
         mtype: 'TEXT_TO_IMAGE',
         task: 'actor_editorial',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux/schnell',
         active: true,
       },
       {
@@ -868,6 +876,8 @@ async function seed() {
         name: 'FLUX Pro Img2Img',
         mtype: 'IMAGE_TO_IMAGE',
         task: 'image_to_image',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux-pro/img2img',
         active: true,
       },
       {
@@ -875,6 +885,8 @@ async function seed() {
         name: 'SDXL Turbo',
         mtype: 'TEXT_TO_IMAGE',
         task: 'actor_character_sheet',
+        provider: 'fal',
+        endpoint: 'fal-ai/sdxl-turbo',
         active: false,
       },
       {
@@ -882,6 +894,8 @@ async function seed() {
         name: 'Kling v1',
         mtype: 'IMAGE_TO_IMAGE',
         task: 'image_to_video',
+        provider: 'fal',
+        endpoint: 'fal-ai/kling-v1',
         active: true,
       },
       {
@@ -889,6 +903,8 @@ async function seed() {
         name: 'Runway Gen-3',
         mtype: 'IMAGE_TO_IMAGE',
         task: 'image_to_video',
+        provider: 'fal',
+        endpoint: 'fal-ai/runway-gen3',
         active: false,
       },
       {
@@ -896,6 +912,8 @@ async function seed() {
         name: 'GPT-4 Vision',
         mtype: 'IMAGE_TO_TEXT',
         task: 'reference_extraction',
+        provider: 'openai',
+        endpoint: 'openai/gpt-4-vision',
         active: true,
       },
       {
@@ -903,15 +921,27 @@ async function seed() {
         name: 'Stable Cascade',
         mtype: 'TEXT_TO_IMAGE',
         task: 'look_generation',
+        provider: 'fal',
+        endpoint: 'fal-ai/stable-cascade',
         active: false,
       },
     ];
 
     for (const m of modelDefs) {
       await client.query(
-        `INSERT INTO models (id, model_id, name, model_type, task, parameters, is_active, created_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,NOW())`,
-        [uid(), m.mid, m.name, m.mtype, m.task, '{"steps":30,"guidance":7.5}', m.active],
+        `INSERT INTO models (id, model_id, name, model_type, task, provider, endpoint, parameters, is_active, created_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,NOW())`,
+        [
+          uid(),
+          m.mid,
+          m.name,
+          m.mtype,
+          m.task,
+          m.provider,
+          m.endpoint,
+          '{"steps":30,"guidance":7.5}',
+          m.active,
+        ],
       );
     }
 
