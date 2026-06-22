@@ -23,6 +23,8 @@ interface Step1Props {
   fashionItems: Array<{ id: string; name: string; image_url: string | null }>;
   onGenerate: () => void;
   isGenerating: boolean;
+  isExtracting: boolean;
+  onExtractReference: (imageUrl: string) => void;
 }
 
 const METHODS: Array<{
@@ -65,14 +67,17 @@ export default function LookDesignerStep1({
   fashionItems,
   onGenerate,
   isGenerating,
+  isExtracting,
+  onExtractReference,
 }: Step1Props) {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
     const reader = new FileReader();
     reader.onload = () => {
-      onReferenceImageChange(reader.result as string);
-      onExtractedPiecesChange(['Jacket', 'Shirt', 'Pants', 'Shoes', 'Watch']);
+      const dataUrl = reader.result as string;
+      onReferenceImageChange(dataUrl);
+      onExtractReference(dataUrl);
     };
     reader.readAsDataURL(file);
   };
@@ -168,20 +173,31 @@ export default function LookDesignerStep1({
               />
               <div className="flex-1 space-y-2">
                 <Label>Extracted Pieces</Label>
-                <div className="flex flex-wrap gap-2">
-                  {['Jacket', 'Shirt', 'Pants', 'Shoes', 'Watch', 'Belt'].map((piece) => (
-                    <div key={piece} className="flex items-center gap-2">
-                      <Checkbox
-                        id={`piece-${piece}`}
-                        checked={extractedPieces.includes(piece)}
-                        onCheckedChange={() => togglePiece(piece)}
-                      />
-                      <label htmlFor={`piece-${piece}`} className="text-sm">
-                        {piece}
-                      </label>
-                    </div>
-                  ))}
-                </div>
+                {isExtracting ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="size-4 animate-spin" />
+                    Analyzing image...
+                  </div>
+                ) : extractedPieces.length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {extractedPieces.map((piece) => (
+                      <div key={piece} className="flex items-center gap-2">
+                        <Checkbox
+                          id={`piece-${piece}`}
+                          checked={extractedPieces.includes(piece)}
+                          onCheckedChange={() => togglePiece(piece)}
+                        />
+                        <label htmlFor={`piece-${piece}`} className="text-sm">
+                          {piece}
+                        </label>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">
+                    No pieces extracted yet. Upload an image to extract clothing categories.
+                  </p>
+                )}
               </div>
             </div>
           )}

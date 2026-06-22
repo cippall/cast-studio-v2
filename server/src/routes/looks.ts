@@ -4,6 +4,7 @@ import { requireSession } from '../middleware/requireSession.js';
 import { requireWorkspace } from '../middleware/requireWorkspace.js';
 import type { Request, Response } from 'express';
 import * as lookService from '../services/look-service.js';
+import { imageToText, getWorkspaceApiKey } from '../services/fal-service.js';
 
 const router = Router();
 
@@ -213,5 +214,51 @@ router.delete('/:id', requireSession, requireWorkspace, async (req: Request, res
     });
   }
 });
+
+// --- POST /api/looks/extract-reference — extract clothing categories from image ---
+
+const extractReferenceSchema = z.object({
+  image_url: z.string().min(1, 'image_url is required'),
+});
+
+router.post(
+  '/extract-reference',
+  requireSession,
+  requireWorkspace,
+  async (req: Request, res: Response) => {
+    try {
+      const parsed = extractReferenceSchema.safeParse(req.body);
+      if (!parsed.success) {
+        res.status(422).json({
+          error: {
+            code: 'VALIDATION_ERROR',
+            message: 'Invalid input',
+            details: parsed.error.flatten().fieldErrors,
+          },
+        });
+        return;
+      }
+
+      const { image_url } = parsed.data;
+      const apiKey = await getWorkspaceApiKey(req.account!.workspace_id);
+
+      const prompt =
+        'List all clothing items and accessories visible in this image. Return them as a comma-separated list (e.g. "Jacket, Shirt, Pants, Shoes"). Only list clothing and accessories, nothing else.';
+      const result = await imageToText(image_url, prompt, apiKey);
+
+      const categories = result
+        .split(',')
+        .map((s: string) => s.trim())
+        .filter((s: string) => s.length > 0);
+
+      res.json({ categories });
+    } catch (err) {
+      console.error('Extract reference error:', err);
+      res.status(500).json({
+        error: { code: 'INTERNAL_ERROR', message: 'Failed to extract reference data' },
+      });
+    }
+  },
+);
 
 export default router;

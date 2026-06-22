@@ -26,6 +26,7 @@ export default function LookDesigner() {
   const [referenceImage, setReferenceImage] = useState<string | null>(null);
   const [extractedPieces, setExtractedPieces] = useState<string[]>([]);
   const [selectedFashionItemIds, setSelectedFashionItemIds] = useState<string[]>([]);
+  const [isExtracting, setIsExtracting] = useState(false);
 
   const [lookId, setLookId] = useState<string | null>(null);
   const [options, setOptions] = useState<GeneratedOption[]>([]);
@@ -69,6 +70,27 @@ export default function LookDesigner() {
     onError: (err: unknown) => {
       const error = err as { message?: string };
       setCreateError(error.message ?? 'Failed to create look');
+    },
+  });
+
+  const extractReferenceMutation = useMutation({
+    mutationFn: async (imageUrl: string) => {
+      const { data } = await apiClient.post('/looks/extract-reference', {
+        image_url: imageUrl,
+      });
+      return data as { categories: string[] };
+    },
+    onMutate: () => {
+      setIsExtracting(true);
+    },
+    onSuccess: (data) => {
+      setExtractedPieces(data.categories);
+    },
+    onError: () => {
+      setExtractedPieces([]);
+    },
+    onSettled: () => {
+      setIsExtracting(false);
     },
   });
 
@@ -154,6 +176,8 @@ export default function LookDesigner() {
           fashionItems={fashionItems}
           onGenerate={handleGenerate}
           isGenerating={createLookMutation.isPending}
+          isExtracting={isExtracting}
+          onExtractReference={extractReferenceMutation.mutate}
         />
       )}
 

@@ -12,10 +12,18 @@ vi.mock('../src/db/pool.js', () => ({
   default: {},
 }));
 
+// Mock fal-service before importing routes
+vi.mock('../src/services/fal-service.js', () => ({
+  imageToText: vi.fn(),
+  getWorkspaceApiKey: vi.fn().mockResolvedValue('test-fal-key'),
+}));
+
 import * as poolModule from '../src/db/pool.js';
+import * as falService from '../src/services/fal-service.js';
 import looksRouter from '../src/routes/looks.js';
 
 const mockQuery = vi.mocked(poolModule.query);
+const mockImageToText = vi.mocked(falService.imageToText);
 
 // Valid v4 UUIDs
 const WORKSPACE_UUID = 'a0000000-0000-4000-8000-000000000001';
@@ -628,5 +636,91 @@ describe('DELETE /api/looks/:id', () => {
     const deleteCall = mockQuery.mock.calls[3];
     expect(deleteCall[0]).toContain('SET deleted_at = NOW()');
     expect(deleteCall[0]).toContain('assets');
+  });
+});
+
+// ================================================================
+// POST /api/looks/extract-reference
+// ================================================================
+describe('POST /api/looks/extract-reference', () => {
+  beforeEach(() => {
+    resetMock();
+    mockImageToText.mockReset();
+  });
+
+  it('401 when not authenticated', async () => {
+    const res = await request(createRouteApp())
+      .post('/api/looks/extract-reference')
+      .send({ image_url: 'https://example.com/ref.jpg' });
+    expect(res.status).toBe(401);
+  });
+
+  it('422 when image_url is missing', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+    const res = await request(createRouteApp(artist)).post('/api/looks/extract-reference').send({});
+    expect(res.status).toBe(422);
+    expect(res.body.error.code).toBe('VALIDATION_ERROR');
+  });
+
+  it('422 when image_url is empty string', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+    const res = await request(createRouteApp(artist))
+      .post('/api/looks/extract-reference')
+      .send({ image_url: '' });
+    expect(res.status).toBe(422);
+  });
+
+  it('200 returns extracted categories from vision model', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    mockImageToText.mockResolvedValueOnce('Jacket, Shirt, Pants, Shoes, Watch');
+
+    const res = await request(createRouteApp(artist))
+      .post('/api/looks/extract-reference')
+      .send({ image_url: 'https://example.com/ref.jpg' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.categories).toBeInstanceOf(Array);
+    expect(res.body.categories.length).toBeGreaterThan(0);
+    expect(res.body.categories).toContain('Jacket');
+    expect(res.body.categories).toContain('Shirt');
+
+    expect(mockImageToText).toHaveBeenCalledTimes(1);
+    expect(mockImageToText).toHaveBeenCalledWith(
+      'https://example.com/ref.jpg',
+      expect.stringContaining('clothing'),
+      'test-fal-key',
+    );
+  });
+
+  it('500 when vision model fails', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    mockImageToText.mockRejectedValueOnce(new Error('fal.ai timeout'));
+
+    const res = await request(createRouteApp(artist))
+      .post('/api/looks/extract-reference')
+      .send({ image_url: 'https://example.com/ref.jpg' });
+
+    expect(res.status).toBe(500);
+    expect(res.body.error.code).toBe('INTERNAL_ERROR');
+  });
+
+  it('200 with empty categories when vision model returns empty', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    mockImageToText.mockResolvedValueOnce('');
+
+    const res = await request(createRouteApp(artist))
+      .post('/api/looks/extract-reference')
+      .send({ image_url: 'https://example.com/ref.jpg' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.categories).toEqual([]);
   });
 });
