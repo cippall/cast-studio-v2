@@ -29,6 +29,12 @@ vi.mock('../src/services/prompt-service.js', () => ({
     .mockResolvedValue('Professional headshot of test actor. Clean background, studio lighting.'),
 }));
 
+// Mock openrouter service
+const mockSubmitOpenRouterRequest = vi.hoisted(() => vi.fn());
+vi.mock('../src/services/openrouter/api.js', () => ({
+  submitOpenRouterRequest: mockSubmitOpenRouterRequest,
+}));
+
 import * as poolModule from '../src/db/pool.js';
 import actorsRouter from '../src/routes/actors.js';
 import generationJobsRouter from '../src/routes/generation-jobs.js';
@@ -36,6 +42,7 @@ import * as falService from '../src/services/fal-service.js';
 
 const mockQuery = vi.mocked(poolModule.query);
 const mockSubmitTextToImage = vi.mocked(falService.submitTextToImage);
+const mockSubmitOpenRouter = vi.mocked(mockSubmitOpenRouterRequest);
 
 // Valid v4 UUIDs
 const WORKSPACE_UUID = 'a0000000-0000-4000-8000-000000000001';
@@ -196,6 +203,14 @@ function resetMock() {
   mockQuery.mockReset();
   mockSubmitTextToImage.mockReset();
   mockSubmitTextToImage.mockResolvedValue({ jobId: 'test-job-id', status: 'PENDING' });
+  mockSubmitOpenRouter.mockReset();
+  mockSubmitOpenRouter.mockResolvedValue({
+    id: 'openrouter-test-id',
+    model: 'openrouter/anthropic/claude-3.5-sonnet',
+    content: 'Generated text result from OpenRouter',
+    finish_reason: 'stop',
+    usage: { prompt_tokens: 10, completion_tokens: 20, total_tokens: 30 },
+  });
 }
 
 /** Mock listActiveModels returning empty (so resolveModel falls back to DEFAULT_MODEL) */
@@ -213,6 +228,28 @@ function seedDefaultActiveModel() {
         name: 'Flux Pro',
         model_type: 'image',
         task: 'text-to-image',
+        provider: 'fal',
+        endpoint: 'fal-ai/flux-pro',
+        parameters: {},
+        is_active: true,
+        created_at: '2026-06-17T10:00:00.000Z',
+      },
+    ],
+  } as any);
+}
+
+/** Helper: seed an OpenRouter model as the first active model */
+function seedOpenRouterModel() {
+  mockQuery.mockResolvedValueOnce({
+    rows: [
+      {
+        id: 'model-uuid-or',
+        model_id: 'openrouter/anthropic/claude-3.5-sonnet',
+        name: 'Claude 3.5 Sonnet',
+        model_type: 'image',
+        task: 'text-to-image',
+        provider: 'openrouter',
+        endpoint: null,
         parameters: {},
         is_active: true,
         created_at: '2026-06-17T10:00:00.000Z',
@@ -1258,5 +1295,241 @@ describe('Model resolution in generation', () => {
     await expect(resolveModel(undefined, 'unconfigured_task')).rejects.toThrow(
       'No models configured. Please add models in Settings → Models.',
     );
+  });
+
+  it('resolveModel: returns provider and endpoint fields', async () => {
+    const { resolveModel } = await import('../src/services/generation/resolve-model.js');
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid',
+          model_id: 'fal-ai/flux-pro',
+          name: 'Flux Pro',
+          model_type: 'image',
+          task: 'text-to-image',
+          provider: 'fal',
+          endpoint: 'fal-ai/flux-pro',
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const result = await resolveModel();
+    expect(result).toEqual({
+      modelId: 'fal-ai/flux-pro',
+      provider: 'fal',
+      endpoint: 'fal-ai/flux-pro',
+    });
+  });
+
+  it('resolveModel: returns provider openrouter and null endpoint', async () => {
+    const { resolveModel } = await import('../src/services/generation/resolve-model.js');
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'model-uuid-or',
+          model_id: 'openrouter/anthropic/claude-3.5-sonnet',
+          name: 'Claude 3.5 Sonnet',
+          model_type: 'image',
+          task: 'text-to-image',
+          provider: 'openrouter',
+          endpoint: null,
+          parameters: {},
+          is_active: true,
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const result = await resolveModel();
+    expect(result).toEqual({
+      modelId: 'openrouter/anthropic/claude-3.5-sonnet',
+      provider: 'openrouter',
+      endpoint: null,
+    });
+  });
+});
+
+// ================================================================
+// Provider Routing Tests
+// ================================================================
+describe('Provider routing in generate', () => {
+  beforeEach(() => {
+    resetMock();
+  });
+
+  it('routes to OpenRouter sync path when provider is openrouter', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: return an OpenRouter model
+    seedOpenRouterModel();
+    // reserveCreditsForGeneration
+    seedWalletCreditMocks(ARTIST_UUID);
+    // createAssetOutput
+    const output = makeOutputRow({ model: 'openrouter/anthropic/claude-3.5-sonnet' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+    // UPDATE generation_params (openRouter result stored)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+
+    // Verify OpenRouter was called
+    expect(mockSubmitOpenRouter).toHaveBeenCalledTimes(1);
+    expect(mockSubmitOpenRouter).toHaveBeenCalledWith(
+      expect.objectContaining({
+        model: 'openrouter/anthropic/claude-3.5-sonnet',
+        messages: expect.any(Array),
+      }),
+    );
+
+    // Verify fal.ai was NOT called
+    expect(mockSubmitTextToImage).not.toHaveBeenCalled();
+
+    // Verify generation_params UPDATE was called (stores openrouter_result)
+    const updateCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('UPDATE asset_outputs') &&
+        call[0].includes('generation_params'),
+    );
+    expect(updateCall).toBeDefined();
+    const paramsJson = JSON.parse(updateCall![1][0] as string);
+    expect(paramsJson).toHaveProperty('openrouter_result');
+    expect(paramsJson.openrouter_result).toHaveProperty('content');
+    expect(paramsJson.openrouter_result).toHaveProperty('finish_reason');
+  });
+
+  it('routes to fal.ai async path when provider is fal', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    // resolveModel: return a fal model
+    seedDefaultActiveModel();
+    // reserveCreditsForGeneration
+    seedWalletCreditMocks(ARTIST_UUID);
+    // createAssetOutput
+    const output = makeOutputRow({ model: 'fal-ai/flux-pro' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+    // UPDATE generation_params (fal_job_id stored)
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(202);
+
+    // Verify fal.ai was called
+    expect(mockSubmitTextToImage).toHaveBeenCalledTimes(1);
+
+    // Verify OpenRouter was NOT called
+    expect(mockSubmitOpenRouter).not.toHaveBeenCalled();
+
+    // Verify generation_params UPDATE stores fal_job_id
+    const updateCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('UPDATE asset_outputs') &&
+        call[0].includes('generation_params'),
+    );
+    expect(updateCall).toBeDefined();
+    const paramsJson = JSON.parse(updateCall![1][0] as string);
+    expect(paramsJson).toHaveProperty('fal_job_id', 'test-job-id');
+  });
+
+  it('502 when OpenRouter sync call fails, credits refunded', async () => {
+    const artist = makeAccountRow();
+    seedRequireSessionQueries(artist);
+
+    const actor = makeActorRow();
+    mockQuery.mockResolvedValueOnce({ rows: [actor] } as any);
+    seedOpenRouterModel();
+    seedWalletCreditMocks(ARTIST_UUID);
+
+    const output = makeOutputRow({ model: 'openrouter/anthropic/claude-3.5-sonnet' });
+    mockQuery.mockResolvedValueOnce({ rows: [output] } as any);
+
+    // Make OpenRouter throw
+    mockSubmitOpenRouter.mockRejectedValueOnce(
+      new Error('OpenRouter API error (401): unauthorized'),
+    );
+
+    // updateAssetOutputError
+    mockQuery.mockResolvedValueOnce({ rowCount: 1 } as any);
+
+    // refundCredits: findWallet
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '999.9500',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: updateWalletBalance
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'wallet-uuid',
+          workspace_id: WORKSPACE_UUID,
+          account_id: ARTIST_UUID,
+          balance_credits: '1000.0000',
+          updated_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+    // refundCredits: createLedgerEntry
+    mockQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: 'ledger-refund-uuid',
+          workspace_id: WORKSPACE_UUID,
+          wallet_id: 'wallet-uuid',
+          workflow_id: null,
+          api_key_id: null,
+          amount: 0.05,
+          type: 'REFUND',
+          created_at: '2026-06-17T10:00:00.000Z',
+        },
+      ],
+    } as any);
+
+    const res = await request(createActorsApp(artist))
+      .post(`/api/actors/${ACTOR_UUID}/generate`)
+      .send({ layout_type: 'headshot' });
+
+    expect(res.status).toBe(502);
+    expect(res.body.error.code).toBe('BAD_GATEWAY');
+
+    // Verify updateAssetOutputError was called
+    const updateErrorCall = mockQuery.mock.calls.find(
+      (call) => typeof call[0] === 'string' && call[0].includes("status = 'FAILED'"),
+    );
+    expect(updateErrorCall).toBeDefined();
+
+    // Verify refund ledger entry
+    const refundLedgerCall = mockQuery.mock.calls.find(
+      (call) =>
+        typeof call[0] === 'string' &&
+        call[0].includes('INSERT INTO ledger') &&
+        call[1] &&
+        Array.isArray(call[1]) &&
+        call[1].includes('REFUND'),
+    );
+    expect(refundLedgerCall).toBeDefined();
   });
 });

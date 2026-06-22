@@ -174,4 +174,134 @@ describe('generation-worker', () => {
       expect(mockPollJob).toHaveBeenCalledWith('job-789', 'flux-pro', undefined, undefined);
     });
   });
+
+  describe('processSingleOutput with openrouter_result', () => {
+    it('skips polling and marks SUCCESS when openrouter_result has content', async () => {
+      const { findPendingOutputs } = await import('../src/db/repositories/asset-repo.js');
+      vi.mocked(findPendingOutputs).mockResolvedValueOnce([
+        {
+          id: OUTPUT_UUID,
+          asset_id: ASSET_UUID,
+          model: 'openrouter/anthropic/claude-3.5-sonnet',
+          layout_type: 'headshot',
+          generation_params: {
+            openrouter_result: {
+              content: 'Generated text from OpenRouter',
+              finish_reason: 'stop',
+            },
+            seed: 42,
+          },
+        },
+      ] as any);
+
+      // query for creator_id (notifyAssetCreator)
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ creator_id: CREATOR_UUID }],
+      } as any);
+
+      await processNow();
+
+      // pollJob should NOT be called — result is already in generation_params
+      expect(mockPollJob).not.toHaveBeenCalled();
+
+      // updateOutputsStatus should be called with SUCCESS and openrouter_content
+      expect(mockUpdateOutputsStatus).toHaveBeenCalledWith(
+        ASSET_UUID,
+        [OUTPUT_UUID],
+        'SUCCESS',
+        expect.objectContaining({
+          image_url: null,
+          openrouter_content: 'Generated text from OpenRouter',
+        }),
+      );
+    });
+
+    it('skips polling and marks FAILED when openrouter_result has error finish_reason', async () => {
+      const { findPendingOutputs } = await import('../src/db/repositories/asset-repo.js');
+      vi.mocked(findPendingOutputs).mockResolvedValueOnce([
+        {
+          id: OUTPUT_UUID,
+          asset_id: ASSET_UUID,
+          model: 'openrouter/anthropic/claude-3.5-sonnet',
+          layout_type: 'headshot',
+          generation_params: {
+            openrouter_result: {
+              content: '',
+              finish_reason: 'error',
+            },
+            seed: 42,
+          },
+        },
+      ] as any);
+
+      await processNow();
+
+      // pollJob should NOT be called
+      expect(mockPollJob).not.toHaveBeenCalled();
+
+      // updateOutputsStatus should be called with FAILED
+      expect(mockUpdateOutputsStatus).toHaveBeenCalledWith(
+        ASSET_UUID,
+        [OUTPUT_UUID],
+        'FAILED',
+        expect.objectContaining({
+          error_message: 'OpenRouter generation failed (no API key or API error)',
+          image_url: null,
+        }),
+      );
+    });
+
+    it('falls through to fal polling when no openrouter_result and fal_job_id present', async () => {
+      const { findPendingOutputs } = await import('../src/db/repositories/asset-repo.js');
+      vi.mocked(findPendingOutputs).mockResolvedValueOnce([
+        {
+          id: OUTPUT_UUID,
+          asset_id: ASSET_UUID,
+          model: 'flux-pro',
+          layout_type: 'portrait',
+          generation_params: {
+            fal_job_id: 'job-fal-123',
+            seed: 99,
+          },
+        },
+      ] as any);
+
+      // query for workspace_id from asset
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ workspace_id: WORKSPACE_UUID }],
+      } as any);
+
+      // getWorkspaceApiKey returns undefined
+      mockGetWorkspaceApiKey.mockResolvedValueOnce(undefined);
+
+      // pollJob returns SUCCESS
+      mockPollJob.mockResolvedValueOnce({
+        id: 'job-fal-123',
+        status: 'SUCCESS',
+        image_url: 'https://fal.ai/image.png',
+        error_message: null,
+        cost_credits: 0.05,
+      });
+
+      // query for creator_id (notifyAssetCreator)
+      mockQuery.mockResolvedValueOnce({
+        rows: [{ creator_id: CREATOR_UUID }],
+      } as any);
+
+      await processNow();
+
+      // pollJob SHOULD be called for fal.ai job
+      expect(mockPollJob).toHaveBeenCalledWith('job-fal-123', 'flux-pro', undefined, 99);
+
+      // updateOutputsStatus should be called with SUCCESS and image_url
+      expect(mockUpdateOutputsStatus).toHaveBeenCalledWith(
+        ASSET_UUID,
+        [OUTPUT_UUID],
+        'SUCCESS',
+        expect.objectContaining({
+          image_url: 'https://fal.ai/image.png',
+        }),
+      );
+    });
+  });
 });
